@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/api/auth/auto-login?callbackUrl=/projects");
+  if (!session) redirect("/login?callbackUrl=/projects");
 
   return (
     <TooltipProvider delayDuration={200}>

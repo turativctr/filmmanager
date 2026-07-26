@@ -5,5 +5,5 @@ import { authOptions } from "@/lib/auth";
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
-  redirect(session ? "/projects" : "/api/auth/auto-login?callbackUrl=/projects");
+  redirect(session ? "/projects" : "/login?callbackUrl=/projects");
 }

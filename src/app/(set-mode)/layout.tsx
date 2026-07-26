@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth";
 // src/app/(app)/layout.tsx (grupos de rota não compartilham layout, então precisa duplicar aqui).
 export default async function SetModeLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/api/auth/auto-login?callbackUrl=/projects");
+  if (!session) redirect("/login?callbackUrl=/projects");
 
   return (
     <div className="h-screen w-screen overflow-hidden">

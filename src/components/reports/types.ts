@@ -1,0 +1,22 @@
+export type ShootDayLogistics = {
+  id: string;
+  numeroDia: number;
+  data: string;
+  transporteHorario: string | null;
+  transporteEndereco: string | null;
+  locacaoNome: string | null;
+  locacaoEndereco: string | null;
+  baseInfo: string | null;
+  estacionamento: string | null;
+  hospitalNome: string | null;
+  hospitalEndereco: string | null;
+  hospitalTelefone: string | null;
+  meteoNascer: string | null;
+  meteoPor: string | null;
+  meteoMin: number | null;
+  meteoMax: number | null;
+  meteoChuva: string | null;
+  meteoDescricao: string | null;
+  chamadaEquipe: Record<string, string> | null;
+  observacoesGerais: string | null;
+};

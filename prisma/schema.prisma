@@ -1,0 +1,875 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth (NextAuth.js — credentials/email+senha)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String
+  emailVerified DateTime?
+  image         String?
+  tourConcluido Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Enums — módulo Scheduling
+// ---------------------------------------------------------------------------
+
+enum SceneEnvironment {
+  INT
+  EXT
+}
+
+enum SceneShift {
+  DIA
+  NOITE
+  ENTARDECER
+  AMANHECER
+  CONTINUO
+  DEPOIS
+}
+
+enum CharacterCategoria {
+  PRINCIPAL
+  COADJUVANTE
+  PARTICIPACAO_ESPECIAL
+  FIGURACAO
+  VOZ_OFF
+  DUPLO
+  OUTRO
+}
+
+enum SceneBlock {
+  MANHA
+  TARDE
+}
+
+enum SceneShootDayStatus {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  ADIADA
+}
+
+enum CalendarEventType {
+  ENSAIO
+  VIAGEM
+  FIGURINO
+  FERIADO
+  FOLGA
+  OUTRO
+}
+
+// Como os personagens são identificados nos documentos gerados — ver lib/character-id.ts.
+enum SistemaIdElenco {
+  ID_CURTO // padrão Movie Magic/americano: "PRO", "CHEF"
+  NUMERACAO // padrão brasileiro/europeu: "1", "2", na ordem cadastrada em /cast
+}
+
+enum ProjectStatus {
+  ATIVO
+  CONCLUIDO
+}
+
+enum ProjectStepEtapa {
+  ROTEIRO
+  ELENCO
+  BREAKDOWN
+  CRONOGRAMA
+  ORDEM_DO_DIA
+  ORCAMENTO
+}
+
+// Tipo de reset entre um plano e o anterior — calculado automaticamente por classifyReset()
+// (src/lib/shots.ts) a partir de lente/movimento/tamanho/ângulo, mas editável manualmente.
+enum ShotTipoReset {
+  NENHUM
+  AJUSTE
+  TROCA_LENTE
+  TROCA_CAMERA
+  RESET_POSICAO
+  RESET_COMPLETO
+}
+
+enum ShotStatus {
+  PENDENTE
+  FILMADO
+  DESCARTADO
+}
+
+enum HoraAHoraEventTipo {
+  CHAMADA_EQUIPE
+  CHAMADA_ELENCO
+  SETUP
+  ENSAIO
+  RODANDO
+  ALMOCO
+  SAIDA
+  DESPRODUCAO
+  OUTRO
+}
+
+// ---------------------------------------------------------------------------
+// Enums — módulo Budgeting
+// ---------------------------------------------------------------------------
+
+enum AccountGroupType {
+  ATL
+  BTL_PRODUCAO
+  BTL_POS
+  OUTROS
+}
+
+enum FringeType {
+  INSS
+  FGTS
+  ISS
+  OUTRO
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Scheduling
+// ---------------------------------------------------------------------------
+
+model Project {
+  id        String   @id @default(cuid())
+  titulo    String
+  diretor   String?
+  producao  String?
+  dataInicio DateTime?
+  dataFim    DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Sigla usada no nome dos arquivos gerados (relatórios/exports). Se não definida, calculada
+  // automaticamente a partir do título por getSigla() — ver lib/filename.ts.
+  sigla String?
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+
+  equipeTecnica Int? // headcount fixo de equipe técnica, usado na contagem de refeições do DOOD
+
+  // Metadados extraídos do TitlePage do roteiro (.fdx/.wdz) no onboarding — texto livre, nunca parseado como data/número.
+  roteiristas     String?
+  numeroDraft     String?
+  dataDraft       String?
+  contatoProducao String? @db.Text
+
+  logoUrl         String? // logo da produtora, exibido no header da Call Sheet
+  sistemaIdElenco SistemaIdElenco @default(ID_CURTO)
+
+  // Configuração do Boletim de Continuísmo (por projeto)
+  continuismoResponsavel     String  @default("Continuidade")
+  continuismoUsarLogo        Boolean @default(true)
+  continuismoLinhasPorFolha  Int     @default(12)
+
+  // status = fase da produção; arquivado = visibilidade/organização — eixos independentes,
+  // arquivar um projeto concluído não pode "apagar" que ele foi concluído.
+  status    ProjectStatus @default(ATIVO)
+  arquivado Boolean       @default(false)
+
+  scenes         Scene[]
+  characters     Character[]
+  shootDays      ShootDay[]
+  extras         Extra[]
+  calendarEvents CalendarEvent[]
+  budget         Budget?
+  scriptDrafts   ScriptDraft[]
+  crewMembers    CrewMember[]
+  stepOverrides  ProjectStepOverride[]
+  shots          Shot[]
+  shotSchedules  ShotSchedule[]
+
+  @@map("projects")
+}
+
+// Permite marcar manualmente uma etapa do painel de progresso guiado como concluída, mesmo que o
+// critério automático (calculado do banco) ainda não tenha sido atingido. Se o critério automático
+// depois passar a "completo" por conta própria, a exibição usa o status automático — o override fica
+// dormente, sem precisar ser apagado.
+model ProjectStepOverride {
+  id                   String           @id @default(cuid())
+  projectId            String
+  etapa                ProjectStepEtapa
+  concluidaManualmente Boolean          @default(false)
+  concluidaEm          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, etapa])
+  @@map("project_step_overrides")
+}
+
+model Scene {
+  id                String           @id @default(cuid())
+  projectId         String
+  numero            String
+  tipo              SceneEnvironment?
+  periodo           SceneShift?
+  set               String?
+  locacao           String?
+  sinopse           String?          @db.Text
+  // Frase operacional curta do AD pra Escaleta do AD e Hora a Hora — diferente da sinopse longa do
+  // roteiro. Se vazia, a UI/PDF caem pra sinopse truncada em 80 chars (ver resolveSinopseAD).
+  sinopseAD         String?          @db.Text
+  paginas           Decimal          @default(0) @db.Decimal(6, 3)
+  diaNarrativo      Int?
+  tempoEstimadoMin  Int?
+  // Convenção WGA: uma cena removida numa revisão nunca é deletada nem tem seu número reciclado —
+  // fica marcada OMITIDA no lugar, preservando a numeração/continuidade entre drafts.
+  omitida           Boolean          @default(false)
+  notasAD           String?          @db.Text // anotação livre do AD, visível na Escaleta e no Stripboard
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cast            SceneCast[]
+  shootDays       SceneShootDay[]
+  extras          ExtraScene[]
+  breakdownSheet  BreakdownSheet?
+  continuityNotes ContinuityNote[]
+  shots           Shot[]
+
+  @@unique([projectId, numero])
+  @@map("scenes")
+}
+
+// Decupagem da cena — um plano por linha, ordenado por `ordem` (editável via drag-and-drop).
+// tempoResetMin é calculado por classifyReset() (comparando com o plano anterior na mesma `ordem`),
+// mas fica gravado no banco e é editável manualmente — ver PARTE 3 do pedido original.
+model Shot {
+  id                String        @id @default(cuid())
+  sceneId           String
+  projectId         String
+  ordem             Int
+  numero            String
+  descricao         String        @db.Text
+  tamanho           String?
+  lente             String?
+  angulo            String?
+  movimento         String?
+  // takesPrevistos/duracaoTakeMin/tempoSetupMin são editáveis; tempoTotalMin é sempre recalculado
+  // no servidor a partir dos três (takesPrevistos × duracaoTakeMin + tempoSetupMin) — nunca aceito
+  // como input direto da API, mesma convenção de tipoReset/tempoResetMin.
+  takesPrevistos    Int           @default(3)
+  duracaoTakeMin    Int           @default(2)
+  tempoSetupMin     Int           @default(0)
+  tempoTotalMin     Int           @default(6)
+  tempoResetMin     Int?
+  tipoReset         ShotTipoReset @default(NENHUM)
+  notasDirecao      String?       @db.Text
+  notasContinuidade String?       @db.Text
+  status            ShotStatus    @default(PENDENTE)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  scene   Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  schedule ShotSchedule?
+
+  @@unique([sceneId, ordem])
+  @@map("shots")
+}
+
+// Controle total da OD por plano individual — reorganiza planos de filmagem livremente dentro do
+// dia, independente da ordem/vínculo das cenas de origem (Shot.sceneId nunca muda). Um Shot sem
+// ShotSchedule ainda não foi agendado num dia específico. `ordem` é a posição global no dia (cruza
+// cenas); `tempoResetMin`/`tipoReset` aqui são o reset entre planos NO DIA — diferente dos mesmos
+// campos em Shot, que refletem a ordem dentro da própria cena.
+model ShotSchedule {
+  id            String         @id @default(cuid())
+  shotId        String         @unique
+  shootDayId    String
+  projectId     String
+  ordem         Int
+  bloco         SceneBlock?
+  tempoResetMin Int?
+  tipoReset     ShotTipoReset  @default(NENHUM)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  shot     Shot     @relation(fields: [shotId], references: [id], onDelete: Cascade)
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([shootDayId, ordem])
+  @@map("shot_schedules")
+}
+
+model ScriptDraft {
+  id          String   @id @default(cuid())
+  projectId   String
+  numero      Int // sequência do draft dentro do projeto (1 = original/Branco, 2 = primeira revisão...)
+  corRevisao  String // rótulo de cor no padrão WGA — ver lib/revision-colors.ts
+  numeroDraft String? // rótulo livre extraído do TitlePage do arquivo importado (ex.: "3rd Draft"), pode divergir de `numero`
+  dataDraft   String?
+  arquivoNome String?
+  importedAt  DateTime @default(now())
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sceneDiffs SceneDiff[]
+
+  @@unique([projectId, numero])
+  @@map("script_drafts")
+}
+
+enum SceneDiffTipo {
+  ADICIONADA
+  REMOVIDA
+  MODIFICADA
+}
+
+model SceneDiff {
+  id              String        @id @default(cuid())
+  scriptDraftId   String
+  sceneNumero     String
+  tipo            SceneDiffTipo
+  // { campo: { antes, depois } } — só os campos que de fato mudaram nessa revisão
+  camposAlterados Json?
+  createdAt       DateTime      @default(now())
+
+  scriptDraft ScriptDraft @relation(fields: [scriptDraftId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptDraftId, sceneNumero])
+  @@map("scene_diffs")
+}
+
+model Character {
+  id                String        @id @default(cuid())
+  projectId         String
+  idCurto           String
+  numeroElenco      Int? // posição sequencial em /cast — usado quando Project.sistemaIdElenco = NUMERACAO
+  categoria         CharacterCategoria @default(PRINCIPAL)
+  personagem        String
+  ator              String?
+  idadePersonagem   Int?
+  // Prestação de contas do elenco (AD)
+  cacheeDiario       Decimal? @db.Decimal(10, 2)
+  percentualHold     Decimal? @db.Decimal(5, 2) // % do cachê diário pago em dias de "hold" (aguardando, sem filmar)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  project   Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes    SceneCast[]
+  callTimes CharacterCallTime[]
+
+  @@unique([projectId, idCurto])
+  @@map("characters")
+}
+
+model SceneCast {
+  id          String @id @default(cuid())
+  sceneId     String
+  characterId String
+
+  scene     Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([sceneId, characterId])
+  @@map("scene_cast")
+}
+
+model ShootDay {
+  id               String   @id @default(cuid())
+  projectId        String
+  numeroDia        Int
+  data             DateTime
+  chamadaGeral     String?
+  lancheHorario    String?
+  blocoManhaInicio String?
+  almocoInicio     String?
+  almocoFim        String?
+  blocoTardeInicio String?
+  desprodInicio    String?
+
+  // Logística — Call Sheet
+  transporteHorario  String?
+  transporteEndereco String?  @db.Text
+  locacaoNome        String?
+  locacaoEndereco    String?  @db.Text
+  baseInfo           String?  @db.Text // Base / Alimentação / Camarim
+  estacionamento     String?  @db.Text
+  hospitalNome       String?
+  hospitalEndereco   String?  @db.Text
+  hospitalTelefone   String?
+  meteoNascer        String?
+  meteoPor           String?
+  meteoMin           Int?
+  meteoMax           Int?
+  meteoChuva         String?
+  meteoDescricao     String?  @db.Text
+  chamadaEquipe      Json? // Record<departamento, horario>
+  observacoesGerais  String?  @db.Text
+  observacaoCronogramaElenco String? @db.Text // nota de rodapé por diária no Cronograma de Elenco
+  observacaoPlanoSimples     String? @db.Text // texto livre no Plano Simplificado para as Diárias
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes    SceneShootDay[]
+  callTimes CharacterCallTime[]
+  checklist ShootDayChecklist[]
+  continuityNotes     ContinuityNote[]
+  dailyProgressReport DailyProgressReport?
+  horaAHoraEvents     HoraAHoraEvent[]
+  shotSchedules       ShotSchedule[]
+
+  @@unique([projectId, numeroDia])
+  @@map("shoot_days")
+}
+
+enum ShootDayChecklistTipo {
+  LOCACAO
+  TRANSPORTE
+  ELENCO
+  ARTE
+  SOM
+  FIGURINO
+  MAKE
+  PLAYBACK
+  OUTRO
+}
+
+model ShootDayChecklist {
+  id                    String                @id @default(cuid())
+  shootDayId            String
+  item                  String                @db.Text
+  confirmado            Boolean               @default(false)
+  tipo                  ShootDayChecklistTipo
+  geradoAutomaticamente Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@map("shoot_day_checklists")
+}
+
+// Roteiro operacional do dia (Hora a Hora) — mistura eventos gerados automaticamente a partir do
+// Stripboard/Ordem do Dia (chamadas, setups, rodagens, saídas) com eventos manuais do AD. Mesmo
+// padrão do ShootDayChecklist: `geradoAutomaticamente` marca o que "Regenerar" pode substituir
+// sem apagar o que foi adicionado à mão.
+model HoraAHoraEvent {
+  id                    String             @id @default(cuid())
+  shootDayId            String
+  horaInicio            String
+  horaFim               String?
+  descricao             String
+  tipo                  HoraAHoraEventTipo
+  geradoAutomaticamente Boolean            @default(false)
+  ordem                 Int
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@map("hora_a_hora_events")
+}
+
+model CharacterCallTime {
+  id          String   @id @default(cuid())
+  characterId String
+  shootDayId  String
+  chamada     String?
+  camarim     String?
+  set         String?
+  saida       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  shootDay  ShootDay  @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, shootDayId])
+  @@map("character_call_times")
+}
+
+model SceneShootDay {
+  id             String              @id @default(cuid())
+  sceneId        String
+  shootDayId     String
+  ordem          Int
+  bloco          SceneBlock          @default(MANHA)
+  prepMin        Int?
+  rodMin         Int?
+  status         SceneShootDayStatus @default(PENDENTE)
+  horaInicioReal String?
+  horaFimReal    String?
+
+  // Notas operacionais do AD pra esta cena NESTA diária (diferente de Scene.notasAD, que é geral,
+  // e do BreakdownSheet, que é técnico) — pré-preenchidas automaticamente na primeira vez que a
+  // cena é agendada num dia (ver stripboard/reorder route), editáveis livremente depois.
+  // observacoesAutoGeradas vira false assim que o AD edita o campo (controla o badge "Gerado
+  // automaticamente" na UI) e precisa ser preservado através do delete+recreate do reorder route,
+  // igual a `observacoes`.
+  observacoes            String?  @db.Text
+  observacoesAutoGeradas Boolean  @default(false)
+
+  scene    Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@unique([shootDayId, sceneId])
+  @@unique([shootDayId, ordem])
+  @@map("scene_shoot_days")
+}
+
+model Extra {
+  id         String   @id @default(cuid())
+  projectId  String
+  personagem String
+  quantidade Int      @default(1)
+  chamada    DateTime? @db.Time
+  saida      DateTime? @db.Time
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cenas   ExtraScene[]
+
+  @@map("extras")
+}
+
+model ExtraScene {
+  id      String @id @default(cuid())
+  extraId String
+  sceneId String
+
+  extra Extra @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  scene Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([extraId, sceneId])
+  @@map("extra_scenes")
+}
+
+model BreakdownSheet {
+  id                  String   @id @default(cuid())
+  sceneId             String   @unique
+  figurino            String[]
+  make                String[]
+  arteDressing        String?  @db.Text
+  objetos             String[]
+  comidaCena          String[]
+  microfones          String[]
+  trilha              String[]
+  habilidades         String[]
+  arteGrafica         String[]
+  posProducao         String[]
+  notasArte           String?  @db.Text
+  notasFoto           String?  @db.Text
+  notasSom            String?  @db.Text
+  notasContinuidade   String?  @db.Text
+  notasProducao       String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  scene Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@map("breakdown_sheets")
+}
+
+model CalendarEvent {
+  id                 String            @id @default(cuid())
+  projectId          String
+  data               DateTime
+  tipo               CalendarEventType
+  nome               String
+  elementosAfetados  String[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_events")
+}
+
+// ---------------------------------------------------------------------------
+// Módulo Budgeting
+// ---------------------------------------------------------------------------
+
+model Budget {
+  id                     String   @id @default(cuid())
+  projectId              String   @unique
+  moedaBase              String   @default("BRL")
+  versao                 String   @default("1.0")
+  contingenciaPercentual Decimal  @default(10) @db.Decimal(5, 2)
+  notas                  String?  @db.Text
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  accountGroups   AccountGroup[]
+  accounts        BudgetAccount[]
+  lineItems       LineItem[]
+  globals         Global[]
+  fringes         Fringe[]
+  fringeLineItems FringeLineItem[]
+  scenarios       BudgetScenario[]
+  actuals         Actual[]
+
+  @@map("budgets")
+}
+
+model AccountGroup {
+  id       String           @id @default(cuid())
+  budgetId String
+  codigo   String
+  nome     String
+  tipo     AccountGroupType
+  ordem    Int
+
+  budget   Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  accounts BudgetAccount[]
+
+  @@unique([budgetId, codigo])
+  @@map("account_groups")
+}
+
+model BudgetAccount {
+  id       String @id @default(cuid())
+  groupId  String
+  budgetId String
+  codigo   String
+  nome     String
+  ordem    Int
+
+  group           AccountGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  lineItems       LineItem[]
+  fringeLineItems FringeLineItem[]
+  actuals         Actual[]
+
+  @@unique([budgetId, codigo])
+  @@map("budget_accounts")
+}
+
+model LineItem {
+  id           String   @id @default(cuid())
+  accountId    String
+  budgetId     String
+  scenarioId   String?
+  descricao    String
+  quantidade   Decimal  @db.Decimal(10, 2)
+  unidade      String
+  periodo      Decimal  @default(1) @db.Decimal(10, 2)
+  taxa         Decimal  @db.Decimal(12, 2)
+  moeda        String   @default("BRL")
+  taxaCambio   Decimal  @default(1.0) @db.Decimal(10, 4)
+  total        Decimal  @db.Decimal(14, 2)
+  isFrengeable Boolean  @default(false)
+  globalRef    String?
+  notas        String?  @db.Text
+  ordem        Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  account  BudgetAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  budget   Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  scenario BudgetScenario? @relation(fields: [scenarioId], references: [id], onDelete: SetNull)
+
+  @@map("line_items")
+}
+
+model Global {
+  id          String   @id @default(cuid())
+  budgetId    String
+  chave       String
+  valor       Decimal  @db.Decimal(10, 2)
+  descricao   String?
+  afetaLinhas String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, chave])
+  @@map("globals")
+}
+
+model Fringe {
+  id         String     @id @default(cuid())
+  budgetId   String
+  nome       String
+  percentual Decimal    @db.Decimal(5, 2)
+  teto       Decimal?   @db.Decimal(12, 2)
+  aplicaEm   String[]
+  tipo       FringeType
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  budget          Budget           @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  fringeLineItems FringeLineItem[]
+
+  @@map("fringes")
+}
+
+model FringeLineItem {
+  id        String  @id @default(cuid())
+  fringeId  String
+  budgetId  String
+  accountId String?
+  base      Decimal @db.Decimal(14, 2)
+  valor     Decimal @db.Decimal(14, 2)
+
+  fringe  Fringe         @relation(fields: [fringeId], references: [id], onDelete: Cascade)
+  budget  Budget         @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  account BudgetAccount? @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("fringe_line_items")
+}
+
+model BudgetScenario {
+  id       String  @id @default(cuid())
+  budgetId String
+  nome     String
+  isBase   Boolean @default(false)
+  notas    String? @db.Text
+
+  budget    Budget                   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  lineItems LineItem[]
+  overrides ScenarioGlobalOverride[]
+
+  @@map("budget_scenarios")
+}
+
+model ScenarioGlobalOverride {
+  id         String  @id @default(cuid())
+  scenarioId String
+  chave      String
+  valor      Decimal @db.Decimal(10, 2)
+
+  scenario BudgetScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@unique([scenarioId, chave])
+  @@map("scenario_global_overrides")
+}
+
+model Actual {
+  id        String   @id @default(cuid())
+  budgetId  String
+  accountId String
+  descricao String
+  valor     Decimal  @db.Decimal(14, 2)
+  data      DateTime
+  notas     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  budget  Budget        @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  account BudgetAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("actuals")
+}
+
+// ---------------------------------------------------------------------------
+// Documentos do AD
+// ---------------------------------------------------------------------------
+
+model ContinuityNote {
+  id         String   @id @default(cuid())
+  sceneId    String
+  shootDayId String? // dia em que a nota foi registrada, se aplicável
+  texto      String   @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  scene    Scene     @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  shootDay ShootDay? @relation(fields: [shootDayId], references: [id], onDelete: SetNull)
+
+  @@map("continuity_notes")
+}
+
+model CrewMember {
+  id           String   @id @default(cuid())
+  projectId    String
+  nome         String
+  funcao       String
+  departamento String?
+  telefone     String?
+  email        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("crew_members")
+}
+
+model DailyProgressReport {
+  id                 String   @id @default(cuid())
+  shootDayId         String   @unique
+  cenasConcluidas    String[] // números das cenas efetivamente concluídas nesta diária
+  cenasNaoConcluidas String[] // números das cenas previstas mas não concluídas (ficam pra outro dia)
+  paginasFilmadas    Decimal  @default(0) @db.Decimal(6, 3)
+  horaInicioReal     String?
+  horaTerminoReal    String?
+  atrasoMin          Int? // positivo = atrasado, negativo = adiantado
+  motivoAtraso       String?  @db.Text
+  observacoes        String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@map("daily_progress_reports")
+}

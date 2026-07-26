@@ -1,0 +1,62 @@
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { projectUpdateSchema } from "@/lib/validation/project";
+
+export async function GET(_request: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
+  const project = await prisma.project.findFirst({
+    where: { id: params.id, ownerId: session.user.id },
+  });
+
+  if (!project) return NextResponse.json({ error: "Projeto não encontrado." }, { status: 404 });
+
+  return NextResponse.json(project);
+}
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
+  const project = await prisma.project.findFirst({
+    where: { id: params.id, ownerId: session.user.id },
+  });
+  if (!project) return NextResponse.json({ error: "Projeto não encontrado." }, { status: 404 });
+
+  const body = await request.json();
+  const parsed = projectUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { dataInicio, dataFim, ...rest } = parsed.data;
+
+  const updated = await prisma.project.update({
+    where: { id: project.id },
+    data: {
+      ...rest,
+      dataInicio: dataInicio ? new Date(dataInicio) : dataInicio === null ? null : undefined,
+      dataFim: dataFim ? new Date(dataFim) : dataFim === null ? null : undefined,
+    },
+  });
+
+  return NextResponse.json(updated);
+}
+
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+
+  const project = await prisma.project.findFirst({
+    where: { id: params.id, ownerId: session.user.id },
+  });
+  if (!project) return NextResponse.json({ error: "Projeto não encontrado." }, { status: 404 });
+
+  await prisma.project.delete({ where: { id: project.id } });
+
+  return NextResponse.json({ ok: true });
+}

@@ -15,10 +15,9 @@ export const shootDaySchema = z.object({
   data: z.string().min(1),
   chamadaGeral: timeField,
   lancheHorario: timeField,
-  blocoManhaInicio: timeField,
-  almocoInicio: timeField,
-  almocoFim: timeField,
-  blocoTardeInicio: timeField,
+  // blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio não são mais editáveis aqui — são
+  // sempre derivados pelo servidor (chamadaGeral + Jornada do projeto + posição do marcador de
+  // almoço no Stripboard), ver recalculateDayBlocks em src/lib/shootday-blocks.ts.
   desprodInicio: timeField,
 
   // Logística — Call Sheet

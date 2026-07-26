@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 export * from "@/lib/shots-shared";
 
 import { computeSceneShotTotals, recomputeResetsForOrderedShots } from "@/lib/shots-shared";
+import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 
 /** Recalcula tipoReset/tempoResetMin de todos os planos da cena (a ordem pode ter mudado) e
  *  sincroniza SceneShootDay.rodMin em toda diária onde a cena estiver agendada — chamado ao fim
@@ -29,6 +30,13 @@ export async function recalculateScene(sceneId: string): Promise<Shot[]> {
   if (updated.length > 0) {
     const { totalMin } = computeSceneShotTotals(updated);
     await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin: totalMin } });
+
+    // Rod mudou, então o cronograma daquela(s) diária(s) mudou — recalcula blocoManha/almoço de cada
+    // uma delas (normalmente uma só, mas nada impede a mesma cena de estar agendada em mais de um dia).
+    const days = await prisma.sceneShootDay.findMany({ where: { sceneId }, select: { shootDayId: true } });
+    for (const day of days) {
+      await recalculateDayBlocks(day.shootDayId);
+    }
   }
 
   return updated;

@@ -99,3 +99,118 @@ export function computeBlockSchedule(
     };
   });
 }
+
+/** Formata uma DURAÇÃO em minutos (não um horário) no mesmo padrão "5h45" de formatHHh — usado nas
+ *  mensagens de validação do almoço ("Almoço 5h45 após a chamada"), onde o número representa tempo
+ *  decorrido desde a chamada geral, não um horário do relógio. */
+export function formatDurationHHh(totalMin: number): string {
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
+
+export type JornadaConfig = {
+  limiteAlmocoMin: number;
+  duracaoAlmocoMin: number;
+  preparacaoInicialMin: number;
+};
+
+export type DerivedBlockTimes = {
+  blocoManhaInicio: string | null;
+  almocoInicio: string | null;
+  almocoFim: string | null;
+  blocoTardeInicio: string | null;
+};
+
+/** Deriva os horários de bloco/almoço de uma diária a partir da chamada geral, da Jornada configurada
+ *  no projeto e do tempo acumulado das cenas da manhã (bloco não é definido, é consequência da posição
+ *  do marcador de almoço no Stripboard — ver recalculateDayBlocks em src/lib/shootday-blocks.ts, que
+ *  chama esta função depois de qualquer reorder/edição). Sem chamada geral não há nenhum horário
+ *  calculável — tudo fica null, como já acontecia quando os campos eram editados manualmente. */
+export function computeDerivedBlockTimes(
+  chamadaGeral: string | null,
+  manhaItems: ScheduleItem[],
+  config: JornadaConfig
+): DerivedBlockTimes {
+  if (!chamadaGeral) {
+    return { blocoManhaInicio: null, almocoInicio: null, almocoFim: null, blocoTardeInicio: null };
+  }
+
+  const blocoManhaInicio = minutesToTime(timeToMinutes(chamadaGeral) + config.preparacaoInicialMin);
+  const manhaSchedule = computeBlockSchedule(blocoManhaInicio, manhaItems);
+  const lastManha = manhaSchedule[manhaSchedule.length - 1];
+  const almocoInicioMin = lastManha ? timeToMinutes(lastManha.rodEnd) : timeToMinutes(blocoManhaInicio);
+  const almocoFimMin = almocoInicioMin + config.duracaoAlmocoMin;
+
+  return {
+    blocoManhaInicio,
+    almocoInicio: minutesToTime(almocoInicioMin),
+    almocoFim: minutesToTime(almocoFimMin),
+    blocoTardeInicio: minutesToTime(almocoFimMin),
+  };
+}
+
+/** Sugere onde posicionar o marcador de almoço quando a diária ainda nunca foi dividida manualmente
+ *  (todas as cenas em bloco MANHA) — o último corte de cena antes que `limiteAlmocoMin` (contado a
+ *  partir da chamada geral) seria excedido. Usado tanto por recalculateDayBlocks (pra persistir o
+ *  corte de fato, em src/lib/shootday-blocks.ts) quanto por getStripboardBoard (pra exibir a mesma
+ *  sugestão antes de qualquer gravação, no primeiro carregamento da página). */
+export function suggestAlmocoIndex(
+  chamadaGeral: string | null,
+  blocoManhaInicio: string | null,
+  items: ScheduleItem[],
+  limiteAlmocoMin: number
+): number {
+  if (!chamadaGeral || !blocoManhaInicio) return items.length;
+
+  const deadline = timeToMinutes(chamadaGeral) + limiteAlmocoMin;
+  const schedule = computeBlockSchedule(blocoManhaInicio, items);
+
+  for (let i = 0; i < schedule.length; i++) {
+    const entry = schedule[i];
+    if (entry && timeToMinutes(entry.rodEnd) > deadline) return i;
+  }
+  return items.length;
+}
+
+export type AlmocoValidationStatus = "ok" | "perto" | "acima";
+
+export type AlmocoValidation = {
+  status: AlmocoValidationStatus;
+  /** Minutos decorridos entre a chamada geral e o início do almoço — null quando não há dado suficiente. */
+  minutosDesdeChamada: number | null;
+  /** Mensagem pronta pra exibir no marcador, já no formato "Almoço 5h45 após a chamada — perto do limite" — null quando status é "ok" (sem aviso). */
+  mensagem: string | null;
+};
+
+/** Valida a distância entre a chamada geral e o início do almoço contra o limite configurado do
+ *  projeto — nunca bloqueia a ação (o AD pode ter motivo pra estourar; o sistema avisa e ele decide),
+ *  só classifica o marcador em âmbar/vermelho pra UI. Faixa âmbar = últimos 30min antes do limite. */
+export function validateAlmocoTiming(
+  chamadaGeral: string | null,
+  almocoInicio: string | null,
+  limiteAlmocoMin: number
+): AlmocoValidation {
+  if (!chamadaGeral || !almocoInicio) {
+    return { status: "ok", minutosDesdeChamada: null, mensagem: null };
+  }
+
+  const minutosDesdeChamada = timeToMinutes(almocoInicio) - timeToMinutes(chamadaGeral);
+  const decorrido = formatDurationHHh(Math.max(minutosDesdeChamada, 0));
+
+  if (minutosDesdeChamada > limiteAlmocoMin) {
+    return {
+      status: "acima",
+      minutosDesdeChamada,
+      mensagem: `Almoço ${decorrido} após a chamada — acima do limite`,
+    };
+  }
+  if (minutosDesdeChamada > limiteAlmocoMin - 30) {
+    return {
+      status: "perto",
+      minutosDesdeChamada,
+      mensagem: `Almoço ${decorrido} após a chamada — perto do limite`,
+    };
+  }
+  return { status: "ok", minutosDesdeChamada, mensagem: null };
+}

@@ -39,8 +39,12 @@ export type DayState = {
   almocoFim: string | null;
   blocoTardeInicio: string | null;
   desprodInicio: string | null;
-  manha: StripItem[];
-  tarde: StripItem[];
+  /** Lista única do dia, já na ordem de filmagem (SceneShootDay.ordem) — bloco não existe mais como
+   *  duas listas separadas: itens em índice < almocoIndex são manhã, os demais são tarde. */
+  scenes: StripItem[];
+  /** Posição do marcador de almoço dentro de `scenes` — arrastar o marcador é o que move este número,
+   *  nunca um horário declarado diretamente (ver AlmocoMarker/StripboardBoard). */
+  almocoIndex: number;
 };
 
 export type BoardState = {
@@ -48,8 +52,22 @@ export type BoardState = {
   days: DayState[];
 };
 
-export type ContainerId = "boneyard" | `day:${string}:MANHA` | `day:${string}:TARDE`;
+export type ContainerId = "boneyard" | `day:${string}`;
 
-export function dayContainerId(dayId: string, bloco: "MANHA" | "TARDE"): ContainerId {
-  return `day:${dayId}:${bloco}`;
+export function dayContainerId(dayId: string): ContainerId {
+  return `day:${dayId}`;
+}
+
+/** id sortable do marcador de almoço de um dia — único por dia (não por bloco, já que só existe um
+ *  marcador), no mesmo namespace de ids que os sceneId dentro do DndContext do Stripboard. */
+export function almocoMarkerId(dayId: string): string {
+  return `almoco:${dayId}`;
+}
+
+export function isAlmocoMarkerId(id: string): id is `almoco:${string}` {
+  return id.startsWith("almoco:");
+}
+
+export function almocoMarkerDayId(markerId: string): string {
+  return markerId.slice("almoco:".length);
 }

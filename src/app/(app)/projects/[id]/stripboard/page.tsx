@@ -9,6 +9,7 @@ import type { BoardState, DayState, SceneSummary, ShotsSummary, StripItem } from
 import { Button } from "@/components/ui/button";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
+import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
 import { computeSceneShotTotals } from "@/lib/shots";
 
 const shotsSelect = {
@@ -33,7 +34,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
   const [project, scenes, shootDays, characters] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
-      select: { titulo: true, sigla: true, sistemaIdElenco: true },
+      select: { titulo: true, sigla: true, sistemaIdElenco: true, limiteAlmocoMin: true, duracaoAlmocoMin: true },
     }),
     prisma.scene.findMany({
       where: { projectId: params.id, omitida: false },
@@ -90,21 +91,34 @@ export default async function StripboardPage({ params }: { params: { id: string 
     }));
 
   const days: DayState[] = shootDays.map((day) => {
-    const manha: StripItem[] = [];
-    const tarde: StripItem[] = [];
+    const sceneItems: StripItem[] = day.scenes.map((entry) => ({
+      sceneId: entry.sceneId,
+      prepMin: entry.prepMin,
+      rodMin: entry.rodMin,
+      scene: toSceneSummary(entry.scene),
+      shotsSummary: toShotsSummary(entry.scene.shots),
+      observacoes: entry.observacoes,
+      observacoesAutoGeradas: entry.observacoesAutoGeradas,
+    }));
 
-    for (const entry of day.scenes) {
-      const item: StripItem = {
-        sceneId: entry.sceneId,
-        prepMin: entry.prepMin,
-        rodMin: entry.rodMin,
-        scene: toSceneSummary(entry.scene),
-        shotsSummary: toShotsSummary(entry.scene.shots),
-        observacoes: entry.observacoes,
-        observacoesAutoGeradas: entry.observacoesAutoGeradas,
-      };
-      (entry.bloco === "MANHA" ? manha : tarde).push(item);
-    }
+    // Bloco não existe mais como duas listas: manhã/tarde são derivadas da posição do marcador de
+    // almoço (almocoIndex) dentro da lista única `scenes`, já ordenada por SceneShootDay.ordem.
+    // Enquanto a diária nunca foi dividida manualmente (todas as cenas ainda em bloco MANHA — o
+    // mesmo critério usado por recalculateDayBlocks pra decidir se ainda pode auto-posicionar),
+    // sugere aqui a mesma posição que seria persistida no próximo recálculo, pra já exibir a posição
+    // certa do marcador antes mesmo de qualquer gravação.
+    const neverSplit = day.scenes.length > 0 && day.scenes.every((e) => e.bloco === "MANHA");
+    const almocoIndex = neverSplit
+      ? suggestAlmocoIndex(
+          day.chamadaGeral,
+          day.blocoManhaInicio,
+          day.scenes.map((e) => ({
+            prepMin: resolveEffectivePrepMin(e.prepMin),
+            rodMin: resolveEffectiveRodMin(e.rodMin, e.scene.tempoEstimadoMin),
+          })),
+          project.limiteAlmocoMin
+        )
+      : day.scenes.filter((e) => e.bloco === "MANHA").length;
 
     return {
       id: day.id,
@@ -117,8 +131,8 @@ export default async function StripboardPage({ params }: { params: { id: string 
       almocoFim: day.almocoFim,
       blocoTardeInicio: day.blocoTardeInicio,
       desprodInicio: day.desprodInicio,
-      manha,
-      tarde,
+      scenes: sceneItems,
+      almocoIndex,
     };
   });
 
@@ -152,6 +166,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
           characterMap={characterMap}
           sistemaIdElenco={project.sistemaIdElenco}
           projeto={{ titulo: project.titulo, sigla: project.sigla }}
+          jornada={{ limiteAlmocoMin: project.limiteAlmocoMin, duracaoAlmocoMin: project.duracaoAlmocoMin }}
         />
       )}
     </div>

@@ -49,6 +49,9 @@ export default async function ProjectLayout({
             continuismoResponsavel: project.continuismoResponsavel,
             continuismoUsarLogo: project.continuismoUsarLogo,
             continuismoLinhasPorFolha: project.continuismoLinhasPorFolha,
+            limiteAlmocoMin: project.limiteAlmocoMin,
+            duracaoAlmocoMin: project.duracaoAlmocoMin,
+            preparacaoInicialMin: project.preparacaoInicialMin,
           }}
         />
       </div>

@@ -42,6 +42,9 @@ type ProjectDefaults = {
   continuismoResponsavel: string;
   continuismoUsarLogo: boolean;
   continuismoLinhasPorFolha: number;
+  limiteAlmocoMin: number;
+  duracaoAlmocoMin: number;
+  preparacaoInicialMin: number;
 };
 
 export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
@@ -72,6 +75,9 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
       continuismoResponsavel: form.get("continuismoResponsavel") || undefined,
       continuismoUsarLogo,
       continuismoLinhasPorFolha: form.get("continuismoLinhasPorFolha") || undefined,
+      limiteAlmocoMin: form.get("limiteAlmocoMin") || undefined,
+      duracaoAlmocoMin: form.get("duracaoAlmocoMin") || undefined,
+      preparacaoInicialMin: form.get("preparacaoInicialMin") || undefined,
     };
 
     const res = await fetch(`/api/projects/${project.id}`, {
@@ -243,6 +249,50 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
             <p className="text-xs text-muted-foreground">
               Define como o elenco é identificado nos documentos gerados (Call Sheet, Escaleta, etc.).
             </p>
+          </div>
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Jornada</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="limiteAlmocoMin" className="inline-flex items-center gap-1.5">
+                  Limite para o almoço
+                  <TermTooltip content="Tempo máximo entre a chamada geral e o início do intervalo. Praxe do mercado: 5 a 6 horas." />
+                </Label>
+                <Input
+                  id="limiteAlmocoMin"
+                  name="limiteAlmocoMin"
+                  type="number"
+                  min={1}
+                  defaultValue={project.limiteAlmocoMin}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="duracaoAlmocoMin" className="inline-flex items-center gap-1.5">
+                  Duração do intervalo
+                  <TermTooltip content="Tempo total que o almoço ocupa no cronograma. A praxe conta 1 hora a partir do momento em que o último da equipe se serve — se a fila costuma demorar, considere somar esse tempo aqui." />
+                </Label>
+                <Input
+                  id="duracaoAlmocoMin"
+                  name="duracaoAlmocoMin"
+                  type="number"
+                  min={1}
+                  defaultValue={project.duracaoAlmocoMin}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="preparacaoInicialMin" className="inline-flex items-center gap-1.5">
+                  Preparação inicial
+                  <TermTooltip content="Tempo entre a chamada geral e o início da primeira cena." />
+                </Label>
+                <Input
+                  id="preparacaoInicialMin"
+                  name="preparacaoInicialMin"
+                  type="number"
+                  min={0}
+                  defaultValue={project.preparacaoInicialMin}
+                />
+              </div>
+            </div>
           </div>
           <div className="space-y-3">
             <h4 className="text-sm font-medium">Boletim de Continuísmo</h4>

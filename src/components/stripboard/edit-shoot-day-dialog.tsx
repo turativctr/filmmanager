@@ -35,10 +35,6 @@ export function EditShootDayDialog({ projectId, day }: { projectId: string; day:
       data: form.get("data"),
       chamadaGeral: form.get("chamadaGeral") || undefined,
       lancheHorario: form.get("lancheHorario") || undefined,
-      blocoManhaInicio: form.get("blocoManhaInicio") || undefined,
-      almocoInicio: form.get("almocoInicio") || undefined,
-      almocoFim: form.get("almocoFim") || undefined,
-      blocoTardeInicio: form.get("blocoTardeInicio") || undefined,
       desprodInicio: form.get("desprodInicio") || undefined,
     };
 
@@ -83,7 +79,10 @@ export function EditShootDayDialog({ projectId, day }: { projectId: string; day:
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar Diária {day.numeroDia}</DialogTitle>
-          <DialogDescription>Horários dos blocos e da diária.</DialogDescription>
+          <DialogDescription>
+            Horários da diária. Bloco manhã/tarde e almoço são calculados a partir da chamada geral e do
+            marcador de almoço no Stripboard.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -110,41 +109,6 @@ export function EditShootDayDialog({ projectId, day }: { projectId: string; day:
             <div className="space-y-1.5">
               <Label htmlFor="lancheHorario">Lanche</Label>
               <Input id="lancheHorario" name="lancheHorario" type="time" defaultValue={day.lancheHorario ?? ""} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="blocoManhaInicio">Início bloco manhã</Label>
-              <Input
-                id="blocoManhaInicio"
-                name="blocoManhaInicio"
-                type="time"
-                defaultValue={day.blocoManhaInicio ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="blocoTardeInicio">Início bloco tarde</Label>
-              <Input
-                id="blocoTardeInicio"
-                name="blocoTardeInicio"
-                type="time"
-                defaultValue={day.blocoTardeInicio ?? ""}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="almocoInicio">Almoço início</Label>
-              <Input
-                id="almocoInicio"
-                name="almocoInicio"
-                type="time"
-                defaultValue={day.almocoInicio ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="almocoFim">Almoço fim</Label>
-              <Input id="almocoFim" name="almocoFim" type="time" defaultValue={day.almocoFim ?? ""} />
             </div>
           </div>
           <div className="space-y-1.5">

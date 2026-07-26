@@ -227,6 +227,13 @@ model Project {
   status    ProjectStatus @default(ATIVO)
   arquivado Boolean       @default(false)
 
+  // Configuração da "Jornada" do dia de filmagem — usada por recalculateDayBlocks (src/lib/shootday-blocks.ts)
+  // pra derivar blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de cada ShootDay. O almoço nunca é
+  // definido diretamente pelo AD: ele é consequência de onde o marcador fica no Stripboard (ver ShootDay).
+  limiteAlmocoMin      Int @default(360) // praxe de mercado: 5 a 6h após a chamada geral
+  duracaoAlmocoMin     Int @default(60)
+  preparacaoInicialMin Int @default(60) // chamada geral -> início da 1ª cena
+
   scenes         Scene[]
   characters     Character[]
   shootDays      ShootDay[]

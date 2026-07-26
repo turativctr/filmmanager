@@ -1,11 +1,11 @@
-import type { BoardState, ContainerId, StripItem } from "./types";
+import { almocoMarkerId } from "./types";
+import type { BoardState, ContainerId, DayState, StripItem } from "./types";
 
 export function findContainer(board: BoardState, sceneId: string): ContainerId | undefined {
   if (board.boneyard.some((item) => item.sceneId === sceneId)) return "boneyard";
 
   for (const day of board.days) {
-    if (day.manha.some((item) => item.sceneId === sceneId)) return `day:${day.id}:MANHA`;
-    if (day.tarde.some((item) => item.sceneId === sceneId)) return `day:${day.id}:TARDE`;
+    if (day.scenes.some((item) => item.sceneId === sceneId)) return `day:${day.id}`;
   }
 
   return undefined;
@@ -18,22 +18,44 @@ export function isContainerId(id: string): id is ContainerId {
 export function getItems(board: BoardState, container: ContainerId): StripItem[] {
   if (container === "boneyard") return board.boneyard;
 
-  const [, dayId, bloco] = container.split(":");
-  const day = board.days.find((d) => d.id === dayId);
-  if (!day) return [];
-  return bloco === "MANHA" ? day.manha : day.tarde;
+  const dayId = container.split(":")[1];
+  return board.days.find((d) => d.id === dayId)?.scenes ?? [];
 }
 
 export function setItems(board: BoardState, container: ContainerId, items: StripItem[]): BoardState {
   if (container === "boneyard") return { ...board, boneyard: items };
 
-  const [, dayId, bloco] = container.split(":");
+  const dayId = container.split(":")[1];
   return {
     ...board,
-    days: board.days.map((day) =>
-      day.id === dayId ? { ...day, [bloco === "MANHA" ? "manha" : "tarde"]: items } : day
-    ),
+    days: board.days.map((day) => (day.id === dayId ? { ...day, scenes: items } : day)),
   };
+}
+
+/** Uma entrada da lista sortable exibida de um dia — cenas e o marcador de almoço compartilham a
+ *  mesma lista/SortableContext (ver StripDropZone em shoot-day-column.tsx), então qualquer drag
+ *  dentro do dia (mover uma cena OU mover o próprio marcador) é tratado como reordenar esta lista
+ *  combinada, depois convertida de volta em (scenes, almocoIndex) por splitDayEntries. */
+export type DayEntry = { type: "scene"; item: StripItem } | { type: "almoco" };
+
+export function buildDayEntries(day: DayState): DayEntry[] {
+  const entries: DayEntry[] = day.scenes.map((item) => ({ type: "scene", item }));
+  entries.splice(day.almocoIndex, 0, { type: "almoco" });
+  return entries;
+}
+
+export function dayEntryIds(day: DayState): string[] {
+  return buildDayEntries(day).map((entry) => (entry.type === "scene" ? entry.item.sceneId : almocoMarkerId(day.id)));
+}
+
+export function splitDayEntries(entries: DayEntry[]): { scenes: StripItem[]; almocoIndex: number } {
+  const scenes: StripItem[] = [];
+  let almocoIndex = entries.length - 1;
+  for (const entry of entries) {
+    if (entry.type === "almoco") almocoIndex = scenes.length;
+    else scenes.push(entry.item);
+  }
+  return { scenes, almocoIndex };
 }
 
 export type StripboardChangePayload = {
@@ -45,11 +67,10 @@ export type StripboardChangePayload = {
   rodMin: number | null;
 };
 
-/** Serializa o conteúdo atual de um conjunto de containers em mudanças para persistir via API. */
-export function computeChanges(
-  board: BoardState,
-  containers: ContainerId[]
-): StripboardChangePayload[] {
+/** Serializa o conteúdo atual de um conjunto de containers em mudanças para persistir via API —
+ *  bloco nunca é lido de um estado próprio: é sempre derivado da posição do item em relação ao
+ *  almocoIndex do dia (índice < almocoIndex = manhã, consequência da posição do marcador). */
+export function computeChanges(board: BoardState, containers: ContainerId[]): StripboardChangePayload[] {
   const changes: StripboardChangePayload[] = [];
 
   for (const container of containers) {
@@ -69,16 +90,15 @@ export function computeChanges(
       continue;
     }
 
-    const [, dayId, bloco] = container.split(":");
+    const dayId = container.split(":")[1];
     const day = board.days.find((d) => d.id === dayId)!;
-    const baseOrdem = bloco === "TARDE" ? day.manha.length : 0;
 
     items.forEach((item, index) => {
       changes.push({
         sceneId: item.sceneId,
         shootDayId: dayId,
-        bloco: bloco as "MANHA" | "TARDE",
-        ordem: baseOrdem + index,
+        bloco: index < day.almocoIndex ? "MANHA" : "TARDE",
+        ordem: index,
         prepMin: item.prepMin,
         rodMin: item.rodMin,
       });

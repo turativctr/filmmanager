@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { AlmocoMarker } from "@/components/stripboard/almoco-marker";
 import { DayGroupingButtons } from "@/components/stripboard/day-grouping-buttons";
 import { EditShootDayDialog } from "@/components/stripboard/edit-shoot-day-dialog";
 import { DayPlanoView } from "@/components/stripboard/plano-view/day-plano-view";
@@ -23,13 +24,22 @@ import { formatPaginas } from "@/lib/paginas";
 import {
   computeBlockSchedule,
   formatHHh,
+  minutesToTime,
   resolveEffectivePrepMin,
   resolveEffectiveRodMin,
   timeToMinutes,
+  validateAlmocoTiming,
 } from "@/lib/schedule";
 
-import { dayContainerId } from "./types";
+import { almocoMarkerId, dayContainerId } from "./types";
 import type { DayState, StripItem } from "./types";
+
+function toScheduleItem(item: StripItem) {
+  return {
+    prepMin: resolveEffectivePrepMin(item.prepMin),
+    rodMin: resolveEffectiveRodMin(item.rodMin, item.scene.tempoEstimadoMin),
+  };
+}
 
 export function ShootDayColumn({
   projectId,
@@ -37,6 +47,7 @@ export function ShootDayColumn({
   characterMap,
   sistemaIdElenco,
   projeto,
+  jornada,
   onUpdateTimes,
 }: {
   projectId: string;
@@ -44,6 +55,7 @@ export function ShootDayColumn({
   characterMap: Record<string, { idCurto: string; numeroElenco: number | null; personagem: string }>;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   projeto: { titulo: string; sigla: string | null };
+  jornada: { limiteAlmocoMin: number; duracaoAlmocoMin: number };
   onUpdateTimes: (sceneId: string, prepMin: number | null, rodMin: number | null) => void;
 }) {
   const resolveId = (id: string) => {
@@ -74,9 +86,11 @@ export function ShootDayColumn({
     }
   }
 
-  const scenesSemTempoCount = [...day.manha, ...day.tarde].filter(
-    (i) => !i.rodMin || i.rodMin === 0
-  ).length;
+  const allItems = day.scenes;
+  const manhaItems = day.scenes.slice(0, day.almocoIndex);
+  const tardeItems = day.scenes.slice(day.almocoIndex);
+
+  const scenesSemTempoCount = allItems.filter((i) => !i.rodMin || i.rodMin === 0).length;
 
   function handleDownloadPdfClick() {
     if (scenesSemTempoCount > 0) {
@@ -87,32 +101,33 @@ export function ShootDayColumn({
   }
 
   const manhaSchedule = useMemo(
-    () =>
-      computeBlockSchedule(
-        day.blocoManhaInicio,
-        day.manha.map((i) => ({
-          prepMin: resolveEffectivePrepMin(i.prepMin),
-          rodMin: resolveEffectiveRodMin(i.rodMin, i.scene.tempoEstimadoMin),
-        }))
-      ),
-    [day.blocoManhaInicio, day.manha]
+    () => computeBlockSchedule(day.blocoManhaInicio, manhaItems.map(toScheduleItem)),
+    [day.blocoManhaInicio, manhaItems]
   );
+
+  // Bloco não é declarado, é consequência da posição do marcador — então almocoInicio/almocoFim (e por
+  // tabela, a âncora do bloco tarde) são recalculados aqui a partir do acumulado da manhã em tempo real,
+  // pra refletir instantaneamente qualquer drag otimista antes do round-trip com o servidor (que persiste
+  // o mesmo cálculo via recalculateDayBlocks). blocoManhaInicio em si não muda por drag: só por
+  // chamadaGeral/preparacaoInicialMin, que já vêm prontos do servidor.
+  const lastManha = manhaSchedule[manhaSchedule.length - 1];
+  const almocoInicio = lastManha ? lastManha.rodEnd : day.blocoManhaInicio;
+  const almocoFim = almocoInicio ? minutesToTime(timeToMinutes(almocoInicio) + jornada.duracaoAlmocoMin) : null;
+
   const tardeSchedule = useMemo(
-    () =>
-      computeBlockSchedule(
-        day.blocoTardeInicio,
-        day.tarde.map((i) => ({
-          prepMin: resolveEffectivePrepMin(i.prepMin),
-          rodMin: resolveEffectiveRodMin(i.rodMin, i.scene.tempoEstimadoMin),
-        }))
-      ),
-    [day.blocoTardeInicio, day.tarde]
+    () => computeBlockSchedule(almocoFim, tardeItems.map(toScheduleItem)),
+    [almocoFim, tardeItems]
+  );
+
+  const almocoValidation = useMemo(
+    () => validateAlmocoTiming(day.chamadaGeral, almocoInicio, jornada.limiteAlmocoMin),
+    [day.chamadaGeral, almocoInicio, jornada.limiteAlmocoMin]
   );
 
   const conflicts = useMemo(() => {
     const all = [
-      ...day.manha.map((item, index) => ({ item, schedule: manhaSchedule[index] })),
-      ...day.tarde.map((item, index) => ({ item, schedule: tardeSchedule[index] })),
+      ...manhaItems.map((item, index) => ({ item, schedule: manhaSchedule[index] })),
+      ...tardeItems.map((item, index) => ({ item, schedule: tardeSchedule[index] })),
     ].filter((entry) => entry.schedule);
 
     return detectSceneConflicts(
@@ -128,12 +143,16 @@ export function ShootDayColumn({
         return c ? getCharacterId(c, { sistemaIdElenco }) : characterId;
       }
     );
-  }, [day.manha, day.tarde, manhaSchedule, tardeSchedule, characterMap, sistemaIdElenco]);
+  }, [manhaItems, tardeItems, manhaSchedule, tardeSchedule, characterMap, sistemaIdElenco]);
 
-  const allItems = [...day.manha, ...day.tarde];
   const totalPaginas = allItems.reduce((sum, item) => sum + Number(item.scene.paginas), 0);
   const totalMinutos = allItems.reduce((sum, item) => sum + (item.scene.tempoEstimadoMin ?? 0), 0);
   const elencoPresente = [...new Set(allItems.flatMap((item) => item.scene.characterIds))].map(resolveId);
+
+  const entryIds =
+    allItems.length === 0
+      ? []
+      : [...manhaItems.map((i) => i.sceneId), almocoMarkerId(day.id), ...tardeItems.map((i) => i.sceneId)];
 
   function characterLabels(item: StripItem) {
     return item.scene.characterIds.map(resolveId);
@@ -199,61 +218,45 @@ export function ShootDayColumn({
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">
-            Bloco manhã{day.blocoManhaInicio && ` · início ${formatHHh(day.blocoManhaInicio)}`}
-          </p>
-          <StripDropZone
-            id={dayContainerId(day.id, "MANHA")}
-            itemIds={day.manha.map((i) => i.sceneId)}
-            emptyLabel="Arraste cenas para o bloco da manhã"
-          >
-            {day.manha.map((item, index) => (
-              <StripCard
-                key={item.sceneId}
-                item={item}
-                characterLabels={characterLabels(item)}
-                schedule={manhaSchedule[index]}
-                conflicts={conflicts.get(item.sceneId)}
-                onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
-                projectId={projectId}
-                shootDayId={day.id}
-              />
-            ))}
-          </StripDropZone>
-        </div>
-
-        {(day.almocoInicio || day.almocoFim) && (
-          <div className="rounded-md border border-dashed px-3 py-1.5 text-center text-xs text-muted-foreground">
-            Almoço: {day.almocoInicio && formatHHh(day.almocoInicio)}
-            {day.almocoInicio && day.almocoFim && " às "}
-            {day.almocoFim && formatHHh(day.almocoFim)}
-          </div>
-        )}
-
-        <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">
-            Bloco tarde{day.blocoTardeInicio && ` · início ${formatHHh(day.blocoTardeInicio)}`}
-          </p>
-          <StripDropZone
-            id={dayContainerId(day.id, "TARDE")}
-            itemIds={day.tarde.map((i) => i.sceneId)}
-            emptyLabel="Arraste cenas para o bloco da tarde"
-          >
-            {day.tarde.map((item, index) => (
-              <StripCard
-                key={item.sceneId}
-                item={item}
-                characterLabels={characterLabels(item)}
-                schedule={tardeSchedule[index]}
-                conflicts={conflicts.get(item.sceneId)}
-                onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
-                projectId={projectId}
-                shootDayId={day.id}
-              />
-            ))}
-          </StripDropZone>
-        </div>
+        <StripDropZone
+          id={dayContainerId(day.id)}
+          itemIds={entryIds}
+          isEmpty={allItems.length === 0}
+          emptyLabel="Arraste cenas do Boneyard para esta diária"
+        >
+          {manhaItems.map((item, index) => (
+            <StripCard
+              key={item.sceneId}
+              item={item}
+              characterLabels={characterLabels(item)}
+              schedule={manhaSchedule[index]}
+              conflicts={conflicts.get(item.sceneId)}
+              onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
+              projectId={projectId}
+              shootDayId={day.id}
+            />
+          ))}
+          {allItems.length > 0 && (
+            <AlmocoMarker
+              dayId={day.id}
+              almocoInicio={almocoInicio}
+              duracaoAlmocoMin={jornada.duracaoAlmocoMin}
+              validation={almocoValidation}
+            />
+          )}
+          {tardeItems.map((item, index) => (
+            <StripCard
+              key={item.sceneId}
+              item={item}
+              characterLabels={characterLabels(item)}
+              schedule={tardeSchedule[index]}
+              conflicts={conflicts.get(item.sceneId)}
+              onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
+              projectId={projectId}
+              shootDayId={day.id}
+            />
+          ))}
+        </StripDropZone>
 
         {day.desprodInicio && (
           <p className="text-center text-xs text-muted-foreground">

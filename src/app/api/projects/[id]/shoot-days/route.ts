@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
+import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 import { shootDaySchema } from "@/lib/validation/shoot-day";
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -32,5 +33,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     data: { ...rest, data: new Date(data), projectId: params.id },
   });
 
-  return NextResponse.json(shootDay, { status: 201 });
+  // Sem cenas ainda, mas se chamadaGeral já veio preenchida, blocoManhaInicio já fica correto
+  // desde a criação em vez de ficar null até o primeiro reorder no Stripboard.
+  const recalculated = await recalculateDayBlocks(shootDay.id);
+
+  return NextResponse.json(recalculated ?? shootDay, { status: 201 });
 }

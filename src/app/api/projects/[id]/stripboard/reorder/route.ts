@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { parsePersonagemPrefixed, type CharacterLike } from "@/lib/ordem-do-dia";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
+import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 import { stripboardReorderSchema } from "@/lib/validation/stripboard";
 
 /** Alertas automáticos detectados no breakdown/planos da cena, usados pra pré-preencher
@@ -125,6 +126,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
   });
+
+  // Recalcula blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de toda diária tocada por este
+  // reorder — inclui as diárias de ORIGEM das cenas movidas (existingByPair, via shootDayIds antigos),
+  // não só as de destino, já que remover uma cena da manhã também desloca o almoço daquele dia.
+  const affectedShootDayIds = new Set<string>(shootDayIds);
+  for (const entry of existing) {
+    if (entry.shootDayId) affectedShootDayIds.add(entry.shootDayId);
+  }
+  for (const dayId of affectedShootDayIds) {
+    await recalculateDayBlocks(dayId);
+  }
 
   return NextResponse.json({ ok: true });
 }

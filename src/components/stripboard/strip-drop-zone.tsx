@@ -11,13 +11,18 @@ export function StripDropZone({
   itemIds,
   children,
   emptyLabel,
+  isEmpty,
 }: {
   id: string;
   itemIds: string[];
   children: ReactNode;
   emptyLabel?: string;
+  /** Quando omitido, considera vazio se itemIds.length === 0 — mas o Stripboard de diária sempre tem
+   *  pelo menos o marcador de almoço em itemIds, então passa isso explicitamente (vazio = sem cenas). */
+  isEmpty?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const empty = isEmpty ?? itemIds.length === 0;
 
   return (
     <SortableContext id={id} items={itemIds} strategy={verticalListSortingStrategy}>
@@ -25,7 +30,7 @@ export function StripDropZone({
         ref={setNodeRef}
         className={cn("min-h-[3.5rem] rounded-md transition-colors", isOver && "bg-accent")}
       >
-        {itemIds.length === 0 ? (
+        {empty ? (
           <p className="px-2 py-3 text-center text-xs text-muted-foreground">
             {emptyLabel ?? "Arraste cenas para cá"}
           </p>

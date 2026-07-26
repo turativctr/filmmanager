@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
+import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 import { shootDaySchema } from "@/lib/validation/shoot-day";
 
 export async function PATCH(
@@ -38,12 +39,16 @@ export async function PATCH(
     }
   }
 
-  const updated = await prisma.shootDay.update({
+  await prisma.shootDay.update({
     where: { id: shootDay.id },
     data: { ...rest, data: new Date(data) },
   });
 
-  return NextResponse.json(updated);
+  // chamadaGeral pode ter mudado — blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio são
+  // sempre derivados dela (+ Jornada do projeto + cenas da manhã), nunca editados diretamente aqui.
+  const recalculated = await recalculateDayBlocks(shootDay.id);
+
+  return NextResponse.json(recalculated);
 }
 
 export async function DELETE(

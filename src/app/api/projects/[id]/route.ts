@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recalculateAllDayBlocksForProject } from "@/lib/shootday-blocks";
 import { projectUpdateSchema } from "@/lib/validation/project";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
@@ -43,6 +44,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       dataFim: dataFim ? new Date(dataFim) : dataFim === null ? null : undefined,
     },
   });
+
+  // A Jornada (limiteAlmocoMin/duracaoAlmocoMin/preparacaoInicialMin) afeta o cálculo de bloco/almoço
+  // de TODAS as diárias do projeto, não só a que estava sendo editada — recalcula todas quando muda.
+  if (
+    rest.limiteAlmocoMin !== undefined ||
+    rest.duracaoAlmocoMin !== undefined ||
+    rest.preparacaoInicialMin !== undefined
+  ) {
+    await recalculateAllDayBlocksForProject(project.id);
+  }
 
   return NextResponse.json(updated);
 }

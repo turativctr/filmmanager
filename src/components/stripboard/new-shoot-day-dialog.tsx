@@ -39,10 +39,6 @@ export function NewShootDayDialog({
       numeroDia: form.get("numeroDia"),
       data: form.get("data"),
       chamadaGeral: form.get("chamadaGeral") || undefined,
-      blocoManhaInicio: form.get("blocoManhaInicio") || undefined,
-      almocoInicio: form.get("almocoInicio") || undefined,
-      almocoFim: form.get("almocoFim") || undefined,
-      blocoTardeInicio: form.get("blocoTardeInicio") || undefined,
       desprodInicio: form.get("desprodInicio") || undefined,
     };
 
@@ -90,26 +86,6 @@ export function NewShootDayDialog({
           <div className="space-y-1.5">
             <Label htmlFor="chamadaGeral">Chamada geral</Label>
             <Input id="chamadaGeral" name="chamadaGeral" type="time" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="blocoManhaInicio">Início bloco manhã</Label>
-              <Input id="blocoManhaInicio" name="blocoManhaInicio" type="time" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="blocoTardeInicio">Início bloco tarde</Label>
-              <Input id="blocoTardeInicio" name="blocoTardeInicio" type="time" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="almocoInicio">Almoço início</Label>
-              <Input id="almocoInicio" name="almocoInicio" type="time" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="almocoFim">Almoço fim</Label>
-              <Input id="almocoFim" name="almocoFim" type="time" />
-            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="desprodInicio">Desprodução</Label>

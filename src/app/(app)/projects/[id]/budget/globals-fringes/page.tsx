@@ -8,7 +8,7 @@ export default async function BudgetGlobalsFringesPage({ params }: { params: { i
   if (!data)
     return (
       <div className="space-y-4">
-        <PageHeader title="Globals e Fringes" />
+        <PageHeader title="Globais e Encargos" />
         <CreateBudgetCard projectId={params.id} />
       </div>
     );

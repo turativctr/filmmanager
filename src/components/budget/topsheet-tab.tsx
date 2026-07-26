@@ -63,7 +63,7 @@ export function TopsheetTab({
       <InfoBanner
         storageKey="budget-topsheet"
         title="Orçamento"
-        description="Gerencie os custos da produção por departamento. O Topsheet mostra o resumo executivo. O módulo Detalhado lista cada item de custo. Globals são variáveis que atualizam múltiplas linhas ao mesmo tempo."
+        description="Gerencie os custos da produção por departamento. O Resumo mostra o total executivo. O módulo Detalhado lista cada item de custo. Globais são variáveis que atualizam múltiplas linhas ao mesmo tempo."
       />
       <Card>
       <CardContent className="space-y-4 pt-6">

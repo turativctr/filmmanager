@@ -131,12 +131,12 @@ export function DailyProgressReportDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
-          Daily Progress Report
+          Relatório de Progresso Diário
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Daily Progress Report — Diária {numeroDia}</DialogTitle>
+          <DialogTitle>Relatório de Progresso Diário — Diária {numeroDia}</DialogTitle>
           <DialogDescription>Confirme o que foi concluído hoje e registre atrasos/observações.</DialogDescription>
         </DialogHeader>
 

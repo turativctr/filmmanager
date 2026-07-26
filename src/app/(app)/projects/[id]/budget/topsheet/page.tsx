@@ -15,7 +15,7 @@ export default async function BudgetTopsheetPage({ params }: { params: { id: str
   if (!data)
     return (
       <div className="space-y-4">
-        <PageHeader title="Topsheet" />
+        <PageHeader title="Resumo" />
         <CreateBudgetCard projectId={params.id} />
       </div>
     );

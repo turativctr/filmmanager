@@ -112,7 +112,7 @@ export function ExportDropdown({
             )
           }
         >
-          One-Line Schedule XLSX
+          Cronograma Resumido XLSX
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

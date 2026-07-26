@@ -1,9 +1,9 @@
 export type ModuleKey = "scheduling" | "budgeting" | "drafts";
 
 export const MODULE_LABEL: Record<ModuleKey, string> = {
-  scheduling: "Scheduling",
-  budgeting: "Budgeting",
-  drafts: "Drafts",
+  scheduling: "Planejamento",
+  budgeting: "Orçamento",
+  drafts: "Roteiro",
 };
 
 /** Classes literais (não interpoladas) — o scanner do Tailwind só detecta strings completas no

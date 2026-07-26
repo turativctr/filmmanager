@@ -32,7 +32,7 @@ export function DailyProgressReportDocument({ data }: { data: DailyProgressRepor
           projectTitulo={data.titulo}
           diretor={data.diretor}
           producao={data.producao}
-          documentTitle={`Daily Progress Report — Diária ${shootDay.numeroDia}`}
+          documentTitle={`Relatório de Progresso Diário — Diária ${shootDay.numeroDia}`}
         />
         <Text style={styles.dateLine}>
           {weekdayNameFull(shootDay.data)}, {formatFullDate(shootDay.data)}
@@ -96,7 +96,7 @@ export function DailyProgressReportDocument({ data }: { data: DailyProgressRepor
           </>
         )}
 
-        <StandardFooter projectTitulo={data.titulo} documentName="Daily Progress Report" />
+        <StandardFooter projectTitulo={data.titulo} documentName="Relatório de Progresso Diário" />
       </Page>
     </Document>
   );

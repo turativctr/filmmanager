@@ -46,7 +46,7 @@ export function TopsheetDocument({ budget, projectTitulo }: { budget: BudgetData
             </Text>
             {activeScenario && <Text style={styles.projectSub}>Cenário ativo: {activeScenario.nome}</Text>}
           </View>
-          <Text style={styles.docTitle}>Topsheet</Text>
+          <Text style={styles.docTitle}>Resumo</Text>
         </View>
 
         <TopsheetSummarySection budget={budget} />

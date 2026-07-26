@@ -105,7 +105,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
           projectTitulo={project.titulo}
           diretor={project.diretor}
           producao={project.producao}
-          documentTitle={`Shot List — Diária ${shootDay.numeroDia} de ${totalShootDays} — ${weekdayNameFull(
+          documentTitle={`Lista de Planos — Diária ${shootDay.numeroDia} de ${totalShootDays} — ${weekdayNameFull(
             shootDay.data
           )}, ${formatFullDate(shootDay.data)}`}
         />
@@ -257,7 +257,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
           </>
         )}
 
-        <StandardFooter projectTitulo={project.titulo} documentName="Shot List" />
+        <StandardFooter projectTitulo={project.titulo} documentName="Lista de Planos" />
       </Page>
     </Document>
   );

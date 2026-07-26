@@ -37,8 +37,11 @@ export default async function DraftsPage({ params }: { params: { id: string } })
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Drafts"
-        help={{ title: "Drafts", description: "Histórico de versões importadas, com o que mudou em cada uma." }}
+        title="Versões do roteiro"
+        help={{
+          title: "Versões do roteiro",
+          description: "Histórico de versões importadas, com o que mudou em cada uma.",
+        }}
         actions={<ImportDraftDialog projectId={params.id} />}
       />
 

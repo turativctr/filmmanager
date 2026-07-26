@@ -114,7 +114,7 @@ export function DocumentosPorDiaria({
                 variante: `Diaria${selectedDay.numeroDia}`,
                 ext: "pdf",
               })}
-              label="Shot List (PDF)"
+              label="Lista de Planos (PDF)"
             />
             <DownloadButton
               url={`/api/projects/${projectId}/reports/continuismo?day=${selectedDay.id}`}
@@ -136,12 +136,12 @@ export function DocumentosPorDiaria({
                   variante: `Diaria${selectedDay.numeroDia}`,
                   ext: "pdf",
                 })}
-                label="Daily Progress Report (PDF)"
+                label="Relatório de Progresso Diário (PDF)"
               />
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" disabled>
-                  Daily Progress Report (PDF)
+                  Relatório de Progresso Diário (PDF)
                 </Button>
                 <span className="text-xs text-muted-foreground">Ainda não preenchido</span>
                 <Button asChild variant="link" size="sm" className="h-8 px-0">

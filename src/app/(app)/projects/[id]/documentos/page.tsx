@@ -68,7 +68,7 @@ export default async function DocumentosPage({ params }: { params: { id: string 
               <div className="flex flex-wrap gap-2">
                 {scenesCount === 0 ? (
                   <>
-                    <DisabledDownloadButton label="One-Line Schedule (XLSX)" reason="Nenhuma cena cadastrada" />
+                    <DisabledDownloadButton label="Cronograma Resumido (XLSX)" reason="Nenhuma cena cadastrada" />
                     <DisabledDownloadButton label="Escaleta (PDF)" reason="Nenhuma cena cadastrada" />
                   </>
                 ) : (
@@ -76,7 +76,7 @@ export default async function DocumentosPage({ params }: { params: { id: string 
                     <DownloadButton
                       url={`/api/projects/${params.id}/reports/one-line-schedule`}
                       filename={gerarNomeArquivo({ projeto, tipo: "OneLineSchedule", ext: "xlsx" })}
-                      label="One-Line Schedule (XLSX)"
+                      label="Cronograma Resumido (XLSX)"
                     />
                     <DownloadButton
                       url={`/api/projects/${params.id}/reports/escaleta`}

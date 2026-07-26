@@ -21,14 +21,14 @@ const SCHEDULING_ITEMS: { segment: string; label: string; module: ModuleKey }[] 
   { segment: "stripboard", label: "Stripboard", module: "scheduling" },
   { segment: "calendar", label: "Calendário", module: "scheduling" },
   { segment: "dood", label: "DOOD", module: "scheduling" },
-  { segment: "drafts", label: "Drafts", module: "drafts" },
+  { segment: "drafts", label: "Versões do roteiro", module: "drafts" },
   { segment: "documentos", label: "Documentos", module: "scheduling" },
 ];
 
 const BUDGETING_ITEMS: { segment: string; label: string; module: ModuleKey }[] = [
-  { segment: "budget/topsheet", label: "Topsheet", module: "budgeting" },
+  { segment: "budget/topsheet", label: "Resumo", module: "budgeting" },
   { segment: "budget/detalhado", label: "Detalhado", module: "budgeting" },
-  { segment: "budget/globals-fringes", label: "Globals e Fringes", module: "budgeting" },
+  { segment: "budget/globals-fringes", label: "Globais e Encargos", module: "budgeting" },
   { segment: "budget/cenarios", label: "Cenários", module: "budgeting" },
   { segment: "budget/acompanhamento", label: "Acompanhamento", module: "budgeting" },
 ];
@@ -83,7 +83,7 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col overflow-y-auto p-3 pt-0">
         {projectId ? (
           <>
-            <SectionLabel icon={Clapperboard}>Scheduling</SectionLabel>
+            <SectionLabel icon={Clapperboard}>Planejamento</SectionLabel>
             <div className="flex flex-col gap-1">
               {SCHEDULING_ITEMS.map(({ segment, label, module }) => {
                 const href = segment ? `/projects/${projectId}/${segment}` : `/projects/${projectId}`;
@@ -95,7 +95,7 @@ export function Sidebar() {
 
             <div className="my-3 border-t border-white/50" />
 
-            <SectionLabel icon={Wallet}>Budgeting</SectionLabel>
+            <SectionLabel icon={Wallet}>Orçamento</SectionLabel>
             <div className="flex flex-col gap-1">
               {BUDGETING_ITEMS.map(({ segment, label, module }) => {
                 const href = `/projects/${projectId}/${segment}`;

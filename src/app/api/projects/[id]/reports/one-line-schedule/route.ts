@@ -56,10 +56,10 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   ];
 
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("One-Liner");
+  const sheet = workbook.addWorksheet("Cronograma Resumido");
 
   sheet.mergeCells(1, 1, 1, columns.length);
-  sheet.getCell(1, 1).value = `One-Line Schedule — ${project.titulo}`;
+  sheet.getCell(1, 1).value = `Cronograma Resumido — ${project.titulo}`;
   sheet.getCell(1, 1).font = { bold: true, size: 14 };
 
   sheet.mergeCells(2, 1, 2, columns.length);

@@ -1,6 +1,6 @@
 import { CalendarBoard } from "@/components/calendar/calendar-board";
 import type { CalendarDayData, CalendarMonthSummary } from "@/components/calendar/types";
-import { InfoBanner } from "@/components/shared/info-banner";
+import { PageHeader } from "@/components/shared/page-header";
 import { getMonthGrid, toDateKey } from "@/lib/calendar-grid";
 import { prisma } from "@/lib/prisma";
 
@@ -141,10 +141,13 @@ export default async function CalendarPage({
 
   return (
     <div className="space-y-4">
-      <InfoBanner
-        storageKey="calendar"
+      <PageHeader
         title="Calendário"
-        description="Visão mensal dos dias de filmagem. Arraste os dias para mudar datas. Adicione eventos como ensaios, viagens e feriados que afetam a produção."
+        help={{
+          title: "Calendário",
+          description:
+            "Visão mensal dos dias de filmagem. Arraste os dias para mudar datas. Adicione eventos como ensaios, viagens e feriados que afetam a produção.",
+        }}
       />
       <CalendarBoard
         projectId={params.id}

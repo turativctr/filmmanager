@@ -5,9 +5,14 @@ export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
   CONCLUIDO: "Concluído",
 };
 
+// O schema hoje só tem 2 fases (ATIVO/CONCLUÍDO) + arquivado, não as 6 fases de produção
+// (Desenvolvimento/Pré-produção/Filmagem/Pós-produção/Concluído/Arquivado) do mapa de cores do
+// design system — CONCLUIDO usa "sucesso" (verde), arquivado usa "neutro" (cinza). Os módulos
+// drafts/scheduling/alerta/decupagem ficam disponíveis em tailwind.config.ts pra quando as fases
+// intermediárias existirem como dado de verdade.
 export const PROJECT_STATUS_BADGE_CLASS: Record<ProjectStatus, string> = {
-  ATIVO: "border-blue-400/50 bg-blue-100 text-blue-700",
-  CONCLUIDO: "border-green-400/50 bg-green-100 text-green-700",
+  ATIVO: "border-scheduling-accent/30 bg-scheduling-bg text-scheduling-fg",
+  CONCLUIDO: "border-sucesso-accent/30 bg-sucesso-bg text-sucesso-fg",
 };
 
-export const PROJECT_ARQUIVADO_BADGE_CLASS = "border-gray-300/50 bg-gray-100 text-gray-500";
+export const PROJECT_ARQUIVADO_BADGE_CLASS = "border-neutro-accent/30 bg-neutro-bg text-neutro-fg";

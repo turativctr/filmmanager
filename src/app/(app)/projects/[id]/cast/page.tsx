@@ -1,5 +1,6 @@
 import { CastTable } from "@/components/cast/cast-table";
 import { CharacterFormDialog } from "@/components/cast/character-form-dialog";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
@@ -23,9 +24,7 @@ export default async function CastPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <CharacterFormDialog projectId={params.id} scenes={sortedScenes} />
-      </div>
+      <PageHeader title="Elenco" actions={<CharacterFormDialog projectId={params.id} scenes={sortedScenes} />} />
 
       {sortedCharacters.length === 0 ? (
         <Card>

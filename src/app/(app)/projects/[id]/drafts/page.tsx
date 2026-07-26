@@ -2,6 +2,7 @@ import { ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import { ImportDraftDialog } from "@/components/drafts/import-draft-dialog";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
@@ -35,15 +36,11 @@ export default async function DraftsPage({ params }: { params: { id: string } })
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Drafts do roteiro</h2>
-          <p className="text-sm text-muted-foreground">
-            Histórico de versões importadas, com o que mudou em cada uma.
-          </p>
-        </div>
-        <ImportDraftDialog projectId={params.id} />
-      </div>
+      <PageHeader
+        title="Drafts"
+        help={{ title: "Drafts", description: "Histórico de versões importadas, com o que mudou em cada uma." }}
+        actions={<ImportDraftDialog projectId={params.id} />}
+      />
 
       {drafts.length === 0 ? (
         <Card>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { MissingTimesDialog } from "@/components/shared/missing-times-dialog";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { gerarNomeArquivo } from "@/lib/filename";
@@ -27,7 +28,7 @@ import type {
   ShotSummary,
 } from "./types";
 
-const STEPS = ["Locação e logística", "Quem vai", "Alertas e habilidades", "Meteorologia e revisão"];
+const STEPS = ["Locação e logística", "Tempos e ritmo", "Alertas e habilidades", "Meteorologia e revisão"];
 
 function buildInitialLogistics(shootDay: ShootDayInfo, firstSceneLocation: string | null): LogisticsState {
   const locacaoEndereco = shootDay.locacaoEndereco || firstSceneLocation || "";
@@ -272,6 +273,10 @@ export function OrdemDoDiaWizard({
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title={`Ordem do Dia — Diária ${shootDay.numeroDia} — ${new Date(shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}`}
+      />
+
       <div className="flex items-center gap-2">
         {STEPS.map((label, index) => {
           const num = index + 1;
@@ -322,7 +327,7 @@ export function OrdemDoDiaWizard({
               />
             </div>
           )}
-          {step === 3 && <Step3Alertas data={passo3} />}
+          {step === 3 && <Step3Alertas data={passo3} projectId={projectId} shootDayId={shootDay.id} />}
           {step === 4 && (
             <Step4Revisao
               meteo={meteo}

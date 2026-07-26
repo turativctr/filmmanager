@@ -1,5 +1,6 @@
 import { ExtraFormDialog } from "@/components/extras/extra-form-dialog";
 import { ExtrasTable } from "@/components/extras/extras-table";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
@@ -26,9 +27,7 @@ export default async function ExtrasPage({ params }: { params: { id: string } })
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <ExtraFormDialog projectId={params.id} scenes={sortedScenes} />
-      </div>
+      <PageHeader title="Figuração" actions={<ExtraFormDialog projectId={params.id} scenes={sortedScenes} />} />
 
       {extras.length === 0 ? (
         <Card>

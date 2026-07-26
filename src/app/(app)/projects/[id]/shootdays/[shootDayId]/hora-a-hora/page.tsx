@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { HoraAHoraEditor } from "@/components/ordem-do-dia/hora-a-hora-editor";
+import { PageHeader } from "@/components/shared/page-header";
 import { generateHoraAHoraEvents } from "@/lib/hora-a-hora";
 import { prisma } from "@/lib/prisma";
 import { getShootDayReportData } from "@/lib/report-data";
@@ -42,12 +43,9 @@ export default async function HoraAHoraPage({ params }: { params: { id: string; 
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">Hora a Hora</h2>
-        <p className="text-sm text-muted-foreground">
-          {data.project.titulo} — Diária {data.shootDay.numeroDia}
-        </p>
-      </div>
+      <PageHeader
+        title={`Hora a Hora — Diária ${data.shootDay.numeroDia} — ${new Date(data.shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}`}
+      />
       <HoraAHoraEditor
         projectId={params.id}
         shootDayId={params.shootDayId}

@@ -44,6 +44,18 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+
+        // Tokens de módulo — cor só entra em badges, headers de módulo, sidebar ativa e
+        // cabeçalhos de PDF, nunca em fundo de página inteiro (ver src/lib/module-theme.ts e
+        // src/lib/glass.ts). Cada família: bg (fundo do badge) · fg (texto) · accent (bordas/ícones).
+        scheduling: { bg: "#E6F1FB", fg: "#0C447C", accent: "#185FA5" },
+        budgeting: { bg: "#EAF3DE", fg: "#27500A", accent: "#3B6D11" },
+        drafts: { bg: "#EEEDFE", fg: "#3C3489", accent: "#534AB7" },
+        decupagem: { bg: "#E3F3F0", fg: "#0F4F45", accent: "#1B7365" },
+        alerta: { bg: "#FAEEDA", fg: "#633806", accent: "#854F0B" },
+        erro: { bg: "#FAECE7", fg: "#993C1D", accent: "#A32D2D" },
+        sucesso: { bg: "#EAF3DE", fg: "#3B6D11", accent: "#3B6D11" },
+        neutro: { bg: "#F4F4F5", fg: "#52525B", accent: "#A1A1AA" },
       },
       borderRadius: {
         lg: "var(--radius)",

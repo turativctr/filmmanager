@@ -3,7 +3,7 @@ import { LayoutList } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { InfoBanner } from "@/components/shared/info-banner";
+import { PageHeader } from "@/components/shared/page-header";
 import { StripboardBoard } from "@/components/stripboard/stripboard-board";
 import type { BoardState, DayState, SceneSummary, ShotsSummary, StripItem } from "@/components/stripboard/types";
 import { Button } from "@/components/ui/button";
@@ -126,10 +126,13 @@ export default async function StripboardPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-4">
-      <InfoBanner
-        storageKey="stripboard"
+      <PageHeader
         title="Stripboard"
-        description="O Stripboard organiza as cenas em dias de filmagem. Cada tira colorida representa uma cena — azul para dia, roxo para entardecer, cinza para noite. Arraste para reordenar. As cenas não agendadas ficam no Boneyard."
+        help={{
+          title: "Stripboard",
+          description:
+            "O Stripboard organiza as cenas em dias de filmagem. Cada tira colorida representa uma cena — azul para dia, roxo para entardecer, cinza para noite. Arraste para reordenar. As cenas não agendadas ficam no Boneyard.",
+        }}
       />
       {scenes.length === 0 && days.length === 0 ? (
         <EmptyState

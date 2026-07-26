@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { DailyProgressReportDialog } from "@/components/ad-documents/daily-progress-report-dialog";
 import { SceneProgressPanel } from "@/components/ordem-do-dia/scene-progress-panel";
+import { PageHeader } from "@/components/shared/page-header";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -140,33 +141,33 @@ export function ShootDayDashboard({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          Diária {shootDay.numeroDia} — {new Date(shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
-        </h2>
-        <div className="flex gap-2">
-          <DailyProgressReportDialog
-            projectId={projectId}
-            shootDayId={shootDay.id}
-            numeroDia={shootDay.numeroDia}
-            scheduledScenes={scheduledScenes}
-            initialReport={initialDailyProgressReport}
-            projeto={projeto}
-          />
-          <Button asChild size="sm" className="gap-1.5">
-            <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/set`}>
-              <Tablet className="h-4 w-4" />
-              Modo set
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/hora-a-hora`}>Hora a Hora</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/ordem-do-dia`}>Editar Ordem do Dia</Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={`Diária ${shootDay.numeroDia} — ${new Date(shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}`}
+        actions={
+          <>
+            <DailyProgressReportDialog
+              projectId={projectId}
+              shootDayId={shootDay.id}
+              numeroDia={shootDay.numeroDia}
+              scheduledScenes={scheduledScenes}
+              initialReport={initialDailyProgressReport}
+              projeto={projeto}
+            />
+            <Button asChild size="sm" className="gap-1.5">
+              <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/set`}>
+                <Tablet className="h-4 w-4" />
+                Modo set
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/hora-a-hora`}>Hora a Hora</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/ordem-do-dia`}>Editar Ordem do Dia</Link>
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-4 gap-3">
         <Card>

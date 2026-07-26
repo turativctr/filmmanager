@@ -1,7 +1,7 @@
 import { FdxImportDialog } from "@/components/scenes/fdx-import-dialog";
 import { ScenesTable } from "@/components/scenes/scenes-table";
 import { SceneFormDialog } from "@/components/scenes/scene-form-dialog";
-import { InfoBanner } from "@/components/shared/info-banner";
+import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
@@ -26,16 +26,20 @@ export default async function ScenesPage({ params }: { params: { id: string } })
 
   return (
     <div className="space-y-4">
-      <InfoBanner
-        storageKey="scenes"
+      <PageHeader
         title="Cenas"
-        description="As cenas são a base de todo o projeto. Cada cena contém as informações que alimentam o Breakdown, o Stripboard e os documentos gerados. Importe do roteiro (.fdx) ou cadastre manualmente."
+        help={{
+          title: "Cenas",
+          description:
+            "As cenas são a base de todo o projeto. Cada cena contém as informações que alimentam o Breakdown, o Stripboard e os documentos gerados. Importe do roteiro (.fdx) ou cadastre manualmente.",
+        }}
+        actions={
+          <>
+            <FdxImportDialog projectId={params.id} />
+            <SceneFormDialog projectId={params.id} characters={characters} sistemaIdElenco={project.sistemaIdElenco} />
+          </>
+        }
       />
-
-      <div className="flex justify-end gap-2">
-        <FdxImportDialog projectId={params.id} />
-        <SceneFormDialog projectId={params.id} characters={characters} sistemaIdElenco={project.sistemaIdElenco} />
-      </div>
 
       {sortedScenes.length === 0 ? (
         <Card>

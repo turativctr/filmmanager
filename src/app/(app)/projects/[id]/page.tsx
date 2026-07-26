@@ -3,6 +3,7 @@ import { CalendarRange, DollarSign, FileClock, FileText, ListChecks, Users } fro
 import { getServerSession } from "next-auth";
 
 import { GuidedProgressPanel, type ProgressStep, type ProgressStepStatus } from "@/components/projects/guided-progress-panel";
+import { ProjectStatusBadges } from "@/components/projects/project-status-badge";
 import { WelcomeTourModal } from "@/components/tour/welcome-tour-modal";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,7 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
   const session = await getServerSession(authOptions);
 
   const [
+    project,
     scriptDraftsCount,
     charactersWithAtorCount,
     totalScenesCount,
@@ -21,6 +23,10 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
     currentUser,
     stepOverrides,
   ] = await Promise.all([
+    prisma.project.findUniqueOrThrow({
+      where: { id: params.id },
+      select: { titulo: true, diretor: true, producao: true, status: true, arquivado: true },
+    }),
     prisma.scriptDraft.count({ where: { projectId: params.id } }),
     prisma.character.count({ where: { projectId: params.id, ator: { not: null } } }),
     prisma.scene.count({ where: { projectId: params.id } }),
@@ -138,9 +144,21 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
   ];
 
   return (
-    <>
+    <div className="space-y-4">
+      {/* Única página do projeto que mostra nome/créditos/status — em toda outra página essa
+          informação já vive no breadcrumb do Header global, ver PageHeader. */}
+      <div>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{project.titulo}</h1>
+          <ProjectStatusBadges status={project.status} arquivado={project.arquivado} />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {[project.diretor && `Direção: ${project.diretor}`, project.producao].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+
       <GuidedProgressPanel projectId={params.id} steps={steps} />
       {currentUser && !currentUser.tourConcluido && <WelcomeTourModal projectId={params.id} />}
-    </>
+    </div>
   );
 }

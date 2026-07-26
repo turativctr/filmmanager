@@ -17,7 +17,7 @@ export function ArchivedProjectsSection({ projects }: { projects: ProjectCardDat
         <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
         Projetos arquivados ({projects.length})
       </CollapsibleTrigger>
-      <CollapsibleContent className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <CollapsibleContent className="mt-4 grid grid-cols-1 gap-4 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}

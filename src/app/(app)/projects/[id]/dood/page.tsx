@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ExportDoodButton } from "@/components/dood/export-dood-button";
 import { StatusCell } from "@/components/dood/status-cell";
 import { EmptyState } from "@/components/shared/empty-state";
-import { InfoBanner } from "@/components/shared/info-banner";
+import { PageHeader } from "@/components/shared/page-header";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,13 +20,11 @@ import { getCharacterId } from "@/lib/character-id";
 import { getProjectDoodData } from "@/lib/dood-data";
 import { formatHHh } from "@/lib/schedule";
 
-const DOOD_BANNER = (
-  <InfoBanner
-    storageKey="dood"
-    title="DOOD (Day Out of Days)"
-    description="Tabela que mostra quando cada ator trabalha ao longo da produção. SW = primeiro dia, W = trabalhando, H = contratado mas de folga, WF = último dia. Usado para calcular contratos e cachês."
-  />
-);
+const DOOD_HELP = {
+  title: "DOOD (Day Out of Days)",
+  description:
+    "Tabela que mostra quando cada ator trabalha ao longo da produção. SW = primeiro dia, W = trabalhando, H = contratado mas de folga, WF = último dia. Usado para calcular contratos e cachês.",
+};
 
 export default async function DoodPage({ params }: { params: { id: string } }) {
   const { project, shootDays, characterRows, extraRows, totalsByDay, mealsByDay } =
@@ -35,7 +33,7 @@ export default async function DoodPage({ params }: { params: { id: string } }) {
   if (shootDays.length === 0) {
     return (
       <div className="space-y-4">
-        {DOOD_BANNER}
+        <PageHeader title="DOOD" help={DOOD_HELP} />
         <EmptyState
           icon={CalendarDays}
           title="Ainda não há diárias"
@@ -52,18 +50,16 @@ export default async function DoodPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-6">
-      {DOOD_BANNER}
-
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          DOOD
-          <TermTooltip content="Day Out of Days — tabela de disponibilidade do elenco ao longo de toda a produção." />
-        </h2>
-        <ExportDoodButton
-          projectId={params.id}
-          projeto={{ titulo: project?.titulo ?? "", sigla: project?.sigla ?? null }}
-        />
-      </div>
+      <PageHeader
+        title="DOOD"
+        help={DOOD_HELP}
+        actions={
+          <ExportDoodButton
+            projectId={params.id}
+            projeto={{ titulo: project?.titulo ?? "", sigla: project?.sigla ?? null }}
+          />
+        }
+      />
 
       <Card>
         <CardContent className="p-0">

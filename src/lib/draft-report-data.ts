@@ -49,7 +49,7 @@ export async function getScriptDraftDetail(projectId: string, draftId: string): 
     numeros.length > 0
       ? await prisma.scene.findMany({
           where: { projectId, numero: { in: numeros } },
-          include: { cast: { include: { character: true } } },
+          include: { cast: { include: { character: true } }, locacao: { select: { nome: true } } },
         })
       : [];
   const sceneByNumero = new Map(scenes.map((s) => [s.numero, s]));
@@ -67,7 +67,7 @@ export async function getScriptDraftDetail(projectId: string, draftId: string): 
               tipo: scene.tipo,
               periodo: scene.periodo,
               set: scene.set,
-              locacao: scene.locacao,
+              locacao: scene.locacao?.nome ?? null,
               sinopse: scene.sinopse,
               paginas: Number(scene.paginas),
               cast: scene.cast.map((c) => ({

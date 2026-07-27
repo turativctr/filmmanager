@@ -17,8 +17,9 @@ export function LocationSceneListDocument({ data }: { data: LocationSceneListDat
         {data.locations.length === 0 && <Text style={kit.muted}>Nenhuma cena cadastrada.</Text>}
 
         {data.locations.map((location) => (
-          <View key={location.locacao} wrap={false} style={{ marginBottom: 10 }}>
-            <SectionTitle>{location.locacao}</SectionTitle>
+          <View key={location.nome} wrap={false} style={{ marginBottom: 10 }}>
+            <SectionTitle>{location.nome}</SectionTitle>
+            {location.endereco && <Text style={kit.muted}>{location.endereco}</Text>}
             <Table>
               <Tr header dark>
                 <Td width="15%">CENA</Td>

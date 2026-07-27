@@ -41,7 +41,7 @@ type SceneRow = {
   tipo: "INT" | "EXT" | null;
   periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
   set: string | null;
-  locacao: string | null;
+  locacao: { id: string; nome: string } | null;
   sinopse: string | null;
   paginas: unknown;
   diaNarrativo: number | null;
@@ -56,11 +56,13 @@ export function ScenesTable({
   scenes,
   characters,
   sistemaIdElenco,
+  locacoes,
 }: {
   projectId: string;
   scenes: SceneRow[];
   characters: CharacterOption[];
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
+  locacoes: { id: string; nome: string }[];
 }) {
   const router = useRouter();
 
@@ -104,7 +106,7 @@ export function ScenesTable({
             <TableCell>{scene.tipo ?? "—"}</TableCell>
             <TableCell>{scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}</TableCell>
             <TableCell>{scene.set ?? "—"}</TableCell>
-            <TableCell>{scene.locacao ?? "—"}</TableCell>
+            <TableCell>{scene.locacao?.nome ?? "—"}</TableCell>
             <TableCell className="max-w-[220px] truncate" title={scene.sinopse ?? undefined}>
               {scene.sinopse ?? "—"}
             </TableCell>
@@ -122,6 +124,7 @@ export function ScenesTable({
                   projectId={projectId}
                   characters={characters}
                   sistemaIdElenco={sistemaIdElenco}
+                  locacoes={locacoes}
                   scene={scene}
                   trigger={
                     <Button variant="ghost" size="icon" title="Editar cena">

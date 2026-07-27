@@ -26,7 +26,7 @@ export default async function BreakdownPage({
 }) {
   const scene = await prisma.scene.findFirst({
     where: { id: params.sceneId, projectId: params.id },
-    include: { cast: true, breakdownSheet: true, extras: true },
+    include: { cast: true, breakdownSheet: true, extras: true, locacao: { select: { nome: true } } },
   });
 
   if (!scene) notFound();
@@ -71,7 +71,7 @@ export default async function BreakdownPage({
         <p className="text-sm text-muted-foreground">
           {scene.tipo ?? "—"} · {scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}
           {scene.set ? ` · ${scene.set}` : ""}
-          {scene.locacao ? ` · ${scene.locacao}` : ""}
+          {scene.locacao ? ` · ${scene.locacao.nome}` : ""}
         </p>
       </div>
 

@@ -38,7 +38,11 @@ export default async function StripboardPage({ params }: { params: { id: string 
     }),
     prisma.scene.findMany({
       where: { projectId: params.id, omitida: false },
-      include: { cast: { select: { characterId: true } }, shots: shotsSelect },
+      include: {
+        cast: { select: { characterId: true } },
+        shots: shotsSelect,
+        locacao: { select: { nome: true } },
+      },
     }),
     prisma.shootDay.findMany({
       where: { projectId: params.id },
@@ -47,7 +51,13 @@ export default async function StripboardPage({ params }: { params: { id: string 
         scenes: {
           orderBy: { ordem: "asc" },
           include: {
-            scene: { include: { cast: { select: { characterId: true } }, shots: shotsSelect } },
+            scene: {
+              include: {
+                cast: { select: { characterId: true } },
+                shots: shotsSelect,
+                locacao: { select: { nome: true } },
+              },
+            },
           },
         },
       },
@@ -66,7 +76,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
       tipo: scene.tipo,
       periodo: scene.periodo,
       set: scene.set,
-      locacao: scene.locacao,
+      locacao: scene.locacao?.nome ?? null,
       sinopse: scene.sinopse,
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,

@@ -75,7 +75,7 @@ export function NewScenarioDialog({ projectId, globals }: { projectId: string; g
         <DialogHeader>
           <DialogTitle>Novo cenário</DialogTitle>
           <DialogDescription>
-            Herda todos os LineItems do orçamento; só os Globals abaixo diferem neste cenário.
+            Herda todos os LineItems do orçamento; só os Globais abaixo diferem neste cenário.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,7 +89,7 @@ export function NewScenarioDialog({ projectId, globals }: { projectId: string; g
           </div>
           {globals.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Sobrescrever Globals (deixe em branco para manter o valor atual)</Label>
+              <Label>Sobrescrever Globais (deixe em branco para manter o valor atual)</Label>
               <div className="grid grid-cols-2 gap-3 rounded-md border p-3">
                 {globals.map((g) => (
                   <div key={g.id} className="space-y-1">

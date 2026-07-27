@@ -18,6 +18,7 @@ const SCHEDULING_ITEMS: { segment: string; label: string; module: ModuleKey }[] 
   { segment: "scenes", label: "Cenas", module: "scheduling" },
   { segment: "cast", label: "Elenco", module: "scheduling" },
   { segment: "extras", label: "Figuração", module: "scheduling" },
+  { segment: "locacoes", label: "Locações", module: "scheduling" },
   { segment: "stripboard", label: "Stripboard", module: "scheduling" },
   { segment: "calendar", label: "Calendário", module: "scheduling" },
   { segment: "dood", label: "DOOD", module: "scheduling" },

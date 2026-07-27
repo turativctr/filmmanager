@@ -49,7 +49,7 @@ export default async function DoodPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         title="DOOD"
         help={DOOD_HELP}

@@ -1,22 +1,30 @@
+import { Clapperboard } from "lucide-react";
+
 import { FdxImportDialog } from "@/components/scenes/fdx-import-dialog";
 import { ScenesTable } from "@/components/scenes/scenes-table";
 import { SceneFormDialog } from "@/components/scenes/scene-form-dialog";
+import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 
 export default async function ScenesPage({ params }: { params: { id: string } }) {
-  const [project, scenes, characters] = await Promise.all([
+  const [project, scenes, characters, locacoes] = await Promise.all([
     prisma.project.findUniqueOrThrow({ where: { id: params.id }, select: { sistemaIdElenco: true } }),
     prisma.scene.findMany({
       where: { projectId: params.id },
-      include: { cast: { select: { characterId: true } } },
+      include: { cast: { select: { characterId: true } }, locacao: { select: { id: true, nome: true } } },
     }),
     prisma.character.findMany({
       where: { projectId: params.id },
       orderBy: { idCurto: "asc" },
       select: { id: true, idCurto: true, numeroElenco: true, personagem: true },
+    }),
+    prisma.locacao.findMany({
+      where: { projectId: params.id },
+      orderBy: { nome: "asc" },
+      select: { id: true, nome: true },
     }),
   ]);
 
@@ -36,17 +44,22 @@ export default async function ScenesPage({ params }: { params: { id: string } })
         actions={
           <>
             <FdxImportDialog projectId={params.id} />
-            <SceneFormDialog projectId={params.id} characters={characters} sistemaIdElenco={project.sistemaIdElenco} />
+            <SceneFormDialog
+              projectId={params.id}
+              characters={characters}
+              sistemaIdElenco={project.sistemaIdElenco}
+              locacoes={locacoes}
+            />
           </>
         }
       />
 
       {sortedScenes.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhuma cena cadastrada ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Clapperboard}
+          title="Nenhuma cena cadastrada ainda"
+          description="Importe o roteiro (.fdx) para detectar cenas automaticamente, ou cadastre manualmente."
+        />
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -55,6 +68,7 @@ export default async function ScenesPage({ params }: { params: { id: string } })
               scenes={sortedScenes}
               characters={characters}
               sistemaIdElenco={project.sistemaIdElenco}
+              locacoes={locacoes}
             />
           </CardContent>
         </Card>

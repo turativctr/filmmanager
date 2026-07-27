@@ -1,25 +1,45 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TIPO_PONTO_APOIO_LABEL, TIPO_PONTO_APOIO_ORDER } from "@/lib/locacao";
 
-import type { LogisticsState } from "./types";
+import type { LocacaoInfo, LogisticsState } from "./types";
 
 export function Step1Locacao({
   logistics,
   onChange,
+  locacaoInfo,
 }: {
   logistics: LogisticsState;
   onChange: (patch: Partial<LogisticsState>) => void;
+  locacaoInfo: LocacaoInfo;
 }) {
+  const pontosApoio = locacaoInfo.locacao?.pontosApoio ?? [];
+  const pontosPorTipo = TIPO_PONTO_APOIO_ORDER.map((tipo) => ({
+    tipo,
+    pontos: pontosApoio.filter((p) => p.tipo === tipo),
+  })).filter((g) => g.pontos.length > 0);
+
   function copyLocacaoParaBase() {
     onChange({ baseInfo: `Na locação (${logistics.locacaoEndereco || logistics.locacaoNome})` });
   }
 
   return (
     <div className="space-y-4">
+      {locacaoInfo.mixedCount != null && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Este dia tem cenas em {locacaoInfo.mixedCount} locações — prevê mudança de locação. Preencha os campos
+            abaixo manualmente.
+          </p>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="locacaoNome">Locação — nome</Label>
@@ -116,6 +136,27 @@ export function Step1Locacao({
       <p className="text-xs text-muted-foreground">
         Não há API gratuita confiável para sugerir hospital mais próximo — preencha manualmente.
       </p>
+
+      {pontosPorTipo.length > 0 && (
+        <div className="space-y-2 rounded-md border p-3">
+          <Label>Apoio e entorno</Label>
+          <div className="space-y-2">
+            {pontosPorTipo.map(({ tipo, pontos }) => (
+              <div key={tipo} className="space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground">{TIPO_PONTO_APOIO_LABEL[tipo]}</p>
+                <ul className="space-y-0.5">
+                  {pontos.map((ponto) => (
+                    <li key={ponto.id} className="text-sm">
+                      {ponto.descricao}
+                      {ponto.endereco && <span className="text-muted-foreground"> — {ponto.endereco}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

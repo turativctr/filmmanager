@@ -102,7 +102,7 @@ export function ScenariosTab({ projectId, budget }: { projectId: string; budget:
                         {!scenario.isBase && (
                           <ConfirmDeleteDialog
                             title={`Excluir "${scenario.nome}"?`}
-                            description="Remove o cenário e seus overrides de Globals. Não pode ser desfeita."
+                            description="Remove o cenário e seus overrides de Globais. Não pode ser desfeita."
                             onConfirm={() => handleDelete(scenario.id)}
                           />
                         )}
@@ -180,7 +180,7 @@ export function ScenariosTab({ projectId, budget }: { projectId: string; budget:
                   field="totalBTL"
                 />
                 <ComparisonTotalRow
-                  label="Total Fringes"
+                  label="Total Encargos"
                   scenarios={scenarios}
                   totalsByScenario={totalsByScenario}
                   baseTotals={baseTotals}

@@ -110,7 +110,7 @@ export function TopsheetSummarySection({ budget }: { budget: BudgetData }) {
           <Text style={styles.totalsValue}>{formatCurrency(totals.totalBTL, budget.moedaBase)}</Text>
         </View>
         <View style={styles.totalsRow}>
-          <Text style={styles.totalsLabel}>Total Fringes</Text>
+          <Text style={styles.totalsLabel}>Total Encargos</Text>
           <Text style={styles.totalsValue}>{formatCurrency(totals.totalFringes, budget.moedaBase)}</Text>
         </View>
         <View style={styles.totalsRow}>

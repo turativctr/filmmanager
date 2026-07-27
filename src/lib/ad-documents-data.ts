@@ -118,7 +118,10 @@ export async function getActorSceneListData(projectId: string): Promise<ActorSce
       scenes: {
         include: {
           scene: {
-            include: { shootDays: { include: { shootDay: { select: { numeroDia: true } } } } },
+            include: {
+              shootDays: { include: { shootDay: { select: { numeroDia: true } } } },
+              locacao: { select: { nome: true } },
+            },
           },
         },
       },
@@ -136,7 +139,7 @@ export async function getActorSceneListData(projectId: string): Promise<ActorSce
         .filter((sc) => !sc.scene.omitida)
         .map((sc) => ({
           numero: sc.scene.numero,
-          locacao: sc.scene.locacao,
+          locacao: sc.scene.locacao?.nome ?? null,
           numeroDia: sc.scene.shootDays[0]?.shootDay.numeroDia ?? null,
         }))
         .sort((a, b) => naturalCompare(a.numero, b.numero)),
@@ -150,11 +153,15 @@ export async function getActorSceneListData(projectId: string): Promise<ActorSce
 // ---------------------------------------------------------------------------
 
 export type LocationSceneListEntry = {
-  locacao: string;
+  nome: string;
+  endereco: string | null;
   scenes: { numero: string; numeroDia: number | null; elenco: string[] }[];
 };
 export type LocationSceneListData = ProjectHeader & { locations: LocationSceneListEntry[] };
 
+/** Agrupa pela locação real (não mais pelo texto solto de set/locação) — cada grupo já traz o
+ *  endereço pra aparecer no cabeçalho. Cenas sem locação atribuída caem no grupo "Sem locação
+ *  definida", sempre por último. */
 export async function getLocationSceneListData(projectId: string): Promise<LocationSceneListData> {
   const project = await getProjectHeader(projectId);
   const scenes = await prisma.scene.findMany({
@@ -162,27 +169,41 @@ export async function getLocationSceneListData(projectId: string): Promise<Locat
     include: {
       cast: { include: { character: true } },
       shootDays: { include: { shootDay: { select: { numeroDia: true } } } },
+      locacao: { select: { id: true, nome: true, endereco: true } },
     },
   });
 
-  const byLocation = new Map<string, LocationSceneListEntry["scenes"]>();
+  const byLocation = new Map<string, { nome: string; endereco: string | null; scenes: LocationSceneListEntry["scenes"] }>();
   for (const scene of scenes) {
-    const key = scene.locacao || scene.set || "Sem locação definida";
-    const list = byLocation.get(key) ?? [];
-    list.push({
+    const key = scene.locacao?.id ?? "__sem_locacao__";
+    const group =
+      byLocation.get(key) ??
+      {
+        nome: scene.locacao?.nome ?? "Sem locação definida",
+        endereco: scene.locacao?.endereco ?? null,
+        scenes: [],
+      };
+    group.scenes.push({
       numero: scene.numero,
       numeroDia: scene.shootDays[0]?.shootDay.numeroDia ?? null,
       elenco: scene.cast.map((c) => getCharacterId(c.character, project)),
     });
-    byLocation.set(key, list);
+    byLocation.set(key, group);
   }
 
   const locations = [...byLocation.entries()]
-    .map(([locacao, list]) => ({
-      locacao,
-      scenes: list.sort((a, b) => naturalCompare(a.numero, b.numero)),
+    .map(([key, group]) => ({
+      key,
+      nome: group.nome,
+      endereco: group.endereco,
+      scenes: group.scenes.sort((a, b) => naturalCompare(a.numero, b.numero)),
     }))
-    .sort((a, b) => a.locacao.localeCompare(b.locacao));
+    .sort((a, b) => {
+      if (a.key === "__sem_locacao__") return 1;
+      if (b.key === "__sem_locacao__") return -1;
+      return a.nome.localeCompare(b.nome);
+    })
+    .map(({ nome, endereco, scenes }) => ({ nome, endereco, scenes }));
 
   return { ...project, locations };
 }
@@ -389,21 +410,21 @@ export async function getEscaletaData(projectId: string): Promise<EscaletaData> 
 
   const scenes = await prisma.scene.findMany({
     where: { projectId, omitida: false },
-    include: { cast: { include: { character: true } } },
+    include: { cast: { include: { character: true } }, locacao: { select: { nome: true } } },
   });
 
   // Locação principal = set/locação mais frequente entre as cenas do projeto — heurística para
   // decidir se uma cena de dia é "de rotina" (branco) ou "fora da base" (amarelo, ver spec).
   const locationCounts = new Map<string, number>();
   for (const scene of scenes) {
-    const key = formatSetLocacao(scene.set, scene.locacao);
+    const key = formatSetLocacao(scene.set, scene.locacao?.nome ?? null);
     locationCounts.set(key, (locationCounts.get(key) ?? 0) + 1);
   }
   const mainLocation = [...locationCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
   const rows: EscaletaSceneRow[] = scenes
     .map((scene) => {
-      const local = formatSetLocacao(scene.set, scene.locacao);
+      const local = formatSetLocacao(scene.set, scene.locacao?.nome ?? null);
       let corCategoria: EscaletaSceneRow["corCategoria"] = "principal";
       if (scene.diaNarrativo === 0) corCategoria = "dia0";
       else if (scene.periodo === "NOITE") corCategoria = "noite";
@@ -543,13 +564,18 @@ export async function getPlanoSimplesData(projectId: string): Promise<PlanoSimpl
     where: { projectId },
     orderBy: { data: "asc" },
     include: {
-      scenes: { include: { scene: true }, orderBy: { ordem: "asc" } },
+      scenes: {
+        include: { scene: { include: { locacao: { select: { nome: true } } } } },
+        orderBy: { ordem: "asc" },
+      },
     },
   });
 
   const days: PlanoSimplesDay[] = shootDays.map((day) => {
     const scenes = day.scenes.map((s) => s.scene).filter((s) => !s.omitida);
-    const sets = [...new Set(scenes.map((s) => formatSetLocacao(s.set, s.locacao)))].filter((s) => s !== "—");
+    const sets = [...new Set(scenes.map((s) => formatSetLocacao(s.set, s.locacao?.nome ?? null)))].filter(
+      (s) => s !== "—"
+    );
 
     return {
       shootDayId: day.id,

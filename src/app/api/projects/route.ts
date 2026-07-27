@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { resolveCharacterId } from "@/lib/character-import";
 import type { FdxScene } from "@/lib/fdx-parser";
+import { resolveLocacaoIdForSet } from "@/lib/locacao-import";
 import { prisma } from "@/lib/prisma";
 import { revisionColorForDraftNumero } from "@/lib/revision-colors";
 import { onboardingCreateSchema } from "@/lib/validation/onboarding";
@@ -54,6 +55,9 @@ export async function POST(request: Request) {
     if (scenes.length > 0) {
       const characterIdByName = new Map<string, string>();
       const takenIdCurtos = new Set<string>();
+      // Projeto novo, sem cena/locação prévia — uma Locacao por set distinto, nome = set, sem
+      // endereço (ver ESCOPO: preenchimento de endereço é manual, feito depois em /locacoes).
+      const setToLocacaoId = new Map<string, string>();
 
       for (const scene of scenes as FdxScene[]) {
         const characterIds: string[] = [];
@@ -69,6 +73,8 @@ export async function POST(request: Request) {
           if (characterId) characterIds.push(characterId);
         }
 
+        const locacaoId = await resolveLocacaoIdForSet(tx, created.id, scene.set, setToLocacaoId);
+
         await tx.scene.create({
           data: {
             numero: scene.numero,
@@ -76,7 +82,7 @@ export async function POST(request: Request) {
             tipo: scene.tipo,
             periodo: scene.periodo,
             set: scene.set,
-            locacao: scene.set,
+            locacaoId,
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
             tempoEstimadoMin: scene.tempoEstimadoMinSugerido,

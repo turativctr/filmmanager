@@ -56,7 +56,7 @@ export default async function DocumentosPage({ params }: { params: { id: string 
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader title="Documentos" />
 
       <section className="space-y-3">

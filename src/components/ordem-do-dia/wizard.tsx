@@ -20,6 +20,7 @@ import { Step4Revisao } from "./step-4-revisao";
 import type {
   CastRow,
   ExtraRow,
+  LocacaoInfo,
   LogisticsState,
   MeteoState,
   Passo3Data,
@@ -30,8 +31,10 @@ import type {
 
 const STEPS = ["Locação e logística", "Tempos e ritmo", "Alertas e habilidades", "Meteorologia e revisão"];
 
-function buildInitialLogistics(shootDay: ShootDayInfo, firstSceneLocation: string | null): LogisticsState {
-  const locacaoEndereco = shootDay.locacaoEndereco || firstSceneLocation || "";
+function buildInitialLogistics(shootDay: ShootDayInfo, locacaoInfo: LocacaoInfo): LogisticsState {
+  const locacao = locacaoInfo.locacao;
+  const locacaoNome = shootDay.locacaoNome || locacao?.nome || "";
+  const locacaoEndereco = shootDay.locacaoEndereco || locacao?.endereco || "";
   const transporteHorario =
     shootDay.transporteHorario ||
     (shootDay.chamadaGeral ? minutesToTime(timeToMinutes(shootDay.chamadaGeral) - 30) : "");
@@ -39,15 +42,15 @@ function buildInitialLogistics(shootDay: ShootDayInfo, firstSceneLocation: strin
   const estacionamento = shootDay.estacionamento || (locacaoEndereco ? "Ruas próximas à locação" : "");
 
   return {
-    locacaoNome: shootDay.locacaoNome ?? "",
+    locacaoNome,
     locacaoEndereco,
     transporteHorario,
     transporteEndereco: shootDay.transporteEndereco ?? "",
     baseInfo,
     estacionamento,
-    hospitalNome: shootDay.hospitalNome ?? "",
-    hospitalEndereco: shootDay.hospitalEndereco ?? "",
-    hospitalTelefone: shootDay.hospitalTelefone ?? "",
+    hospitalNome: shootDay.hospitalNome || locacao?.hospitalNome || "",
+    hospitalEndereco: shootDay.hospitalEndereco || locacao?.hospitalEndereco || "",
+    hospitalTelefone: shootDay.hospitalTelefone || locacao?.hospitalTelefone || "",
   };
 }
 
@@ -88,7 +91,7 @@ export function OrdemDoDiaWizard({
   projectId,
   shootDay,
   projeto,
-  firstSceneLocation,
+  locacaoInfo,
   castRows: initialCastRows,
   extraRows: initialExtraRows,
   chamadaEquipeInicial,
@@ -99,7 +102,7 @@ export function OrdemDoDiaWizard({
   projectId: string;
   shootDay: ShootDayInfo;
   projeto: { titulo: string; sigla: string | null };
-  firstSceneLocation: string | null;
+  locacaoInfo: LocacaoInfo;
   castRows: CastRow[];
   extraRows: ExtraRow[];
   chamadaEquipeInicial: Record<string, string>;
@@ -114,7 +117,7 @@ export function OrdemDoDiaWizard({
   const [showMissingTimesDialog, setShowMissingTimesDialog] = useState(false);
 
   const [logistics, setLogistics] = useState<LogisticsState>(() =>
-    buildInitialLogistics(shootDay, firstSceneLocation)
+    buildInitialLogistics(shootDay, locacaoInfo)
   );
   const [meteo, setMeteo] = useState<MeteoState>(() => buildInitialMeteo(shootDay));
   const [castRows, setCastRows] = useState(initialCastRows);
@@ -302,7 +305,13 @@ export function OrdemDoDiaWizard({
 
       <Card>
         <CardContent className="max-h-[60vh] overflow-y-auto p-6">
-          {step === 1 && <Step1Locacao logistics={logistics} onChange={(p) => setLogistics((s) => ({ ...s, ...p }))} />}
+          {step === 1 && (
+            <Step1Locacao
+              logistics={logistics}
+              onChange={(p) => setLogistics((s) => ({ ...s, ...p }))}
+              locacaoInfo={locacaoInfo}
+            />
+          )}
           {step === 2 && (
             <div className="space-y-6">
               <Step2Tempos

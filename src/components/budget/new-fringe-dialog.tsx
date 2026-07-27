@@ -80,13 +80,15 @@ export function NewFringeDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Fringe
+          Encargo
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Fringe</DialogTitle>
-          <DialogDescription>Encargo percentual aplicado sobre a mão de obra fringeable.</DialogDescription>
+          <DialogTitle>Novo Encargo</DialogTitle>
+          <DialogDescription>
+            Encargo percentual aplicado sobre a mão de obra sujeita a encargos (fringeable).
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -148,7 +150,7 @@ export function NewFringeDialog({
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={loading}>
-              {loading ? "Criando..." : "Criar fringe"}
+              {loading ? "Criando..." : "Criar encargo"}
             </Button>
           </DialogFooter>
         </form>

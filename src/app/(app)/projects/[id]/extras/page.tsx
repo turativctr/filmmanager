@@ -1,5 +1,8 @@
+import { Users } from "lucide-react";
+
 import { ExtraFormDialog } from "@/components/extras/extra-form-dialog";
 import { ExtrasTable } from "@/components/extras/extras-table";
+import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
@@ -30,11 +33,11 @@ export default async function ExtrasPage({ params }: { params: { id: string } })
       <PageHeader title="Figuração" actions={<ExtraFormDialog projectId={params.id} scenes={sortedScenes} />} />
 
       {extras.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhuma figuração cadastrada ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title="Nenhuma figuração cadastrada ainda"
+          description="Cadastre a figuração presente nas cenas para acompanhar chamada e prestação de contas."
+        />
       ) : (
         <Card>
           <CardContent className="p-0">

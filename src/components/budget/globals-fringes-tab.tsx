@@ -15,15 +15,15 @@ export function GlobalsFringesTab({ projectId, budget }: { projectId: string; bu
     <div className="space-y-4">
       <InfoBanner
         storageKey="budget-globals-fringes"
-        title="Globals e Fringes"
-        description="Globals são variáveis reutilizáveis que atualizam automaticamente todas as linhas vinculadas. Ex: mudar G_DIAS_SET de 5 para 7 recalcula diárias, aluguéis e alimentação de uma vez. Fringes são encargos trabalhistas (INSS, FGTS) calculados automaticamente sobre mão de obra."
+        title="Globais e Encargos"
+        description="Globais são variáveis reutilizáveis que atualizam automaticamente todas as linhas vinculadas. Ex: mudar G_DIAS_SET de 5 para 7 recalcula diárias, aluguéis e alimentação de uma vez. Encargos trabalhistas (INSS, FGTS) são calculados automaticamente sobre mão de obra."
       />
       <SyncSchedulingBanner projectId={projectId} globals={budget.globals} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="flex items-center gap-1.5 text-base">
-            Globals
+            Globais
             <TermTooltip content="Variáveis do orçamento que atualizam múltiplas linhas ao mesmo tempo quando seu valor muda." />
           </CardTitle>
           <NewGlobalDialog projectId={projectId} />
@@ -58,7 +58,7 @@ export function GlobalsFringesTab({ projectId, budget }: { projectId: string; bu
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="flex items-center gap-1.5 text-base">
-            Fringes
+            Encargos
             <TermTooltip content="Encargos trabalhistas calculados automaticamente sobre os custos de mão de obra (INSS, FGTS, ISS)." />
           </CardTitle>
           <NewFringeDialog projectId={projectId} accountGroups={budget.accountGroups} />
@@ -89,7 +89,7 @@ export function GlobalsFringesTab({ projectId, budget }: { projectId: string; bu
               {budget.fringes.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="py-4 text-center text-sm text-muted-foreground">
-                    Nenhum fringe ainda.
+                    Nenhum encargo ainda.
                   </TableCell>
                 </TableRow>
               )}

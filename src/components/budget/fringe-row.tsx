@@ -88,7 +88,7 @@ export function FringeRow({
       <TableCell>
         <ConfirmDeleteDialog
           title={`Excluir ${fringe.nome}?`}
-          description="Remove o fringe e os cálculos vinculados. Não pode ser desfeita."
+          description="Remove o encargo e os cálculos vinculados. Não pode ser desfeita."
           onConfirm={handleDelete}
         />
       </TableCell>

@@ -70,6 +70,8 @@ export type ReportSceneRow = {
   periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
   set: string | null;
   locacao: string | null;
+  /** Id da Locacao vinculada (ou null) — usado pra derivar o prefill de logística da Ordem do Dia. */
+  locacaoId: string | null;
   /** "Set" com "Locação" anexada só quando diferem — evita "Restaurante Bananeira · Restaurante Bananeira". */
   setLocacaoDisplay: string;
   sinopse: string | null;
@@ -331,6 +333,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
                 extras: { include: { extra: true } },
                 shots: { orderBy: { ordem: "asc" } },
                 breakdownSheet: true,
+                locacao: { select: { nome: true } },
               },
             },
           },
@@ -377,8 +380,9 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       tipo: scene.tipo,
       periodo: scene.periodo,
       set: scene.set,
-      locacao: scene.locacao,
-      setLocacaoDisplay: formatSetLocacao(scene.set, scene.locacao),
+      locacao: scene.locacao?.nome ?? null,
+      locacaoId: scene.locacaoId,
+      setLocacaoDisplay: formatSetLocacao(scene.set, scene.locacao?.nome ?? null),
       sinopse: scene.sinopse,
       sinopseAD: scene.sinopseAD,
       paginas: scene.paginas.toString(),

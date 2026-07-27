@@ -14,7 +14,7 @@ export default async function BudgetGlobalsFringesPage({ params }: { params: { i
     );
   return (
     <div className="space-y-4">
-      <PageHeader title="Globals e Fringes" />
+      <PageHeader title="Globais e Encargos" />
       <GlobalsFringesTab projectId={params.id} budget={data} />
     </div>
   );

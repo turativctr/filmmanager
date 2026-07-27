@@ -148,7 +148,7 @@ export function BudgetDetailedDocument({
           <Text style={styles.coverMetaRow}>Gerado em {dataGeracao}</Text>
           {project.diretor && <Text style={styles.coverMetaRow}>Direção: {project.diretor}</Text>}
           {project.producao && <Text style={styles.coverMetaRow}>Produção: {project.producao}</Text>}
-          <Text style={styles.coverLegend}>[G] na coluna Período indica valor calculado a partir de um Global (ver aba Globals e Fringes).</Text>
+          <Text style={styles.coverLegend}>[G] na coluna Período indica valor calculado a partir de um Global (ver aba Globais e Encargos).</Text>
         </View>
         <Footer projectTitulo={project.titulo} versao={budget.versao} />
       </Page>

@@ -135,7 +135,7 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
       etapa: "ORCAMENTO",
       icon: DollarSign,
       title: "Monte o orçamento",
-      description: "Registre os custos por departamento, configure encargos e globals, e acompanhe o realizado vs. planejado.",
+      description: "Registre os custos por departamento, configure encargos e globais, e acompanhe o realizado vs. planejado.",
       status: orcamento.status,
       isManual: orcamento.isManual,
       actionLabel: "Abrir orçamento",

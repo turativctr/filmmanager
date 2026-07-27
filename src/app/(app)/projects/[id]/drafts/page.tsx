@@ -2,6 +2,7 @@ import { ClipboardList } from "lucide-react";
 import Link from "next/link";
 
 import { ImportDraftDialog } from "@/components/drafts/import-draft-dialog";
+import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
@@ -46,12 +47,11 @@ export default async function DraftsPage({ params }: { params: { id: string } })
       />
 
       {drafts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
-            <ClipboardList className="h-8 w-8" />
-            <p>Nenhum draft registrado ainda. Importe uma versão do roteiro para começar.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ClipboardList}
+          title="Nenhum draft registrado ainda"
+          description="Importe uma versão do roteiro para começar."
+        />
       ) : (
         <div className="space-y-2">
           {drafts.map((draft) => {
@@ -66,7 +66,7 @@ export default async function DraftsPage({ params }: { params: { id: string } })
                     <div className="flex items-center gap-3">
                       <span
                         className={cn(
-                          "rounded-md border px-2 py-1 text-xs font-semibold",
+                          "rounded-md border px-2 py-0.5 text-xs font-semibold",
                           corClasses(draft.corRevisao)
                         )}
                       >

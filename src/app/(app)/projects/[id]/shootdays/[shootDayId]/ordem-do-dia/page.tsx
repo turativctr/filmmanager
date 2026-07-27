@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import type { LocacaoInfo } from "@/components/ordem-do-dia/types";
 import { OrdemDoDiaWizard } from "@/components/ordem-do-dia/wizard";
 import { getCharacterId } from "@/lib/character-id";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/lib/ordem-do-dia";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import { getShootDayReportData } from "@/lib/report-data";
+import { prisma } from "@/lib/prisma";
 
 export default async function OrdemDoDiaPage({
   params,
@@ -89,6 +91,36 @@ export default async function OrdemDoDiaPage({
     shotsTotal: s.shotsTotal,
   }));
 
+  const distinctLocacaoIds = [...new Set(data.scenes.map((s) => s.locacaoId).filter((id): id is string => id != null))];
+
+  let locacaoInfo: LocacaoInfo = { locacao: null, mixedCount: null };
+  if (distinctLocacaoIds.length === 1) {
+    const locacao = await prisma.locacao.findUnique({
+      where: { id: distinctLocacaoIds[0] },
+      include: { pontosApoio: { orderBy: { ordem: "asc" } } },
+    });
+    if (locacao) {
+      locacaoInfo = {
+        locacao: {
+          nome: locacao.nome,
+          endereco: locacao.endereco,
+          hospitalNome: locacao.hospitalNome,
+          hospitalEndereco: locacao.hospitalEndereco,
+          hospitalTelefone: locacao.hospitalTelefone,
+          pontosApoio: locacao.pontosApoio.map((p) => ({
+            id: p.id,
+            tipo: p.tipo,
+            descricao: p.descricao,
+            endereco: p.endereco,
+          })),
+        },
+        mixedCount: null,
+      };
+    }
+  } else if (distinctLocacaoIds.length > 1) {
+    locacaoInfo = { locacao: null, mixedCount: distinctLocacaoIds.length };
+  }
+
   const initialStep = Math.min(4, Math.max(1, Number(searchParams.step) || 1));
 
   const existingChamadaEquipe: Record<string, string> = {};
@@ -121,7 +153,7 @@ export default async function OrdemDoDiaPage({
       projectId={params.id}
       shootDay={data.shootDay}
       projeto={{ titulo: data.project.titulo, sigla: data.project.sigla }}
-      firstSceneLocation={data.scenes[0]?.locacao ?? data.scenes[0]?.set ?? null}
+      locacaoInfo={locacaoInfo}
       castRows={castRows}
       extraRows={extraRows}
       chamadaEquipeInicial={chamadaEquipeInicial}

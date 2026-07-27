@@ -21,6 +21,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     include: {
       cast: { include: { character: { select: { idCurto: true } } } },
       shootDays: { include: { shootDay: { select: { numeroDia: true, data: true } } } },
+      locacao: { select: { nome: true } },
     },
   });
 
@@ -88,7 +89,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     row.getCell(5).value = scene.numero;
     row.getCell(6).value = scene.tipo;
     row.getCell(7).value = scene.periodo;
-    row.getCell(8).value = scene.locacao ?? "";
+    row.getCell(8).value = scene.locacao?.nome ?? "";
     row.getCell(9).value = scene.set ?? "";
     row.getCell(10).value = scene.sinopse ?? "";
     row.getCell(11).value = scene.cast.map((c) => c.character.idCurto).join(", ");

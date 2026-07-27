@@ -4,8 +4,8 @@ import Link from "next/link";
 
 import { ProjectCard } from "@/components/projects/project-card";
 import { ArchivedProjectsSection } from "@/components/projects/archived-projects-section";
+import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -51,12 +51,11 @@ export default async function ProjectsPage() {
       </div>
 
       {activeProjects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
-            <Film className="h-8 w-8" />
-            <p>Nenhum projeto ainda. Crie o primeiro para começar a planejar.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Film}
+          title="Nenhum projeto ainda"
+          description="Crie o primeiro para começar a planejar."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {activeProjects.map((project) => (

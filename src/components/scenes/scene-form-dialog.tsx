@@ -37,6 +37,8 @@ type CharacterOption = {
 
 const TIPO_INDEFINIDO = "INDEFINIDO";
 const PERIODO_INDEFINIDO = "INDEFINIDO";
+const SEM_LOCACAO = "__sem_locacao__";
+const CRIAR_NOVA_LOCACAO = "__criar_nova_locacao__";
 
 type SceneDefaults = {
   id: string;
@@ -44,7 +46,7 @@ type SceneDefaults = {
   tipo: "INT" | "EXT" | null;
   periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
   set: string | null;
-  locacao: string | null;
+  locacao: { id: string; nome: string } | null;
   sinopse: string | null;
   paginas: unknown;
   diaNarrativo: number | null;
@@ -57,12 +59,14 @@ export function SceneFormDialog({
   projectId,
   characters,
   sistemaIdElenco,
+  locacoes,
   scene,
   trigger,
 }: {
   projectId: string;
   characters: CharacterOption[];
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
+  locacoes: { id: string; nome: string }[];
   scene?: SceneDefaults;
   trigger?: ReactNode;
 }) {
@@ -73,6 +77,8 @@ export function SceneFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [tipo, setTipo] = useState<string>(scene ? scene.tipo ?? TIPO_INDEFINIDO : "INT");
   const [periodo, setPeriodo] = useState<string>(scene ? scene.periodo ?? PERIODO_INDEFINIDO : "DIA");
+  const [locacaoId, setLocacaoId] = useState<string>(scene?.locacao?.id ?? SEM_LOCACAO);
+  const [novaLocacaoNome, setNovaLocacaoNome] = useState("");
   const [selectedCast, setSelectedCast] = useState<Set<string>>(
     new Set(scene?.cast.map((c) => c.characterId) ?? [])
   );
@@ -101,13 +107,35 @@ export function SceneFormDialog({
     setLoading(true);
     setError(null);
 
+    let resolvedLocacaoId: string | null = locacaoId === SEM_LOCACAO ? null : locacaoId;
+
+    if (locacaoId === CRIAR_NOVA_LOCACAO) {
+      if (!novaLocacaoNome.trim()) {
+        setError("Dê um nome pra nova locação.");
+        setLoading(false);
+        return;
+      }
+      const createRes = await fetch(`/api/projects/${projectId}/locacoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: novaLocacaoNome }),
+      });
+      if (!createRes.ok) {
+        setError("Não foi possível criar a locação.");
+        setLoading(false);
+        return;
+      }
+      const created = await createRes.json();
+      resolvedLocacaoId = created.locacao.id;
+    }
+
     const form = new FormData(e.currentTarget);
     const payload = {
       numero: form.get("numero"),
       tipo: tipo === TIPO_INDEFINIDO ? null : tipo,
       periodo: periodo === PERIODO_INDEFINIDO ? null : periodo,
       set: form.get("set") || undefined,
-      locacao: form.get("locacao") || undefined,
+      locacaoId: resolvedLocacaoId,
       sinopse: form.get("sinopse") || undefined,
       paginas: form.get("paginas"),
       diaNarrativo: form.get("diaNarrativo") || undefined,
@@ -202,8 +230,30 @@ export function SceneFormDialog({
               <Input id="set" name="set" defaultValue={scene?.set ?? ""} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="locacao">Locação</Label>
-              <Input id="locacao" name="locacao" defaultValue={scene?.locacao ?? ""} />
+              <Label>Locação</Label>
+              <Select value={locacaoId} onValueChange={setLocacaoId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SEM_LOCACAO}>Sem locação definida</SelectItem>
+                  {locacoes.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.nome}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={CRIAR_NOVA_LOCACAO}>Criar nova locação...</SelectItem>
+                </SelectContent>
+              </Select>
+              {locacaoId === CRIAR_NOVA_LOCACAO && (
+                <Input
+                  className="mt-1.5"
+                  placeholder="Nome da nova locação"
+                  value={novaLocacaoNome}
+                  onChange={(e) => setNovaLocacaoNome(e.target.value)}
+                  autoFocus
+                />
+              )}
             </div>
           </div>
 

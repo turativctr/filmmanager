@@ -141,7 +141,7 @@ export function TopsheetTab({
             moeda={budget.moedaBase}
           />
           <TotalsRow label="Total BTL" value={totals.totalBTL} moeda={budget.moedaBase} />
-          <TotalsRow label="Total Fringes" value={totals.totalFringes} moeda={budget.moedaBase} />
+          <TotalsRow label="Total Encargos" value={totals.totalFringes} moeda={budget.moedaBase} />
           <TotalsRow
             label={`Contingência (${budget.contingenciaPercentual}% sobre BTL)`}
             value={totals.contingencia}

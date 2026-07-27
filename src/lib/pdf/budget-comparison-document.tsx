@@ -143,7 +143,7 @@ export function BudgetComparisonDocument({
             ))}
             {totalRow("Total ATL", "totalATL")}
             {totalRow("Total BTL", "totalBTL")}
-            {totalRow("Total Fringes", "totalFringes")}
+            {totalRow("Total Encargos", "totalFringes")}
             {totalRow("Contingência", "contingencia")}
             {totalRow("GRAND TOTAL", "grandTotal", true)}
           </Table>
@@ -180,7 +180,7 @@ export function BudgetComparisonDocument({
 
         {allGlobalKeys.length > 0 && (
           <View style={styles.section}>
-            <SectionTitle>GLOBALS POR CENÁRIO</SectionTitle>
+            <SectionTitle>GLOBAIS POR CENÁRIO</SectionTitle>
             <Table>
               <Tr header>
                 <Td width={`${labelWidth}%`} bold>

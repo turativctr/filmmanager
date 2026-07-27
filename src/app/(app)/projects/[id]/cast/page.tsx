@@ -1,5 +1,8 @@
+import { Users } from "lucide-react";
+
 import { CastTable } from "@/components/cast/cast-table";
 import { CharacterFormDialog } from "@/components/cast/character-form-dialog";
+import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { naturalCompare } from "@/lib/natural-sort";
@@ -27,11 +30,11 @@ export default async function CastPage({ params }: { params: { id: string } }) {
       <PageHeader title="Elenco" actions={<CharacterFormDialog projectId={params.id} scenes={sortedScenes} />} />
 
       {sortedCharacters.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            Nenhum personagem cadastrado ainda.
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Users}
+          title="Nenhum personagem cadastrado ainda"
+          description="Importe o roteiro para detectar personagens automaticamente, ou cadastre manualmente."
+        />
       ) : (
         <Card>
           <CardContent className="p-0">

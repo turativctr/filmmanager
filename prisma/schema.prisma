@@ -251,6 +251,7 @@ model Project {
   stepOverrides  ProjectStepOverride[]
   shots          Shot[]
   shotSchedules  ShotSchedule[]
+  locacoes       Locacao[]
 
   @@map("projects")
 }
@@ -280,8 +281,11 @@ model Scene {
   numero            String
   tipo              SceneEnvironment?
   periodo           SceneShift?
+  // Set = lugar da ficção, vem do roteiro ("RUA", "APARTAMENTO DE ANA CLARA") — texto livre.
+  // Locação = lugar real onde se filma, decisão de produção — entidade própria (ver Locacao). O
+  // roteiro não conhece a locação: "EXT. RUA" pode virar três ruas diferentes na produção.
   set               String?
-  locacao           String?
+  locacaoId         String?
   sinopse           String?          @db.Text
   // Frase operacional curta do AD pra Escaleta do AD e Hora a Hora — diferente da sinopse longa do
   // roteiro. Se vazia, a UI/PDF caem pra sinopse truncada em 80 chars (ver resolveSinopseAD).
@@ -297,6 +301,7 @@ model Scene {
   updatedAt         DateTime         @updatedAt
 
   project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  locacao         Locacao?         @relation(fields: [locacaoId], references: [id], onDelete: SetNull)
   cast            SceneCast[]
   shootDays       SceneShootDay[]
   extras          ExtraScene[]
@@ -306,6 +311,60 @@ model Scene {
 
   @@unique([projectId, numero])
   @@map("scenes")
+}
+
+// Lugar real onde se filma — decisão de produção, distinta do Set (lugar da ficção, vem do
+// roteiro). Uma Locacao pode abrigar vários Sets ("Casa da Vó" = "SALA" + "COZINHA"), e um Set
+// do roteiro pode corresponder a Locacoes diferentes ao longo da produção.
+model Locacao {
+  id              String   @id @default(cuid())
+  projectId       String
+  nome            String
+  endereco        String?  @db.Text
+  contatoNome     String?
+  contatoTelefone String?
+  notas           String?  @db.Text // estacionamento, restrições de horário, autorização
+
+  // Hospital tem campos próprios, não vira ponto de apoio: é crítico de segurança e tem lugar
+  // fixo no cabeçalho da Ordem do Dia.
+  hospitalNome     String?
+  hospitalEndereco String?  @db.Text
+  hospitalTelefone String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scenes      Scene[]
+  pontosApoio PontoApoio[]
+
+  @@map("locacoes")
+}
+
+enum TipoPontoApoio {
+  METRO_TREM
+  ONIBUS
+  ESTACIONAMENTO
+  MERCADO
+  FARMACIA
+  RESTAURANTE
+  POSTO_COMBUSTIVEL
+  OUTRO
+}
+
+// descricao é texto livre de propósito — transporte público raramente cabe em campo estruturado
+// (ex.: "Estação Jaraguá — Linha 7 Rubi da CPTM, cerca de 6 min a pé").
+model PontoApoio {
+  id        String         @id @default(cuid())
+  locacaoId String
+  tipo      TipoPontoApoio
+  descricao String         @db.Text
+  endereco  String?        @db.Text
+  ordem     Int
+
+  locacao Locacao @relation(fields: [locacaoId], references: [id], onDelete: Cascade)
+
+  @@map("pontos_apoio")
 }
 
 // Decupagem da cena — um plano por linha, ordenado por `ordem` (editável via drag-and-drop).

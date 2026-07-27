@@ -1,3 +1,5 @@
+import type { TipoPontoApoio } from "@prisma/client";
+
 import type {
   ContinuidadeAlert,
   DepartmentNoteGroup,
@@ -6,6 +8,21 @@ import type {
 } from "@/lib/ordem-do-dia";
 import type { ShootDayReportData } from "@/lib/report-data";
 import type { PendingGapAlert, ResumptionAlert } from "@/lib/shots-shared";
+
+/** Locação real vinculada ao dia (via Scene.locacaoId), usada só pra SUGERIR o preenchimento
+ *  da logística do Passo 1 — nunca sobrescreve um valor já digitado manualmente. */
+export type LocacaoInfo = {
+  locacao: {
+    nome: string;
+    endereco: string | null;
+    hospitalNome: string | null;
+    hospitalEndereco: string | null;
+    hospitalTelefone: string | null;
+    pontosApoio: { id: string; tipo: TipoPontoApoio; descricao: string; endereco: string | null }[];
+  } | null;
+  /** Número de locações distintas entre as cenas do dia, quando > 1 (aviso de "prevê mudança de locação"). */
+  mixedCount: number | null;
+};
 
 export type MakeDisplayEntry = { idCurto: string; descricao: string; sceneLabel: string; especial: boolean };
 

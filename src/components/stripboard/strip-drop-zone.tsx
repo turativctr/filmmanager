@@ -35,9 +35,10 @@ export function StripDropZone({
             {emptyLabel ?? "Arraste cenas para cá"}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-max space-y-1.5 p-1.5">{children}</div>
-          </div>
+          // Sem overflow-x-auto/min-w-max: a tira agora cabe na largura do container por design (o
+          // único campo que pode encolher é o SET, via truncate) — rolagem horizontal era exatamente
+          // o problema que a redução de largura da tira resolveu.
+          <div className="space-y-1.5 p-1.5">{children}</div>
         )}
       </div>
     </SortableContext>

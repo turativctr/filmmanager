@@ -1,7 +1,9 @@
 import { z } from "zod";
 
+import { normalizeLocacaoNome } from "@/lib/locacao";
+
 export const locacaoSchema = z.object({
-  nome: z.string().min(1),
+  nome: z.string().min(1).transform(normalizeLocacaoNome),
   endereco: z.string().optional().nullable(),
   contatoNome: z.string().optional().nullable(),
   contatoTelefone: z.string().optional().nullable(),

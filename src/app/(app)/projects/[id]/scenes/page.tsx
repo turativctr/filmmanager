@@ -6,6 +6,7 @@ import { SceneFormDialog } from "@/components/scenes/scene-form-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 
@@ -23,10 +24,11 @@ export default async function ScenesPage({ params }: { params: { id: string } })
     }),
     prisma.locacao.findMany({
       where: { projectId: params.id },
-      orderBy: { nome: "asc" },
       select: { id: true, nome: true },
     }),
   ]);
+
+  locacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
   const sortedScenes = [...scenes]
     .sort((a, b) => naturalCompare(a.numero, b.numero))

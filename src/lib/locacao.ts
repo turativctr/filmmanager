@@ -35,3 +35,17 @@ export function normalizeEndereco(endereco: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/** Nome de locação é sempre maiúsculo — convenção de set, é assim que aparece na Ordem do Dia
+ *  e nos relatórios impressos. Scene.set NÃO passa por isso: fica com a grafia original do
+ *  roteiro, que é o rastro de qual set virou qual locação real. */
+export function normalizeLocacaoNome(nome: string): string {
+  return nome.trim().toUpperCase();
+}
+
+/** Ordena locações alfabeticamente ignorando acento (ex.: "ÁGUA" antes de "ZONA"), pela
+ *  convenção pt-BR — não usar orderBy do Postgres aqui porque o banco está em collation "C"
+ *  (POSIX), que ordena por byte cru e joga letras acentuadas pro fim. */
+export function compareLocacaoNome(a: string, b: string): number {
+  return a.localeCompare(b, "pt-BR", { sensitivity: "base" });
+}

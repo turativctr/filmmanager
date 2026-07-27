@@ -1,5 +1,7 @@
 import type { Prisma } from "@prisma/client";
 
+import { normalizeLocacaoNome } from "@/lib/locacao";
+
 type Tx = Prisma.TransactionClient;
 
 /** Resolve (ou cria) a Locacao correspondente a um valor de Set, dentro de uma transação de import
@@ -28,7 +30,7 @@ export async function resolveLocacaoIdForSet(
     return existingScene.locacaoId;
   }
 
-  const created = await tx.locacao.create({ data: { projectId, nome: set } });
+  const created = await tx.locacao.create({ data: { projectId, nome: normalizeLocacaoNome(set) } });
   setToLocacaoId.set(set, created.id);
   return created.id;
 }

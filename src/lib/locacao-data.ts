@@ -1,3 +1,4 @@
+import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 
@@ -17,7 +18,6 @@ export async function getLocacoesListData(
   const [locacoes, semLocacaoCount] = await Promise.all([
     prisma.locacao.findMany({
       where: { projectId },
-      orderBy: { nome: "asc" },
       include: {
         scenes: { select: { set: true, shootDays: { select: { shootDayId: true } } } },
         _count: { select: { pontosApoio: true } },
@@ -41,6 +41,8 @@ export async function getLocacoesListData(
       sets,
     };
   });
+
+  result.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
   return { locacoes: result, semLocacaoCount };
 }

@@ -2,6 +2,7 @@ import type { CharacterCategoria, SistemaIdElenco } from "@prisma/client";
 
 import { CHARACTER_CATEGORIA_ORDER } from "@/lib/character-categoria";
 import { getCharacterId } from "@/lib/character-id";
+import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { formatSetLocacao, getShootDayReportData } from "@/lib/report-data";
@@ -201,7 +202,7 @@ export async function getLocationSceneListData(projectId: string): Promise<Locat
     .sort((a, b) => {
       if (a.key === "__sem_locacao__") return 1;
       if (b.key === "__sem_locacao__") return -1;
-      return a.nome.localeCompare(b.nome);
+      return compareLocacaoNome(a.nome, b.nome);
     })
     .map(({ nome, endereco, scenes }) => ({ nome, endereco, scenes }));
 

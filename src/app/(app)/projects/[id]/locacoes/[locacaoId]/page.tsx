@@ -4,6 +4,7 @@ import { LocacaoApoioSection } from "@/components/locacoes/locacao-apoio-section
 import { LocacaoCenasSection } from "@/components/locacoes/locacao-cenas-section";
 import { LocacaoDadosSection } from "@/components/locacoes/locacao-dados-section";
 import { PageHeader } from "@/components/shared/page-header";
+import { compareLocacaoNome } from "@/lib/locacao";
 import { getLocacaoDetailData } from "@/lib/locacao-data";
 import { prisma } from "@/lib/prisma";
 
@@ -16,12 +17,13 @@ export default async function LocacaoDetailPage({
     getLocacaoDetailData(params.id, params.locacaoId),
     prisma.locacao.findMany({
       where: { projectId: params.id, id: { not: params.locacaoId } },
-      orderBy: { nome: "asc" },
       select: { id: true, nome: true },
     }),
   ]);
 
   if (!locacao) notFound();
+
+  otherLocacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
   return (
     <div className="space-y-4">

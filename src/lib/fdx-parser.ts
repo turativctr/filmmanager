@@ -128,11 +128,11 @@ function parseHeading(raw: string): { tipo: FdxScene["tipo"]; set: string | null
     const after = body.slice(lastIndex + last[0].length).trim();
     const periodo = PERIODO_MAP[after.toUpperCase()];
     if (periodo) {
-      return { tipo, set: before || null, periodo };
+      return { tipo, set: before ? before.toUpperCase() : null, periodo };
     }
   }
 
-  return { tipo, set: body || null, periodo: null };
+  return { tipo, set: body ? body.toUpperCase() : null, periodo: null };
 }
 
 // O rótulo "quem está na cena" que o roteirista marca manualmente no Scene Heading

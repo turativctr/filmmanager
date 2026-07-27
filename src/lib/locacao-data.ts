@@ -7,6 +7,7 @@ export type LocacaoListRow = {
   nome: string;
   endereco: string | null;
   numCenas: number;
+  sceneNumeros: string[];
   numDiarias: number;
   numPontosApoio: number;
   sets: string[];
@@ -19,7 +20,7 @@ export async function getLocacoesListData(
     prisma.locacao.findMany({
       where: { projectId },
       include: {
-        scenes: { select: { set: true, shootDays: { select: { shootDayId: true } } } },
+        scenes: { select: { numero: true, set: true, shootDays: { select: { shootDayId: true } } } },
         _count: { select: { pontosApoio: true } },
       },
     }),
@@ -30,12 +31,14 @@ export async function getLocacoesListData(
     const sets = [...new Set(l.scenes.map((s) => s.set).filter((s): s is string => Boolean(s)))].sort(
       naturalCompare
     );
+    const sceneNumeros = l.scenes.map((s) => s.numero).sort(naturalCompare);
     const diariaIds = new Set(l.scenes.flatMap((s) => s.shootDays.map((sd) => sd.shootDayId)));
     return {
       id: l.id,
       nome: l.nome,
       endereco: l.endereco,
       numCenas: l.scenes.length,
+      sceneNumeros,
       numDiarias: diariaIds.size,
       numPontosApoio: l._count.pontosApoio,
       sets,

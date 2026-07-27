@@ -67,7 +67,7 @@ export function LocacoesTable({
                 <TableHead className="w-10" />
                 <TableHead>Nome</TableHead>
                 <TableHead>Endereço</TableHead>
-                <TableHead className="text-right">Nº de cenas</TableHead>
+                <TableHead>Cenas</TableHead>
                 <TableHead className="text-right">Nº de diárias</TableHead>
                 <TableHead>Sets</TableHead>
               </TableRow>
@@ -86,7 +86,19 @@ export function LocacoesTable({
                   <TableCell className="max-w-[240px] truncate text-muted-foreground" title={l.endereco ?? undefined}>
                     {l.endereco ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right">{l.numCenas}</TableCell>
+                  <TableCell>
+                    {l.sceneNumeros.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {l.sceneNumeros.map((numero) => (
+                          <Badge key={numero} variant="secondary">
+                            {numero}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">{l.numDiarias}</TableCell>
                   <TableCell>
                     {l.sets.length > 0 ? (

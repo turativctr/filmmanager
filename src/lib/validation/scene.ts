@@ -6,7 +6,11 @@ export const sceneSchema = z.object({
   numero: z.string().min(1),
   tipo: z.enum(["INT", "EXT"]).optional().nullable(),
   periodo: z.enum(["DIA", "NOITE", "ENTARDECER", "AMANHECER", "CONTINUO", "DEPOIS"]).optional().nullable(),
-  set: z.string().optional().nullable(),
+  set: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v.trim().toUpperCase() : v)),
   locacaoId: z.string().optional().nullable(),
   sinopse: z.string().optional().nullable(),
   paginas: z.string().refine(isValidPaginasInput, {

@@ -18,6 +18,7 @@ model User {
   passwordHash  String
   emailVerified DateTime?
   image         String?
+  role          Role      @default(USER)
   tourConcluido Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -27,6 +28,11 @@ model User {
   projects Project[]
 
   @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 model Account {

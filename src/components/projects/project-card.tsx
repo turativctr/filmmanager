@@ -17,6 +17,10 @@ export type ProjectCardData = {
   status: ProjectStatus;
   arquivado: boolean;
   _count: { scenes: number; shootDays: number };
+  /** Só populado quando quem está vendo a lista é ADMIN — mostra o dono do projeto (ou "Sem dono"
+   *  pra órfãos, ownerId null) no card. Ausente (não só vazio) para usuários comuns, que nunca veem
+   *  esse dado. */
+  ownerLabel?: string;
 };
 
 export function ProjectCard({ project }: { project: ProjectCardData }) {
@@ -37,6 +41,7 @@ export function ProjectCard({ project }: { project: ProjectCardData }) {
               {pluralize(project._count.scenes, "cena")} · {pluralize(project._count.shootDays, "diária", "diárias")}
             </p>
             <ProjectStatusBadges status={project.status} arquivado={project.arquivado} className="pt-1" />
+            {project.ownerLabel && <p className="pt-1 text-xs text-muted-foreground/70">{project.ownerLabel}</p>}
           </CardContent>
         </Card>
       </Link>

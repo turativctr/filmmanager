@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <TooltipProvider delayDuration={200}>
       <PageBackground />
       <div className="relative z-10 flex h-screen w-screen overflow-hidden">
-        <Sidebar />
+        <Sidebar isAdmin={session.user.role === "ADMIN"} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>

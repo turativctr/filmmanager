@@ -12,8 +12,10 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
+  // ADMIN enxerga todo projeto, inclusive órfãos (ownerId null) — USER continua restrito aos próprios.
+  const isAdmin = session.user.role === "ADMIN";
   const projects = await prisma.project.findMany({
-    where: { ownerId: session.user.id },
+    where: isAdmin ? {} : { ownerId: session.user.id },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { scenes: true, shootDays: true } } },
   });

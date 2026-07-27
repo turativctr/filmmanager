@@ -1,6 +1,6 @@
 "use client";
 
-import { Clapperboard, Wallet } from "lucide-react";
+import { Clapperboard, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
@@ -68,7 +68,7 @@ function NavLink({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const params = useParams<{ id?: string }>();
   const projectId = params?.id;
@@ -106,13 +106,29 @@ export function Sidebar() {
             </div>
           </>
         ) : (
-          <Link
-            href="/projects"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/60 hover:text-foreground"
-          >
-            <Clapperboard className="h-4 w-4" />
-            Projetos
-          </Link>
+          <div className="flex flex-col gap-1">
+            <Link
+              href="/projects"
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/60 hover:text-foreground"
+            >
+              <Clapperboard className="h-4 w-4" />
+              Projetos
+            </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  pathname === "/admin"
+                    ? "bg-white/80 text-foreground"
+                    : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                )}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Administração
+              </Link>
+            )}
+          </div>
         )}
       </nav>
       <UserMenu />

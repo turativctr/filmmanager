@@ -11,11 +11,24 @@ import { prisma } from "@/lib/prisma";
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
-  const projects = await prisma.project.findMany({
-    where: { ownerId: session!.user.id },
+  const isAdmin = session!.user.role === "ADMIN";
+
+  // ADMIN enxerga todo projeto, inclusive órfãos (ownerId null) — USER continua restrito aos
+  // próprios. O dono é sempre buscado (join barato) mas só vira ownerLabel pra ADMIN — usuários
+  // comuns nunca recebem esse dado no payload.
+  const projectsRaw = await prisma.project.findMany({
+    where: isAdmin ? {} : { ownerId: session!.user.id },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { scenes: true, shootDays: true } } },
+    include: {
+      _count: { select: { scenes: true, shootDays: true } },
+      owner: { select: { email: true } },
+    },
   });
+
+  const projects = projectsRaw.map(({ owner, ...p }) => ({
+    ...p,
+    ownerLabel: isAdmin ? `Dono: ${owner?.email ?? "Sem dono"}` : undefined,
+  }));
 
   const activeProjects = projects.filter((p) => !p.arquivado);
   const archivedProjects = projects.filter((p) => p.arquivado);

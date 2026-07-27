@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { ProjectLifecycleMenu } from "@/components/projects/project-lifecycle-menu";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { findOwnedProject } from "@/lib/project-access";
 
 // Nome do projeto + créditos + badges de status NÃO aparecem mais aqui — o breadcrumb do Header
 // global já mostra o nome, e cada página passou a ter seu próprio H1 de seção (ver PageHeader).
@@ -18,9 +18,7 @@ export default async function ProjectLayout({
   params: { id: string };
 }) {
   const session = await getServerSession(authOptions);
-  const project = await prisma.project.findFirst({
-    where: { id: params.id, ownerId: session!.user.id },
-  });
+  const project = await findOwnedProject(params.id, session!.user.id, session!.user.role);
 
   if (!project) notFound();
 

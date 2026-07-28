@@ -4,6 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
 
+import { GLASS_BG, GLASS_BORDER_COLOR } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 const Sheet = DialogPrimitive.Root;
@@ -35,7 +36,9 @@ const SheetContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-y-0 right-0 z-50 flex h-full w-3/4 flex-col gap-4 rounded-l-2xl border-l border-white/50 bg-white/70 p-6 shadow-lg backdrop-blur-md transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm",
+        "fixed inset-y-0 right-0 z-50 flex h-full w-3/4 flex-col gap-4 rounded-l-2xl border-l p-6 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right sm:max-w-sm",
+        GLASS_BG,
+        GLASS_BORDER_COLOR,
         className
       )}
       {...props}

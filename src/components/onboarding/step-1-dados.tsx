@@ -5,6 +5,7 @@ import { useRef } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
 import type { ProjectFormState } from "./types";
 
@@ -13,13 +14,31 @@ export function Step1Dados({
   onChange,
   fileName,
   onFileSelect,
+  onFileError,
 }: {
   form: ProjectFormState;
   onChange: (patch: Partial<ProjectFormState>) => void;
   fileName: string | null;
   onFileSelect: (file: File | null) => void;
+  onFileError: (message: string | null) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      onFileSelect(null);
+      return;
+    }
+    if (!isAcceptedScriptFile(file.name)) {
+      onFileError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE);
+      e.target.value = "";
+      onFileSelect(null);
+      return;
+    }
+    onFileError(null);
+    onFileSelect(file);
+  }
 
   return (
     <div className="space-y-5">
@@ -81,7 +100,7 @@ export function Step1Dados({
           type="file"
           accept=".fdx,.wdz"
           className="block w-full rounded-md border px-3 py-2 text-sm"
-          onChange={(e) => onFileSelect(e.target.files?.[0] ?? null)}
+          onChange={handleFileChange}
         />
         {fileName && <p className="text-xs text-muted-foreground">Selecionado: {fileName}</p>}
       </div>

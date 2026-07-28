@@ -14,8 +14,14 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // background/foreground/card seguem o sistema de temas (--page-bg/--text/--surface, ver
+        // globals.css) — é o que faz uma <Card> comum (tabela de Cenas, Locações etc.) realmente
+        // trocar de superfície com o tema, não só sidebar/header/badges. border/input/ring/
+        // secondary/accent/destructive/popover ficam de fora de propósito: são cinza neutro em
+        // qualquer tema, não precisam retintar (e retintar --border com o branco do glass ficaria
+        // errado — glass e borda de UI comum são conceitos diferentes).
+        background: "rgb(var(--page-bg) / <alpha-value>)",
+        foreground: "rgb(var(--text) / <alpha-value>)",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -30,7 +36,7 @@ const config: Config = {
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          foreground: "rgb(var(--text-muted) / <alpha-value>)",
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
@@ -41,21 +47,76 @@ const config: Config = {
           foreground: "hsl(var(--popover-foreground))",
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
+          foreground: "rgb(var(--text) / <alpha-value>)",
         },
 
         // Tokens de módulo — cor só entra em badges, headers de módulo, sidebar ativa e
         // cabeçalhos de PDF, nunca em fundo de página inteiro (ver src/lib/module-theme.ts e
         // src/lib/glass.ts). Cada família: bg (fundo do badge) · fg (texto) · accent (bordas/ícones).
-        scheduling: { bg: "#E6F1FB", fg: "#0C447C", accent: "#185FA5" },
-        budgeting: { bg: "#EAF3DE", fg: "#27500A", accent: "#3B6D11" },
-        drafts: { bg: "#EEEDFE", fg: "#3C3489", accent: "#534AB7" },
-        decupagem: { bg: "#E3F3F0", fg: "#0F4F45", accent: "#1B7365" },
-        alerta: { bg: "#FAEEDA", fg: "#633806", accent: "#854F0B" },
-        erro: { bg: "#FAECE7", fg: "#993C1D", accent: "#A32D2D" },
-        sucesso: { bg: "#EAF3DE", fg: "#3B6D11", accent: "#3B6D11" },
-        neutro: { bg: "#F4F4F5", fg: "#52525B", accent: "#A1A1AA" },
+        // Valores vêm de variáveis CSS (--x-bg/-fg/-accent em globals.css), que o tema troca via
+        // data-theme no <html> — nunca hex direto aqui (ver sistema de temas em globals.css).
+        // rgb(var(--x) / <alpha-value>) preserva os modificadores de opacidade do Tailwind
+        // (ex.: border-scheduling-accent/30) mesmo com a cor vindo de variável.
+        scheduling: {
+          bg: "rgb(var(--scheduling-bg) / <alpha-value>)",
+          fg: "rgb(var(--scheduling-fg) / <alpha-value>)",
+          accent: "rgb(var(--scheduling-accent) / <alpha-value>)",
+        },
+        budgeting: {
+          bg: "rgb(var(--budgeting-bg) / <alpha-value>)",
+          fg: "rgb(var(--budgeting-fg) / <alpha-value>)",
+          accent: "rgb(var(--budgeting-accent) / <alpha-value>)",
+        },
+        drafts: {
+          bg: "rgb(var(--drafts-bg) / <alpha-value>)",
+          fg: "rgb(var(--drafts-fg) / <alpha-value>)",
+          accent: "rgb(var(--drafts-accent) / <alpha-value>)",
+        },
+        decupagem: {
+          bg: "rgb(var(--decupagem-bg) / <alpha-value>)",
+          fg: "rgb(var(--decupagem-fg) / <alpha-value>)",
+          accent: "rgb(var(--decupagem-accent) / <alpha-value>)",
+        },
+        alerta: {
+          bg: "rgb(var(--alerta-bg) / <alpha-value>)",
+          fg: "rgb(var(--alerta-fg) / <alpha-value>)",
+          accent: "rgb(var(--alerta-accent) / <alpha-value>)",
+        },
+        erro: {
+          bg: "rgb(var(--erro-bg) / <alpha-value>)",
+          fg: "rgb(var(--erro-fg) / <alpha-value>)",
+          accent: "rgb(var(--erro-accent) / <alpha-value>)",
+        },
+        sucesso: {
+          bg: "rgb(var(--sucesso-bg) / <alpha-value>)",
+          fg: "rgb(var(--sucesso-fg) / <alpha-value>)",
+          accent: "rgb(var(--sucesso-accent) / <alpha-value>)",
+        },
+        neutro: {
+          bg: "rgb(var(--neutro-bg) / <alpha-value>)",
+          fg: "rgb(var(--neutro-fg) / <alpha-value>)",
+          accent: "rgb(var(--neutro-accent) / <alpha-value>)",
+        },
+
+        // Superfície/página do sistema de temas (ver globals.css) — mesmas variáveis que
+        // background/foreground/card acima; expostas também com esses nomes porque
+        // PageBackground e src/lib/glass.ts (glass é translúcido, não pode usar bg-card puro)
+        // precisam referenciar --page-bg/--surface/--text diretamente.
+        "page-bg": "rgb(var(--page-bg) / <alpha-value>)",
+        // 3 stops do gradiente do PageBackground — CLARO usa branco/branco/zinc-50 (mantém o
+        // gradiente sutil de sempre); os outros 3 temas colapsam os 3 num --page-bg liso (ver
+        // globals.css). Ficam em CSS puro (não numa classe condicional em JS por tema) de
+        // propósito: o primeiro render no servidor não tem acesso a `document`, então uma
+        // decisão em React ficaria errada até a hidratação corrigir depois — como variável CSS,
+        // o navegador já aplica certo direto do HTML do servidor, sem flash.
+        "page-bg-from": "rgb(var(--page-bg-from) / <alpha-value>)",
+        "page-bg-via": "rgb(var(--page-bg-via) / <alpha-value>)",
+        "page-bg-to": "rgb(var(--page-bg-to) / <alpha-value>)",
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        "surface-border": "rgb(var(--surface-border) / <alpha-value>)",
+        ink: "rgb(var(--text) / <alpha-value>)",
+        "ink-muted": "rgb(var(--text-muted) / <alpha-value>)",
       },
       borderRadius: {
         lg: "var(--radius)",

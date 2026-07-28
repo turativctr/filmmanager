@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GLASS_PANEL_ROUNDED } from "@/lib/glass";
+import { cn } from "@/lib/utils";
 
 function LoginForm() {
   const router = useRouter();
@@ -43,7 +45,7 @@ function LoginForm() {
       <PageBackground />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-6 px-4">
         <span className="text-lg font-semibold tracking-tight">Film Manager</span>
-        <Card className="w-full max-w-[400px] rounded-2xl border-white/50 bg-white/70 backdrop-blur-md">
+        <Card className={cn("w-full max-w-[400px]", GLASS_PANEL_ROUNDED)}>
           <CardHeader>
             <CardTitle>Entrar</CardTitle>
             <CardDescription>Acesse seus projetos.</CardDescription>

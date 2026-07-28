@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import type { FdxScene, FdxTitlePage } from "@/lib/fdx-parser";
+import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
 type ImportResult = {
   draft: { numero: number; corRevisao: string };
@@ -23,9 +24,12 @@ type ImportResult = {
   impacts: { motivo: string; numeroDia: number }[];
 };
 
+const NETWORK_ERROR_MESSAGE = "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
+
 export function ImportDraftDialog({ projectId }: { projectId: string }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [open, setOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -34,11 +38,24 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   const [parsed, setParsed] = useState<{ scenes: FdxScene[]; titlePage: FdxTitlePage } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
 
+  const uploading = analyzing || importing;
+
   function reset() {
     setParsed(null);
     setResult(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!isAcceptedScriptFile(file.name)) {
+      setError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE);
+      e.target.value = "";
+      return;
+    }
+    setError(null);
   }
 
   async function handleAnalyze() {
@@ -47,23 +64,43 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
       setError("Selecione um arquivo .fdx ou .wdz.");
       return;
     }
+    if (!isAcceptedScriptFile(file.name)) {
+      setError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setAnalyzing(true);
     setError(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    const res = await fetch(`/api/projects/${projectId}/import/fdx`, { method: "POST", body: formData });
-    const data = await res.json().catch(() => ({}));
-    setAnalyzing(false);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    if (!res.ok) {
-      setError(data.error ?? "Não foi possível analisar o arquivo.");
-      return;
+      const res = await fetch(`/api/projects/${projectId}/import/fdx`, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.error ?? "Não foi possível analisar o arquivo.");
+        return;
+      }
+
+      setParsed({ scenes: data.scenes, titlePage: data.titlePage });
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
+    } finally {
+      setAnalyzing(false);
+      abortControllerRef.current = null;
     }
-
-    setParsed({ scenes: data.scenes, titlePage: data.titlePage });
   }
 
   async function handleImport() {
@@ -71,30 +108,47 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
     setImporting(true);
     setError(null);
 
-    const fileName = fileInputRef.current?.files?.[0]?.name;
-    const res = await fetch(`/api/projects/${projectId}/drafts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scenes: parsed.scenes,
-        numeroDraft: parsed.titlePage.numeroDraft ?? undefined,
-        dataDraft: parsed.titlePage.dataDraft ?? undefined,
-        arquivoNome: fileName,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setImporting(false);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    if (!res.ok) {
-      setError(data.error ?? "Não foi possível importar a nova versão.");
-      return;
+    try {
+      const fileName = fileInputRef.current?.files?.[0]?.name;
+      const res = await fetch(`/api/projects/${projectId}/drafts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenes: parsed.scenes,
+          numeroDraft: parsed.titlePage.numeroDraft ?? undefined,
+          dataDraft: parsed.titlePage.dataDraft ?? undefined,
+          arquivoNome: fileName,
+        }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.error ?? "Não foi possível importar a nova versão.");
+        return;
+      }
+
+      setResult(data as ImportResult);
+      router.refresh();
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
+    } finally {
+      setImporting(false);
+      abortControllerRef.current = null;
     }
+  }
 
-    setResult(data as ImportResult);
-    router.refresh();
+  function handleCancel() {
+    abortControllerRef.current?.abort();
   }
 
   function handleOpenChange(next: boolean) {
+    if (!next && uploading) return;
     setOpen(next);
     if (!next) reset();
   }
@@ -146,11 +200,17 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
                 id="draft-file"
                 type="file"
                 accept=".fdx,.wdz"
+                onChange={handleFileChange}
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
+              {analyzing && (
+                <Button variant="outline" onClick={handleCancel}>
+                  Cancelar
+                </Button>
+              )}
               <Button onClick={handleAnalyze} disabled={analyzing}>
                 {analyzing ? "Analisando..." : "Analisar arquivo"}
               </Button>
@@ -169,9 +229,15 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
             </p>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>
-              <Button variant="outline" onClick={reset} disabled={importing}>
-                Voltar
-              </Button>
+              {importing ? (
+                <Button variant="outline" onClick={handleCancel}>
+                  Cancelar
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={reset}>
+                  Voltar
+                </Button>
+              )}
               <Button onClick={handleImport} disabled={importing}>
                 {importing ? "Importando..." : "Confirmar importação"}
               </Button>

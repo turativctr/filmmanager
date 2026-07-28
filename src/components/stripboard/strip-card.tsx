@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import type { ComputedSchedule } from "@/lib/schedule";
 import type { StripItem } from "./types";
 
-/** Cor de destaque (borda esquerda) por período — a tira é sólida (bg-white) desde a redução de
+/** Cor de destaque (borda esquerda) por período — a tira é sólida (bg-surface) desde a redução de
  *  largura; o período deixou de tingir o card inteiro e virou só essa faixa de 3px. */
 const PERIODO_BORDER: Record<string, string> = {
   DIA: "#2563EB",
@@ -95,7 +95,7 @@ export function StripCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("rounded-md border bg-white text-sm shadow-sm", (hasConflict || isOmitida) && "border-destructive")}
+      className={cn("rounded-md border bg-surface text-sm shadow-sm", (hasConflict || isOmitida) && "border-destructive")}
     >
       <div
         className={cn("flex h-11 items-center gap-2 border-l-[3px] pr-3", canExpand && "cursor-pointer")}

@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   }
 
   const token = await encode({
-    token: { id: user.id, sub: user.id, name: user.name, email: user.email, role: user.role },
+    token: { id: user.id, sub: user.id, name: user.name, email: user.email, role: user.role, tema: user.tema },
     secret: process.env.NEXTAUTH_SECRET!,
   });
 

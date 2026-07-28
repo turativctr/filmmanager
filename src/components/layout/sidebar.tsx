@@ -4,6 +4,7 @@ import { Clapperboard, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
+import { GLASS_BG, GLASS_BORDER_COLOR, GLASS_HOVER_BG } from "@/lib/glass";
 import { MODULE_ACTIVE_ITEM_CLASS, type ModuleKey } from "@/lib/module-theme";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,7 @@ function NavLink({
         "flex items-center gap-2 rounded-md border-l-[3px] border-l-transparent px-3 py-2 text-sm font-medium transition-colors",
         active
           ? MODULE_ACTIVE_ITEM_CLASS[module]
-          : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
+          : cn("text-muted-foreground hover:text-foreground", GLASS_HOVER_BG)
       )}
     >
       {label}
@@ -75,8 +76,14 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
   const projectId = params?.id;
 
   return (
-    <aside className="hidden w-56 shrink-0 rounded-r-2xl border-r border-white/50 bg-white/70 backdrop-blur-md md:flex md:flex-col">
-      <div className="flex h-14 items-center border-b border-white/50 px-4">
+    <aside
+      className={cn(
+        "hidden w-56 shrink-0 rounded-r-2xl border-r md:flex md:flex-col",
+        GLASS_BG,
+        GLASS_BORDER_COLOR
+      )}
+    >
+      <div className={cn("flex h-14 items-center border-b px-4", GLASS_BORDER_COLOR)}>
         <Link href="/projects" className="text-sm font-semibold tracking-tight">
           Film Manager
         </Link>
@@ -94,7 +101,7 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
               })}
             </div>
 
-            <div className="my-3 border-t border-white/50" />
+            <div className={cn("my-3 border-t", GLASS_BORDER_COLOR)} />
 
             <SectionLabel icon={Wallet}>Orçamento</SectionLabel>
             <div className="flex flex-col gap-1">
@@ -110,7 +117,10 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
           <div className="flex flex-col gap-1">
             <Link
               href="/projects"
-              className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-white/60 hover:text-foreground"
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground",
+                GLASS_HOVER_BG
+              )}
             >
               <Clapperboard className="h-4 w-4" />
               Projetos
@@ -121,8 +131,8 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   pathname === "/admin"
-                    ? "bg-white/80 text-foreground"
-                    : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                    ? "bg-neutro-bg text-neutro-fg"
+                    : cn("text-muted-foreground hover:text-foreground", GLASS_HOVER_BG)
                 )}
               >
                 <ShieldCheck className="h-4 w-4" />

@@ -292,7 +292,7 @@ export function OrdemDoDiaWizard({
               onClick={() => setStep(num)}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs",
-                active && "border-foreground bg-secondary font-semibold",
+                active && "border-foreground bg-secondary text-secondary-foreground font-semibold",
                 done && !active && "text-muted-foreground"
               )}
             >

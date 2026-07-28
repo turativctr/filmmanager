@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { SceneStatusIcon } from "@/components/shared/status-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPaginas } from "@/lib/paginas";
@@ -164,7 +165,13 @@ export function SceneProgressPanel({
             <div key={s.sceneId} className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5">
               <span className="shrink-0 text-sm font-medium">Cena {s.numero}</span>
               <span className="shrink-0 text-xs text-muted-foreground">{formatPaginas(s.paginas)} pág.</span>
-              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", STATUS_BADGE_CLASS[s.status])}>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                  STATUS_BADGE_CLASS[s.status]
+                )}
+              >
+                <SceneStatusIcon status={s.status} className="h-3 w-3" />
                 {STATUS_LABEL[s.status]}
               </span>
               {(s.horaInicioReal || s.horaFimReal) && (

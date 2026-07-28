@@ -2,6 +2,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+import { GLASS_SUBTLE, GLASS_SUBTLE_HOVER_BG } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -14,8 +15,7 @@ const buttonVariants = cva(
           "border border-erro-accent/30 bg-erro-bg text-erro-fg shadow-sm hover:bg-erro-bg/70",
         outline:
           "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "border border-white/60 bg-white/60 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/80",
+        secondary: `${GLASS_SUBTLE} text-foreground shadow-sm ${GLASS_SUBTLE_HOVER_BG}`,
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },

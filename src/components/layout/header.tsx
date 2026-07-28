@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { GLASS_BG, GLASS_BORDER_COLOR } from "@/lib/glass";
 import { getActiveModule, MODULE_BADGE_CLASS, MODULE_LABEL } from "@/lib/module-theme";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const params = useParams<{ id?: string }>();
@@ -35,7 +37,13 @@ export function Header() {
   }, [params?.id]);
 
   return (
-    <header className="flex h-14 items-center justify-between rounded-b-2xl border-b border-white/50 bg-white/70 px-4 backdrop-blur-md">
+    <header
+      className={cn(
+        "flex h-14 items-center justify-between rounded-b-2xl border-b px-4",
+        GLASS_BG,
+        GLASS_BORDER_COLOR
+      )}
+    >
       <div className="flex items-center gap-2">
         <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
           Projetos

@@ -49,11 +49,317 @@
   }
 }
 
+/* ============================================================================
+ * SISTEMA DE TEMAS
+ * ============================================================================
+ * Variáveis de superfície/página + as 8 famílias de cor de módulo (bg/fg/accent),
+ * como tripla "R G B" (sem função de cor) — assim o Tailwind pode aplicar opacidade
+ * via `rgb(var(--x) / <alpha-value>)`, tanto pros modificadores `/NN` (ex.:
+ * `border-scheduling-accent/30`) quanto pro glass (ver src/lib/glass.ts).
+ *
+ * O tema troca só o VALOR dessas variáveis via atributo `data-theme` no <html>
+ * (ver src/lib/theme.ts) — nenhuma classe Tailwind muda, então a troca é
+ * instantânea (o navegador recalcula o CSS em cascata, sem precisar de re-render
+ * React). CLARO é o :root (default, sem atributo) — os hex abaixo são os MESMOS
+ * que já existiam direto no tailwind.config.ts antes deste refactor; só a forma
+ * de armazenar mudou, não o valor (ver PARTE 0 do pedido: nada muda visualmente).
+ *
+ * Significado de cor é fixo entre temas (ver PARTE 1): azul=Planejamento,
+ * verde=Orçamento, roxo=Roteiro, teal=Decupagem, âmbar=alerta, coral=erro. Só a
+ * temperatura/saturação/tratamento de superfície muda por tema.
+ *
+ * IMPORTANTE — Modo de Set (src/app/(set-mode)/layout.tsx) fixa
+ * data-theme="claro" no próprio wrapper, ignorando o tema do usuário de
+ * propósito (leitura sob sol, no set — ver comentário lá). Não remover.
+ * ========================================================================= */
+@layer base {
+  :root {
+    /* ---- CLARO (default) ---- */
+    --page-bg: 255 255 255;
+    --surface: 255 255 255;
+    --surface-border: 255 255 255;
+    --text: 9 9 11;
+    --text-muted: 113 113 122;
+    /* Gradiente diagonal sutil que o CLARO já usava antes do sistema de temas (branco → branco →
+       zinc-50) — os outros temas não pedem gradiente, só fundo liso, então os 3 stops colapsam
+       pro mesmo --page-bg (ver override abaixo). Ficam como variável (não classe condicional em
+       JS) de propósito: JS não sabe o tema no primeiro render do servidor (useState não vê
+       document ali), então uma decisão em React teria um frame errado até corrigir depois da
+       hidratação — como variável CSS, o navegador já aplica certo direto do HTML do servidor. */
+    --page-bg-from: 255 255 255;
+    --page-bg-via: 255 255 255;
+    --page-bg-to: 250 250 250;
+
+    /* Opacidades do glassmorphism (ver src/lib/glass.ts) — só o número muda por tema. */
+    --surface-glass-alpha: 0.7;
+    --surface-glass-subtle-alpha: 0.6;
+    --surface-border-alpha: 0.5;
+    --surface-border-subtle-alpha: 0.6;
+    /* Opacidade dos orbs decorativos do fundo (ver PageBackground). */
+    --surface-glass-hover-alpha: 0.8;
+    --orb-opacity: 0.12;
+
+    --scheduling-bg: 230 241 251;
+    --scheduling-fg: 12 68 124;
+    --scheduling-accent: 24 95 165;
+    --budgeting-bg: 234 243 222;
+    --budgeting-fg: 39 80 10;
+    --budgeting-accent: 59 109 17;
+    --drafts-bg: 238 237 254;
+    --drafts-fg: 60 52 137;
+    --drafts-accent: 83 74 183;
+    --decupagem-bg: 227 243 240;
+    --decupagem-fg: 15 79 69;
+    --decupagem-accent: 27 115 101;
+    --alerta-bg: 250 238 218;
+    --alerta-fg: 99 56 6;
+    --alerta-accent: 133 79 11;
+    --erro-bg: 250 236 231;
+    --erro-fg: 153 60 29;
+    --erro-accent: 163 45 45;
+    --sucesso-bg: 234 243 222;
+    --sucesso-fg: 59 109 17;
+    --sucesso-accent: 59 109 17;
+    --neutro-bg: 244 244 245;
+    --neutro-fg: 82 82 91;
+    --neutro-accent: 161 161 170;
+  }
+
+  /* ---- CLARO, versão explícita ----
+   * CLARO normalmente NUNCA precisa de um seletor de atributo: é o :root, o padrão de qualquer
+   * elemento sem data-theme (inclusive o <html> quando o usuário está no tema claro). Este bloco
+   * só existe pro caso do Modo de Set (src/app/(set-mode)/layout.tsx), que fixa
+   * data-theme="claro" num <div> ANINHADO dentro de um <html> que pode estar em outro tema
+   * (ex.: <html data-theme="noir"><div data-theme="claro">). Variável CSS herdada não some só
+   * porque o elemento tem um atributo sem regra correspondente — sem este bloco, o <div> do Modo
+   * de Set fica só com `data-theme="claro"` de decoração e continua herdando os valores do tema
+   * do usuário do <html> acima (foi exatamente o bug encontrado: fundo preto do Noir vazando pro
+   * Modo de Set apesar do atributo "certo" já estar presente no DOM). Precisa repetir aqui TODA
+   * variável que os outros temas sobrescrevem, senão a herança vaza just nessas que faltarem. */
+  [data-theme="claro"] {
+    --page-bg: 255 255 255;
+    --surface: 255 255 255;
+    --surface-border: 255 255 255;
+    --text: 9 9 11;
+    --text-muted: 113 113 122;
+    --page-bg-from: 255 255 255;
+    --page-bg-via: 255 255 255;
+    --page-bg-to: 250 250 250;
+
+    --surface-glass-alpha: 0.7;
+    --surface-glass-subtle-alpha: 0.6;
+    --surface-border-alpha: 0.5;
+    --surface-border-subtle-alpha: 0.6;
+    --surface-glass-hover-alpha: 0.8;
+    --orb-opacity: 0.12;
+
+    --muted: 240 4.8% 95.9%;
+
+    --scheduling-bg: 230 241 251;
+    --scheduling-fg: 12 68 124;
+    --scheduling-accent: 24 95 165;
+    --budgeting-bg: 234 243 222;
+    --budgeting-fg: 39 80 10;
+    --budgeting-accent: 59 109 17;
+    --drafts-bg: 238 237 254;
+    --drafts-fg: 60 52 137;
+    --drafts-accent: 83 74 183;
+    --decupagem-bg: 227 243 240;
+    --decupagem-fg: 15 79 69;
+    --decupagem-accent: 27 115 101;
+    --alerta-bg: 250 238 218;
+    --alerta-fg: 99 56 6;
+    --alerta-accent: 133 79 11;
+    --erro-bg: 250 236 231;
+    --erro-fg: 153 60 29;
+    --erro-accent: 163 45 45;
+    --sucesso-bg: 234 243 222;
+    --sucesso-fg: 59 109 17;
+    --sucesso-accent: 59 109 17;
+    --neutro-bg: 244 244 245;
+    --neutro-fg: 82 82 91;
+    --neutro-accent: 161 161 170;
+  }
+
+  /* ---- NOIR ---- */
+  [data-theme="noir"] {
+    --page-bg: 10 10 10;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 22 22 26;
+    /* Glass no Noir usa zinc-900 (levemente diferente da Superfície opaca) — pedido explícito. */
+    --surface-border: 255 255 255;
+    --text: 212 212 212;
+    --text-muted: 148 148 150;
+    /* --muted (fundo de linha destacada/cabeçalho de tabela do shadcn) só precisa de override
+       aqui — nos temas claros o cinza padrão já contrasta bem contra superfície clara; no Noir,
+       sem isso, ficaria uma faixa clara "vazando" dentro de um card escuro. Mesmo valor do
+       .dark padrão do shadcn (já pensado pra fundo escuro). */
+    --muted: 240 3.7% 15.9%;
+
+    --surface-glass-alpha: 0.7;
+    --surface-glass-subtle-alpha: 0.6;
+    --surface-border-alpha: 0.08;
+    --surface-border-subtle-alpha: 0.12;
+    --surface-glass-hover-alpha: 0.8;
+    --orb-opacity: 0.06;
+
+    /* Saturação baixíssima de propósito — lê como escala de cinza, mas cada módulo
+       ainda distingue por matiz (azul/verde/roxo/teal/âmbar/coral). Por isso, neste
+       tema, todo indicador de status ganha ícone além da cor (ver status-icon.tsx). */
+    --scheduling-bg: 38 40 43;
+    --scheduling-fg: 196 199 202;
+    --scheduling-accent: 107 118 132;
+    --budgeting-bg: 41 43 39;
+    --budgeting-fg: 199 201 197;
+    --budgeting-accent: 140 150 132;
+    --drafts-bg: 40 39 43;
+    --drafts-fg: 198 197 201;
+    --drafts-accent: 154 148 164;
+    --decupagem-bg: 39 43 42;
+    --decupagem-fg: 197 201 200;
+    --decupagem-accent: 126 143 140;
+    --alerta-bg: 45 42 36;
+    --alerta-fg: 204 200 194;
+    --alerta-accent: 176 162 140;
+    --erro-bg: 49 35 33;
+    --erro-fg: 208 192 190;
+    --erro-accent: 192 140 134;
+    --sucesso-bg: 41 43 39;
+    --sucesso-fg: 199 201 197;
+    --sucesso-accent: 140 150 132;
+    --neutro-bg: 40 40 41;
+    --neutro-fg: 199 199 199;
+    --neutro-accent: 138 138 142;
+  }
+
+  /* ---- COMÉDIA ---- */
+  [data-theme="comedia"] {
+    --page-bg: 253 251 247;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 255 255 255;
+    --surface-border: 255 255 255;
+    --text: 63 58 52;
+    /* Precisa valer 4.5:1 contra --page-bg (253 251 247), não só contra --surface (255 255 255) —
+       texto muted aparece direto sobre a página em vários lugares (empty states), e a página é
+       ligeiramente mais escura que o card. 124/116/105 batia 4.61:1 no card mas só 4.46:1 na
+       página (medido em runtime, abaixo do mínimo); escurecido pro pior caso real. */
+    --text-muted: 118 110 100;
+
+    --surface-glass-alpha: 0.88;
+    --surface-glass-subtle-alpha: 0.78;
+    --surface-border-alpha: 0.6;
+    --surface-border-subtle-alpha: 0.65;
+    --surface-glass-hover-alpha: 0.95;
+    --orb-opacity: 0.08;
+
+    /* Accent claro e suave — serve só pra borda/ícone, nunca texto (fg é bem mais
+       escuro que o accent em todos os módulos, ver contraste verificado). */
+    --scheduling-bg: 236 240 244;
+    --scheduling-fg: 43 64 85;
+    --scheduling-accent: 143 174 203;
+    --budgeting-bg: 240 242 237;
+    --budgeting-fg: 63 79 49;
+    --budgeting-accent: 163 188 141;
+    --drafts-bg: 238 236 244;
+    --drafts-fg: 53 43 84;
+    --drafts-accent: 175 164 212;
+    --decupagem-bg: 237 242 241;
+    --decupagem-fg: 49 78 72;
+    --decupagem-accent: 147 191 181;
+    --alerta-bg: 246 241 234;
+    --alerta-fg: 96 72 32;
+    --alerta-accent: 220 187 132;
+    --erro-bg: 245 236 235;
+    --erro-fg: 90 45 38;
+    --erro-accent: 214 156 147;
+    --sucesso-bg: 240 242 237;
+    --sucesso-fg: 63 79 49;
+    --sucesso-accent: 163 188 141;
+    --neutro-bg: 240 240 239;
+    --neutro-fg: 68 64 60;
+    --neutro-accent: 163 156 146;
+  }
+
+  /* ---- HISTÓRICO ---- */
+  [data-theme="historico"] {
+    --page-bg: 246 240 230;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 253 250 244;
+    --surface-border: 58 50 41;
+    --text: 58 50 41;
+    /* Mesmo motivo do ajuste em Comédia (ver comentário lá): precisa valer 4.5:1 contra
+       --page-bg, não só contra --surface — 122/111/94 batia 4.73:1 no card mas só 4.35:1 na
+       página (medido em runtime). Escurecido pro pior caso real. */
+    --text-muted: 115 104 88;
+
+    --surface-glass-alpha: 0.85;
+    --surface-glass-subtle-alpha: 0.75;
+    --surface-border-alpha: 0.15;
+    --surface-border-subtle-alpha: 0.2;
+    --surface-glass-hover-alpha: 0.92;
+    --orb-opacity: 0.1;
+    /* Orbs sempre em ocre aqui (pigmento natural), nunca na cor do módulo ativo — exceção
+       deliberada do tema (ver PageBackground). Só o Histórico define esta variável; nos outros
+       3 temas ela não existe, então o var(--orb-accent-override, <fallback>) em PageBackground
+       cai no fallback (cor do módulo), que é o comportamento normal. */
+    --orb-accent-override: rgb(var(--alerta-accent));
+
+    /* Nenhuma cor pura — todas puxam pro marrom, como pigmento natural. Alerta e
+       erro são as mais saturadas da paleta de propósito, pra ainda saltarem. */
+    --scheduling-bg: 225 231 234;
+    --scheduling-fg: 41 61 71;
+    --scheduling-accent: 62 92 107;
+    --budgeting-bg: 232 234 225;
+    --budgeting-fg: 67 72 40;
+    --budgeting-accent: 107 115 64;
+    --drafts-bg: 232 227 229;
+    --drafts-fg: 65 47 56;
+    --drafts-accent: 107 78 92;
+    --decupagem-bg: 227 232 231;
+    --decupagem-fg: 46 66 61;
+    --decupagem-accent: 74 107 99;
+    --alerta-bg: 240 231 219;
+    --alerta-fg: 96 60 16;
+    --alerta-accent: 181 114 31;
+    --erro-bg: 239 223 220;
+    --erro-fg: 91 34 21;
+    --erro-accent: 156 58 36;
+    --sucesso-bg: 232 234 225;
+    --sucesso-fg: 67 72 40;
+    --sucesso-accent: 107 115 64;
+    --neutro-bg: 231 230 228;
+    --neutro-fg: 63 58 50;
+    --neutro-accent: 156 143 122;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Ícone extra em indicadores de status — só no Noir, onde a saturação baixíssima das cores de
+ * módulo é de propósito, mas exige um reforço não-cromático pra continuar distinguível (ver
+ * src/components/shared/status-icon.tsx). Fica em CSS puro (display:none por padrão, visível só
+ * sob [data-theme="noir"]) em vez de um `if (tema === "NOIR")` em JS: JS não sabe o tema no
+ * primeiro render do servidor, e por experiência real nesse sistema de temas (ver PageBackground),
+ * uma decisão de tema em React pode ficar presa no valor errado até a página recarregar — CSS
+ * não tem esse problema, o navegador já aplica certo direto do HTML do servidor. */
+@layer utilities {
+  .theme-status-icon {
+    display: none;
+  }
+  [data-theme="noir"] .theme-status-icon {
+    display: inline-flex;
   }
 }

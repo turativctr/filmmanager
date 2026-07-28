@@ -22,13 +22,14 @@ export const MODULE_ACTIVE_ITEM_CLASS: Record<ModuleKey, string> = {
   drafts: "bg-drafts-bg text-drafts-fg border-l-[3px] border-l-drafts-accent",
 };
 
-/** Hex cru pro accent de cada módulo — usado só nos orbs decorativos do fundo de página, via
- *  inline style (background-color dinâmico não passa pelo scanner do Tailwind, então aqui pode
- *  ser interpolado sem problema). */
-export const MODULE_ACCENT_HEX: Record<ModuleKey, string> = {
-  scheduling: "#185FA5",
-  budgeting: "#3B6D11",
-  drafts: "#534AB7",
+/** Cor do accent de cada módulo como referência de variável CSS — usado só nos orbs decorativos
+ *  do fundo de página, via inline style (`rgb(var(--x))` dinâmico não passa pelo scanner do
+ *  Tailwind, então aqui pode ser interpolado sem problema). Por vir de variável, já troca sozinho
+ *  com o tema (ver globals.css) — nenhum lookup por tema precisa acontecer em JS aqui. */
+export const MODULE_ACCENT_VAR: Record<ModuleKey, string> = {
+  scheduling: "rgb(var(--scheduling-accent))",
+  budgeting: "rgb(var(--budgeting-accent))",
+  drafts: "rgb(var(--drafts-accent))",
 };
 
 /** Deriva o módulo ativo a partir do pathname — mesma lógica que Header/Sidebar/PageBackground

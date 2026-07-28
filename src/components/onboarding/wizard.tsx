@@ -15,6 +15,8 @@ import { EMPTY_PROJECT_FORM, type PreviewScene, type ProjectFormState } from "./
 
 const STEPS = ["Dados do projeto", "Revisão do roteiro", "Confirmação"];
 
+const NETWORK_ERROR_MESSAGE = "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
+
 function mergeTitlePage(current: ProjectFormState, titlePage: FdxTitlePage): ProjectFormState {
   return {
     ...current,
@@ -60,58 +62,68 @@ export function OnboardingWizard() {
     }
 
     setParsing(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch("/api/projects/onboarding/parse", { method: "POST", body: formData });
-    const data = await res.json().catch(() => ({}));
-    setParsing(false);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/projects/onboarding/parse", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setError(data.error ?? "Não foi possível analisar o roteiro.");
-      return;
+      if (!res.ok) {
+        setError(data.error ?? "Não foi possível analisar o roteiro.");
+        return;
+      }
+
+      setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
+      setAvisos((data.avisos as string[]) ?? []);
+      setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
+      setStep(2);
+    } catch {
+      setError(NETWORK_ERROR_MESSAGE);
+    } finally {
+      setParsing(false);
     }
-
-    setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
-    setAvisos((data.avisos as string[]) ?? []);
-    setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
-    setStep(2);
   }
 
   async function handleCreate() {
     setCreating(true);
     setError(null);
 
-    const selected = (scenes ?? []).filter((s) => s.selected).map(({ selected: _selected, ...scene }) => scene);
+    try {
+      const selected = (scenes ?? []).filter((s) => s.selected).map(({ selected: _selected, ...scene }) => scene);
 
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projeto: {
-          titulo: form.titulo,
-          diretor: form.diretor || undefined,
-          producao: form.producao || undefined,
-          dataInicio: form.dataInicio || undefined,
-          dataFim: form.dataFim || undefined,
-          roteiristas: form.roteiristas || undefined,
-          numeroDraft: form.numeroDraft || undefined,
-          dataDraft: form.dataDraft || undefined,
-          contatoProducao: form.contatoProducao || undefined,
-        },
-        scenes: selected,
-        arquivoNome: file?.name,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setCreating(false);
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projeto: {
+            titulo: form.titulo,
+            diretor: form.diretor || undefined,
+            producao: form.producao || undefined,
+            dataInicio: form.dataInicio || undefined,
+            dataFim: form.dataFim || undefined,
+            roteiristas: form.roteiristas || undefined,
+            numeroDraft: form.numeroDraft || undefined,
+            dataDraft: form.dataDraft || undefined,
+            contatoProducao: form.contatoProducao || undefined,
+          },
+          scenes: selected,
+          arquivoNome: file?.name,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setError(data.error ?? "Não foi possível criar o projeto.");
-      return;
+      if (!res.ok) {
+        setError(data.error ?? "Não foi possível criar o projeto.");
+        return;
+      }
+
+      router.push(`/projects/${data.id}`);
+      router.refresh();
+    } catch {
+      setError(NETWORK_ERROR_MESSAGE);
+    } finally {
+      setCreating(false);
     }
-
-    router.push(`/projects/${data.id}`);
-    router.refresh();
   }
 
   return (
@@ -129,7 +141,7 @@ export function OnboardingWizard() {
               disabled={!done && !active}
               className={cn(
                 "flex flex-1 flex-col items-center gap-1 rounded-md border px-2 py-2 text-xs",
-                active && "border-foreground bg-secondary font-semibold",
+                active && "border-foreground bg-secondary text-secondary-foreground font-semibold",
                 done && !active && "text-muted-foreground"
               )}
             >
@@ -148,6 +160,7 @@ export function OnboardingWizard() {
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
               fileName={file?.name ?? null}
               onFileSelect={handleFileSelect}
+              onFileError={setError}
             />
           )}
           {step === 2 && (

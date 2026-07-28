@@ -20,6 +20,10 @@ model User {
   image         String?
   role          Role      @default(USER)
   tourConcluido Boolean   @default(false)
+  // Tema é por PESSOA, não por projeto — é sobre olho/ambiente de quem usa o app, não sobre o
+  // filme. Também fica guardado num cookie (ver src/lib/theme.ts) pra a primeira renderização já
+  // vir certa, sem piscar. O Modo de Set ignora isso de propósito (ver set-mode/layout.tsx).
+  tema          Tema      @default(CLARO)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -33,6 +37,16 @@ model User {
 enum Role {
   USER
   ADMIN
+}
+
+// Fundação do sistema de temas — só estes 4 por enquanto (ver PARTE 2 do pedido). Este enum VAI
+// CRESCER (Horror, Drama, Telenovela, Experimental, Fantasia, Thriller virão depois, cada um
+// como uma rodada própria) — não é uma lista fechada, só o ponto de partida validado.
+enum Tema {
+  CLARO
+  NOIR
+  COMEDIA
+  HISTORICO
 }
 
 model Account {

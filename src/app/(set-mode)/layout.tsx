@@ -12,7 +12,16 @@ export default async function SetModeLayout({ children }: { children: React.Reac
   if (!session) redirect("/login?callbackUrl=/projects");
 
   return (
-    <div className="h-screen w-screen overflow-hidden">
+    // EXCEÇÃO DE PROPÓSITO — Modo de Set ignora o tema do usuário. Ele já tem regra própria
+    // (sólido, alto contraste, tipografia maior) por motivo funcional: leitura sob sol, no set.
+    // `data-theme="claro"` aqui PRENDE as variáveis CSS de tema (ver globals.css) no valor claro,
+    // independente do que o <html> (sistema de temas, ver src/app/layout.tsx) diga — porque
+    // variável CSS em cascata é herdada do ancestral mais próximo que a redefine, e este div é
+    // mais próximo que o <html>. `bg-background text-foreground` é OBRIGATÓRIO aqui (não só o
+    // data-theme): sem um fundo opaco explícito neste nível, o <body> (que fica FORA deste div,
+    // colado no <html> — esse sim já no tema do usuário) aparece por trás em qualquer área
+    // transparente. NÃO REMOVER nem "corrigir" pra seguir o tema do usuário.
+    <div data-theme="claro" className="h-screen w-screen overflow-hidden bg-background text-foreground">
       {children}
       <Toaster richColors position="top-right" />
     </div>

@@ -53,9 +53,9 @@ export default async function RootLayout({
     const session = await getServerSession(authOptions);
     if (session?.user) {
       const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { tema: true } });
-      tema = user?.tema ?? "CLARO";
+      tema = user?.tema ?? "DOCUMENTARIO";
     } else {
-      tema = "CLARO";
+      tema = "DOCUMENTARIO";
     }
   }
 

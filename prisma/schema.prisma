@@ -23,7 +23,7 @@ model User {
   // Tema é por PESSOA, não por projeto — é sobre olho/ambiente de quem usa o app, não sobre o
   // filme. Também fica guardado num cookie (ver src/lib/theme.ts) pra a primeira renderização já
   // vir certa, sem piscar. O Modo de Set ignora isso de propósito (ver set-mode/layout.tsx).
-  tema          Tema      @default(CLARO)
+  tema          Tema      @default(DOCUMENTARIO)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -39,10 +39,10 @@ enum Role {
   ADMIN
 }
 
-// Onda 2 do sistema de temas: Horror, Drama, Telenovela, Experimental, Fantasia e Thriller
-// entraram aqui. O enum continua NÃO fechado — mais temas podem vir depois.
+// Onda 3: CLARO renomeado pra DOCUMENTARIO (nome de gênero, como todos os outros — "claro" era o
+// único sem nome de gênero). O enum continua NÃO fechado — mais temas podem vir depois.
 enum Tema {
-  CLARO
+  DOCUMENTARIO
   NOIR
   COMEDIA
   HISTORICO

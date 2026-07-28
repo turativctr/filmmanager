@@ -25,11 +25,15 @@ const STATUS_LABEL: Record<SceneShootDayStatusValue, string> = {
   ADIADA: "Adiada",
 };
 
+// Onda 3 — PARTE 1/5: eram cores literais do Tailwind (bg-emerald-100 etc.), independentes do
+// tema — por isso o check de "concluído" ficava frio/azulado em qualquer tema (ex.: saltava como
+// a única cor não-terrosa no Histórico). Trocado pelos tokens de módulo (sucesso/scheduling/
+// alerta), que cada tema já define com a própria temperatura.
 const STATUS_BADGE_CLASS: Record<SceneShootDayStatusValue, string> = {
   PENDENTE: "bg-muted text-muted-foreground",
-  EM_ANDAMENTO: "bg-blue-100 text-blue-900",
-  CONCLUIDA: "bg-emerald-100 text-emerald-900",
-  ADIADA: "bg-amber-100 text-amber-900",
+  EM_ANDAMENTO: "bg-scheduling-bg text-scheduling-fg",
+  CONCLUIDA: "bg-sucesso-bg text-sucesso-fg",
+  ADIADA: "bg-alerta-bg text-alerta-fg",
 };
 
 function nextStatus(current: SceneShootDayStatusValue): SceneShootDayStatusValue {
@@ -145,7 +149,7 @@ export function SceneProgressPanel({
                 <span
                   className={cn(
                     "ml-1.5 text-xs font-normal",
-                    progress.estimativa.deltaMin > 0 ? "text-destructive" : "text-emerald-700"
+                    progress.estimativa.deltaMin > 0 ? "text-destructive" : "text-sucesso-fg"
                   )}
                 >
                   {progress.estimativa.deltaMin > 0 ? "+" : ""}
@@ -157,7 +161,7 @@ export function SceneProgressPanel({
         </div>
 
         <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${progress.percentualConcluido}%` }} />
+          <div className="h-full bg-sucesso-accent transition-all" style={{ width: `${progress.percentualConcluido}%` }} />
         </div>
 
         <div className="space-y-1.5">

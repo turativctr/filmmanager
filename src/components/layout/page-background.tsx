@@ -9,11 +9,11 @@ import { getActiveModule, MODULE_ACCENT_VAR } from "@/lib/module-theme";
  *  borrados fora do fluxo. Ausente do layout (set-mode) de propósito — ver a exceção obrigatória
  *  do Modo de Set em src/app/(set-mode)/layout.tsx.
  *
- *  Todo o resto que varia por tema (o gradiente do CLARO vs. fundo liso dos outros 3, e o
+ *  Todo o resto que varia por tema (o gradiente do DOCUMENTÁRIO vs. fundo liso dos outros, e o
  *  ocre fixo dos orbs no Histórico) é resolvido em CSS puro (ver --page-bg-from/via/to e
  *  --orb-accent-override em globals.css), NUNCA por um `if (tema === ...)` em JS aqui —
  *  o primeiro render no servidor não tem acesso a `document`/data-theme, então uma decisão
- *  em React ficaria presa no valor padrão (CLARO) até a hidratação corrigir, e na prática
+ *  em React ficaria presa no valor padrão (DOCUMENTÁRIO) até a hidratação corrigir, e na prática
  *  isso NÃO corrige sozinho (fica errado até um reload) — variável CSS não tem esse problema,
  *  o navegador já aplica certo direto do HTML que o servidor mandou. */
 export function PageBackground() {

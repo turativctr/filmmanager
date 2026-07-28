@@ -7,9 +7,9 @@ import type { Tema } from "@prisma/client";
 import { isValidTema, THEME_CHANGE_EVENT } from "@/lib/theme";
 
 function readDomTheme(): Tema {
-  if (typeof document === "undefined") return "CLARO";
+  if (typeof document === "undefined") return "DOCUMENTARIO";
   const attr = document.documentElement.getAttribute("data-theme")?.toUpperCase();
-  return attr && isValidTema(attr) ? attr : "CLARO";
+  return attr && isValidTema(attr) ? attr : "DOCUMENTARIO";
 }
 
 /** Aplica o tema no <html> (troca instantânea via CSS, sem recarregar) e avisa quem estiver

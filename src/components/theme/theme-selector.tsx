@@ -17,9 +17,15 @@ import { TEMA_LABEL, TEMA_SWATCH, TEMA_VALUES } from "@/lib/theme";
 import { applyTheme, useCurrentTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
 
-/** Amostra grande — cartão inteiro pinta com o page-bg do tema, círculo colorido no accent.
- *  Precisa ser maior que a versão de dropdown de 1 tema (onda 1): com 10 opções o usuário
- *  escolhe pelo clima visual, não só pelo nome, então o preview precisa carregar peso. */
+/** Amostra grande — cartão inteiro pinta com o page-bg do tema, 4 chips de cor em vez de 1.
+ *
+ *  Onda 3 — PARTE 4: a v2 (onda 2) mostrava só o accent de Planejamento, que é azul em quase
+ *  todo tema — 8 dos 10 cartões pareciam iguais, a amostra escolheu justo a cor que MENOS varia.
+ *  Agora são 4 chips: a cor CARACTERÍSTICA do gênero (--characteristic, ver TEMA_SWATCH — é o
+ *  cromo do Horror/Thriller, o ciano do Experimental, ou o próprio pageBg quando o tema não tem
+ *  cromo próprio), Planejamento, Orçamento e Erro. Cada chip leva borda própria (não só a maior)
+ *  porque um chip characteristic=pageBg fica em cima do próprio fundo do cartão — sem borda,
+ *  ficaria invisível. */
 function TemaCard({
   tema,
   selected,
@@ -30,21 +36,38 @@ function TemaCard({
   onSelect: () => void;
 }) {
   const swatch = TEMA_SWATCH[tema];
+  const chips: Array<{ key: string; color: string }> = [
+    { key: "characteristic", color: swatch.characteristic },
+    { key: "planejamento", color: swatch.planejamento },
+    { key: "orcamento", color: swatch.orcamento },
+    { key: "erro", color: swatch.erro },
+  ];
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-colors",
+        "relative flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-colors",
         selected ? "border-foreground" : "border-transparent hover:border-muted-foreground/30"
       )}
       style={{ backgroundColor: swatch.pageBg }}
     >
-      <span
-        className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 shadow-sm"
-        style={{ backgroundColor: swatch.accent }}
-      >
-        {selected && <Check className="h-4 w-4" style={{ color: swatch.pageBg }} />}
+      {selected && (
+        <span
+          className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full"
+          style={{ backgroundColor: swatch.text }}
+        >
+          <Check className="h-3 w-3" style={{ color: swatch.pageBg }} />
+        </span>
+      )}
+      <span className="flex gap-1">
+        {chips.map((chip) => (
+          <span
+            key={chip.key}
+            className="h-4 w-4 rounded-full border border-black/10 shadow-sm"
+            style={{ backgroundColor: chip.color }}
+          />
+        ))}
       </span>
       <span className="text-xs font-medium" style={{ color: swatch.text }}>
         {TEMA_LABEL[tema]}

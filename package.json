@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "verify:themes": "node scripts/verify-theme-tokens.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

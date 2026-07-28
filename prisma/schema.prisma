@@ -39,14 +39,19 @@ enum Role {
   ADMIN
 }
 
-// Fundação do sistema de temas — só estes 4 por enquanto (ver PARTE 2 do pedido). Este enum VAI
-// CRESCER (Horror, Drama, Telenovela, Experimental, Fantasia, Thriller virão depois, cada um
-// como uma rodada própria) — não é uma lista fechada, só o ponto de partida validado.
+// Onda 2 do sistema de temas: Horror, Drama, Telenovela, Experimental, Fantasia e Thriller
+// entraram aqui. O enum continua NÃO fechado — mais temas podem vir depois.
 enum Tema {
   CLARO
   NOIR
   COMEDIA
   HISTORICO
+  HORROR
+  DRAMA
+  TELENOVELA
+  EXPERIMENTAL
+  FANTASIA
+  THRILLER
 }
 
 model Account {

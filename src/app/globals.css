@@ -135,8 +135,12 @@
    * de Set fica só com `data-theme="claro"` de decoração e continua herdando os valores do tema
    * do usuário do <html> acima (foi exatamente o bug encontrado: fundo preto do Noir vazando pro
    * Modo de Set apesar do atributo "certo" já estar presente no DOM). Precisa repetir aqui TODA
-   * variável que os outros temas sobrescrevem, senão a herança vaza just nessas que faltarem. */
+   * variável que os outros temas sobrescrevem, senão a herança vaza just nessas que faltarem.
+   * --radius entrou na onda 2 (Experimental encolhe pra 0.125rem) — mesmo motivo: sem repetir
+   * aqui, rounded-lg/md/sm (que leem --radius, ver tailwind.config.ts) ficariam pequenos demais
+   * dentro do Modo de Set quando o tema ambiente for Experimental. */
   [data-theme="claro"] {
+    --radius: 0.5rem;
     --page-bg: 255 255 255;
     --surface: 255 255 255;
     --surface-border: 255 255 255;
@@ -234,69 +238,72 @@
     --neutro-accent: 138 138 142;
   }
 
-  /* ---- COMÉDIA ---- */
+  /* ---- COMÉDIA ----
+   * Onda 2: feedback de uso foi "ficou lavado" — os accents pastel da v1 eram claros demais
+   * pra servir de texto/borda/preenchimento com presença. Subiram de saturação e desceram de
+   * claridade; agora aguentam ficar em cima da superfície sem sumir. Como o contraste real
+   * melhorou (accents mais escuros = fg mais escuro também), o glass não precisa mais
+   * compensar paleta fraca com opacidade alta — volta de 0.88 pro 0.78 padrão. */
   [data-theme="comedia"] {
-    --page-bg: 253 251 247;
+    --page-bg: 255 252 245;
     --page-bg-from: var(--page-bg);
     --page-bg-via: var(--page-bg);
     --page-bg-to: var(--page-bg);
     --surface: 255 255 255;
     --surface-border: 255 255 255;
-    --text: 63 58 52;
-    /* Precisa valer 4.5:1 contra --page-bg (253 251 247), não só contra --surface (255 255 255) —
-       texto muted aparece direto sobre a página em vários lugares (empty states), e a página é
-       ligeiramente mais escura que o card. 124/116/105 batia 4.61:1 no card mas só 4.46:1 na
-       página (medido em runtime, abaixo do mínimo); escurecido pro pior caso real. */
-    --text-muted: 118 110 100;
+    --text: 46 42 36;
+    --text-muted: 122 115 106;
 
-    --surface-glass-alpha: 0.88;
-    --surface-glass-subtle-alpha: 0.78;
-    --surface-border-alpha: 0.6;
-    --surface-border-subtle-alpha: 0.65;
-    --surface-glass-hover-alpha: 0.95;
+    --surface-glass-alpha: 0.78;
+    --surface-glass-subtle-alpha: 0.68;
+    --surface-border-alpha: 0.55;
+    --surface-border-subtle-alpha: 0.6;
+    --surface-glass-hover-alpha: 0.88;
     --orb-opacity: 0.08;
 
-    /* Accent claro e suave — serve só pra borda/ícone, nunca texto (fg é bem mais
-       escuro que o accent em todos os módulos, ver contraste verificado). */
-    --scheduling-bg: 236 240 244;
-    --scheduling-fg: 43 64 85;
-    --scheduling-accent: 143 174 203;
-    --budgeting-bg: 240 242 237;
-    --budgeting-fg: 63 79 49;
-    --budgeting-accent: 163 188 141;
-    --drafts-bg: 238 236 244;
-    --drafts-fg: 53 43 84;
-    --drafts-accent: 175 164 212;
-    --decupagem-bg: 237 242 241;
-    --decupagem-fg: 49 78 72;
-    --decupagem-accent: 147 191 181;
-    --alerta-bg: 246 241 234;
-    --alerta-fg: 96 72 32;
-    --alerta-accent: 220 187 132;
-    --erro-bg: 245 236 235;
-    --erro-fg: 90 45 38;
-    --erro-accent: 214 156 147;
-    --sucesso-bg: 240 242 237;
-    --sucesso-fg: 63 79 49;
-    --sucesso-accent: 163 188 141;
+    --scheduling-bg: 231 238 244;
+    --scheduling-fg: 31 110 179;
+    --scheduling-accent: 59 143 217;
+    --budgeting-bg: 235 241 233;
+    --budgeting-fg: 60 122 45;
+    --budgeting-accent: 95 184 74;
+    --drafts-bg: 238 231 243;
+    --drafts-fg: 142 62 214;
+    --drafts-accent: 160 95 217;
+    --decupagem-bg: 229 245 244;
+    --decupagem-fg: 7 123 115;
+    --decupagem-accent: 0 181 168;
+    --alerta-bg: 245 238 229;
+    --alerta-fg: 156 93 8;
+    --alerta-accent: 255 159 28;
+    --erro-bg: 245 229 229;
+    --erro-fg: 208 15 15;
+    --erro-accent: 239 91 91;
+    --sucesso-bg: 235 241 233;
+    --sucesso-fg: 60 122 45;
+    --sucesso-accent: 95 184 74;
     --neutro-bg: 240 240 239;
     --neutro-fg: 68 64 60;
     --neutro-accent: 163 156 146;
   }
 
-  /* ---- HISTÓRICO ---- */
+  /* ---- HISTÓRICO ----
+   * Onda 2: fundo escureceu de verdade (papel kraft, não papel branco) e Planejamento deixou
+   * de ser azul — azul não existe em pigmento de terra, então virou verde-acinzentado (mesma
+   * regra do roxo no Fantasia e do vermelho no Horror: quando o tema adota uma matiz que já é
+   * semântica em outro módulo ou no clima geral, o dono daquela matiz semântica precisa se
+   * afastar pra não colidir). */
   [data-theme="historico"] {
-    --page-bg: 246 240 230;
+    --page-bg: 237 227 210;
     --page-bg-from: var(--page-bg);
     --page-bg-via: var(--page-bg);
     --page-bg-to: var(--page-bg);
-    --surface: 253 250 244;
-    --surface-border: 58 50 41;
-    --text: 58 50 41;
-    /* Mesmo motivo do ajuste em Comédia (ver comentário lá): precisa valer 4.5:1 contra
-       --page-bg, não só contra --surface — 122/111/94 batia 4.73:1 no card mas só 4.35:1 na
-       página (medido em runtime). Escurecido pro pior caso real. */
-    --text-muted: 115 104 88;
+    --surface: 247 239 224;
+    --surface-border: 46 38 32;
+    --text: 46 38 32;
+    /* Recalculado pro pior caso real (contra --page-bg, não só --surface — ver motivo no
+       comentário da Comédia logo abaixo). */
+    --text-muted: 108 96 82;
 
     --surface-glass-alpha: 0.85;
     --surface-glass-subtle-alpha: 0.75;
@@ -306,36 +313,345 @@
     --orb-opacity: 0.1;
     /* Orbs sempre em ocre aqui (pigmento natural), nunca na cor do módulo ativo — exceção
        deliberada do tema (ver PageBackground). Só o Histórico define esta variável; nos outros
-       3 temas ela não existe, então o var(--orb-accent-override, <fallback>) em PageBackground
+       temas ela não existe, então o var(--orb-accent-override, <fallback>) em PageBackground
        cai no fallback (cor do módulo), que é o comportamento normal. */
     --orb-accent-override: rgb(var(--alerta-accent));
 
     /* Nenhuma cor pura — todas puxam pro marrom, como pigmento natural. Alerta e
-       erro são as mais saturadas da paleta de propósito, pra ainda saltarem. */
-    --scheduling-bg: 225 231 234;
-    --scheduling-fg: 41 61 71;
-    --scheduling-accent: 62 92 107;
-    --budgeting-bg: 232 234 225;
-    --budgeting-fg: 67 72 40;
-    --budgeting-accent: 107 115 64;
-    --drafts-bg: 232 227 229;
-    --drafts-fg: 65 47 56;
-    --drafts-accent: 107 78 92;
-    --decupagem-bg: 227 232 231;
-    --decupagem-fg: 46 66 61;
-    --decupagem-accent: 74 107 99;
-    --alerta-bg: 240 231 219;
-    --alerta-fg: 96 60 16;
-    --alerta-accent: 181 114 31;
-    --erro-bg: 239 223 220;
-    --erro-fg: 91 34 21;
-    --erro-accent: 156 58 36;
-    --sucesso-bg: 232 234 225;
-    --sucesso-fg: 67 72 40;
-    --sucesso-accent: 107 115 64;
+       erro são as mais saturadas da paleta de propósito, pra ainda saltarem.
+       Planejamento e Decupagem nasceram do pedido quase na mesma matiz/claridade
+       (#4A5A54 e #3D5A50 — 157° e 159°, ambos ~L30%); ficavam indistinguíveis lado a
+       lado na sidebar. Empurrado Planejamento pra mais claro (L42%) e Decupagem pra
+       mais escuro (L20%), mantendo as duas matizes exatamente como pedido — só a
+       claridade mudou (ver PARTE 1 do pedido de onda 2). */
+    --scheduling-bg: 236 238 237;
+    --scheduling-fg: 91 111 104;
+    --scheduling-accent: 97 118 110;
+    --budgeting-bg: 239 241 234;
+    --budgeting-fg: 100 115 53;
+    --budgeting-accent: 94 107 51;
+    --drafts-bg: 241 235 234;
+    --drafts-fg: 153 90 70;
+    --drafts-accent: 122 74 58;
+    --decupagem-bg: 235 239 238;
+    --decupagem-fg: 76 115 102;
+    --decupagem-accent: 41 61 54;
+    --alerta-bg: 245 238 230;
+    --alerta-fg: 157 93 17;
+    --alerta-accent: 194 118 26;
+    --erro-bg: 244 233 231;
+    --erro-fg: 192 58 33;
+    --erro-accent: 142 46 28;
+    --sucesso-bg: 239 241 234;
+    --sucesso-fg: 100 115 53;
+    --sucesso-accent: 94 107 51;
     --neutro-bg: 231 230 228;
     --neutro-fg: 63 58 50;
     --neutro-accent: 156 143 122;
+  }
+
+  /* ---- HORROR ----
+   * Vermelho vive na BORDA (--surface-border), não no preenchimento dos módulos — por isso
+   * todo módulo abaixo é dessaturado (o clima geral já é tenso; cor de módulo não precisa
+   * competir por atenção). O erro (#FF4438) é a única cor vívida da paleta inteira, de
+   * propósito: contra a borda de cromo escura (#4A1518, L~19%) e os módulos dessaturados,
+   * ele salta. RISCO VIGIADO: se a borda vermelha aparecesse em TODA superfície com opacidade
+   * alta, ela ia competir com o erro — por isso surface-border-alpha fica moderado (0.45),
+   * não baixo feito Noir (que faz um branco quase invisível) nem alto a ponto de virar
+   * decoração predominante. Conferir Horror × Thriller lado a lado (ver PARTE 4). */
+  [data-theme="horror"] {
+    --page-bg: 15 11 11;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 23 16 15;
+    --surface-border: 74 21 24;
+    --text: 232 212 208;
+    --text-muted: 157 115 106;
+
+    --surface-glass-alpha: 0.75;
+    --surface-glass-subtle-alpha: 0.65;
+    --surface-border-alpha: 0.45;
+    --surface-border-subtle-alpha: 0.55;
+    --surface-glass-hover-alpha: 0.82;
+    --orb-opacity: 0.07;
+
+    --scheduling-bg: 38 41 44;
+    --scheduling-fg: 130 146 158;
+    --scheduling-accent: 110 132 150;
+    --budgeting-bg: 40 43 38;
+    --budgeting-fg: 134 150 126;
+    --budgeting-accent: 116 136 106;
+    --drafts-bg: 42 38 43;
+    --drafts-fg: 153 137 158;
+    --drafts-accent: 138 116 146;
+    --decupagem-bg: 37 44 44;
+    --decupagem-fg: 120 152 149;
+    --decupagem-accent: 98 138 134;
+    --alerta-bg: 51 41 30;
+    --alerta-fg: 184 137 87;
+    --alerta-accent: 196 136 74;
+    --erro-bg: 57 26 24;
+    --erro-fg: 226 97 88;
+    --erro-accent: 255 68 56;
+    --sucesso-bg: 40 43 38;
+    --sucesso-fg: 134 150 126;
+    --sucesso-accent: 116 136 106;
+    --neutro-bg: 40 38 38;
+    --neutro-fg: 190 178 174;
+    --neutro-accent: 138 122 118;
+  }
+
+  /* ---- DRAMA ----
+   * Paleta fria e dessaturada — azul e verde dominam. Alerta e erro ficam quentes de
+   * propósito, as únicas cores quentes na tela. Roteiro virou azul-violeta (não roxo puro)
+   * pra caber no clima frio, mesma lógica de temperatura do Fantasia/Horror puxando um
+   * módulo pra longe da matiz "padrão" quando ela não serve o clima do tema. Conferir
+   * Noir × Drama lado a lado (ver PARTE 4) — os dois são frios e dessaturados, a diferença
+   * tem que estar em fundo claro vs. escuro, não em matiz de módulo. */
+  [data-theme="drama"] {
+    --page-bg: 238 243 244;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 255 255 255;
+    --surface-border: 255 255 255;
+    --text: 31 53 56;
+    --text-muted: 85 115 120;
+
+    --surface-glass-alpha: 0.78;
+    --surface-glass-subtle-alpha: 0.68;
+    --surface-border-alpha: 0.55;
+    --surface-border-subtle-alpha: 0.6;
+    --surface-glass-hover-alpha: 0.86;
+    --orb-opacity: 0.08;
+
+    --scheduling-bg: 231 239 243;
+    --scheduling-fg: 34 114 153;
+    --scheduling-accent: 31 95 126;
+    --budgeting-bg: 233 242 238;
+    --budgeting-fg: 43 121 93;
+    --budgeting-accent: 46 122 94;
+    --drafts-bg: 234 236 240;
+    --drafts-fg: 77 107 156;
+    --drafts-accent: 70 96 138;
+    --decupagem-bg: 231 244 243;
+    --decupagem-fg: 21 122 115;
+    --decupagem-accent: 23 117 110;
+    --alerta-bg: 243 238 231;
+    --alerta-fg: 148 97 35;
+    --alerta-accent: 176 117 46;
+    --erro-bg: 242 233 232;
+    --erro-fg: 185 64 60;
+    --erro-accent: 168 62 58;
+    --sucesso-bg: 233 242 238;
+    --sucesso-fg: 43 121 93;
+    --sucesso-accent: 46 122 94;
+    --neutro-bg: 236 238 239;
+    --neutro-fg: 74 90 92;
+    --neutro-accent: 150 163 165;
+  }
+
+  /* ---- TELENOVELA ----
+   * A diferença pra Comédia NÃO é saturação — é temperatura. Comédia é fresco (céu, limão,
+   * turquesa); Telenovela é quente e denso (vermelho profundo, dourado, magenta). Conferir
+   * Comédia × Telenovela lado a lado (ver PARTE 4) — se ficarem parecidos, esquentar mais a
+   * Telenovela, nunca esfriar a Comédia (instrução explícita do pedido). */
+  [data-theme="telenovela"] {
+    --page-bg: 255 253 248;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 255 255 255;
+    --surface-border: 255 255 255;
+    --text: 58 46 28;
+    --text-muted: 132 114 87;
+
+    --surface-glass-alpha: 0.78;
+    --surface-glass-subtle-alpha: 0.68;
+    --surface-border-alpha: 0.55;
+    --surface-border-subtle-alpha: 0.6;
+    --surface-glass-hover-alpha: 0.88;
+    --orb-opacity: 0.12;
+
+    --scheduling-bg: 229 238 245;
+    --scheduling-fg: 10 107 194;
+    --scheduling-accent: 15 111 196;
+    --budgeting-bg: 232 243 233;
+    --budgeting-fg: 34 125 48;
+    --budgeting-accent: 46 158 63;
+    --drafts-bg: 238 232 242;
+    --drafts-fg: 146 65 201;
+    --drafts-accent: 142 63 196;
+    --decupagem-bg: 229 245 243;
+    --decupagem-fg: 7 123 111;
+    --decupagem-accent: 0 168 150;
+    --alerta-bg: 245 239 229;
+    --alerta-fg: 155 95 8;
+    --alerta-accent: 245 146 0;
+    --erro-bg: 245 230 231;
+    --erro-fg: 207 23 38;
+    --erro-accent: 224 30 46;
+    --sucesso-bg: 232 243 233;
+    --sucesso-fg: 34 125 48;
+    --sucesso-accent: 46 158 63;
+    --neutro-bg: 240 236 230;
+    --neutro-fg: 90 78 60;
+    --neutro-accent: 168 152 128;
+  }
+
+  /* ---- EXPERIMENTAL ----
+   * Pop art: primárias chapadas, contraste alto. Único tema desta leva que mexe em FORMA além
+   * de cor — senão fica parecido demais com Telenovela (a paleta sozinha não separa os dois,
+   * ver PARTE 4). Tratamento de superfície inteiro em CSS puro (variáveis + seletores por
+   * atributo de tema), nunca condicional em JS — mesmo motivo de sempre neste sistema (ver
+   * PageBackground): decisão de tema em React não está disponível no primeiro render do
+   * servidor e pode ficar presa no valor errado. --radius já dirige rounded-lg/md/sm via
+   * tailwind.config.ts; rounded-full/2xl/xl não são variável no Tailwind por padrão, por isso
+   * o bloco de utilities logo abaixo força esses casos also. Borda preta 2px em card/badge/
+   * button via `outline` (não `border`) de propósito: outline não compartilha box model com
+   * border, então não briga com bordas que já existem por outro motivo (ex.: erro-accent/30 no
+   * botão destructive, border-input no outline) — só desenha por cima, sem alterar layout. */
+  [data-theme="experimental"] {
+    --page-bg: 255 254 242;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 255 255 255;
+    --surface-border: 24 24 27;
+    --text: 24 24 27;
+    --text-muted: 116 116 125;
+
+    --radius: 0.125rem;
+    --surface-glass-alpha: 1;
+    --surface-glass-subtle-alpha: 1;
+    --surface-border-alpha: 1;
+    --surface-border-subtle-alpha: 1;
+    --surface-glass-hover-alpha: 1;
+    --orb-opacity: 0;
+
+    --scheduling-bg: 229 236 245;
+    --scheduling-fg: 12 98 227;
+    --scheduling-accent: 0 87 217;
+    --budgeting-bg: 229 245 237;
+    --budgeting-fg: 7 126 65;
+    --budgeting-accent: 0 166 81;
+    --drafts-bg: 245 229 238;
+    --drafts-fg: 202 11 115;
+    --drafts-accent: 230 0 126;
+    --decupagem-bg: 229 245 245;
+    --decupagem-fg: 6 122 123;
+    --decupagem-accent: 0 179 179;
+    --alerta-bg: 245 242 229;
+    --alerta-fg: 130 108 7;
+    --alerta-accent: 255 210 0;
+    --erro-bg: 245 229 230;
+    --erro-fg: 209 12 19;
+    --erro-accent: 237 28 36;
+    --sucesso-bg: 229 245 237;
+    --sucesso-fg: 7 126 65;
+    --sucesso-accent: 0 166 81;
+    --neutro-bg: 240 240 239;
+    --neutro-fg: 63 63 68;
+    --neutro-accent: 141 141 150;
+  }
+
+  /* ---- FANTASIA ----
+   * Clima de vitral: fundo escuro e saturado, cores luminosas em cima. O roxo vive no CROMO
+   * (--page-bg/--surface, já roxo profundo por si só — não precisa de override extra, sidebar/
+   * header herdam --surface normalmente), não nos módulos. Por isso Roteiro foi empurrado pra
+   * um violeta claro quase magenta: se fosse roxo médio, sumiria contra o fundo (mesma regra
+   * geral do vermelho no Horror — quando o tema adota uma matiz semântica no clima geral, o
+   * módulo dono dela vai pro extremo claro da família pra não se confundir com o cromo). */
+  [data-theme="fantasia"] {
+    --page-bg: 27 20 53;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 37 28 66;
+    --surface-border: 255 255 255;
+    --text: 228 220 245;
+    --text-muted: 147 127 191;
+
+    --surface-glass-alpha: 0.72;
+    --surface-glass-subtle-alpha: 0.62;
+    --surface-border-alpha: 0.1;
+    --surface-border-subtle-alpha: 0.14;
+    --surface-glass-hover-alpha: 0.82;
+    --orb-opacity: 0.14;
+
+    --scheduling-bg: 25 39 56;
+    --scheduling-fg: 86 144 213;
+    --scheduling-accent: 91 155 232;
+    --budgeting-bg: 32 50 40;
+    --budgeting-fg: 80 166 118;
+    --budgeting-accent: 95 192 138;
+    --drafts-bg: 49 27 54;
+    --drafts-fg: 188 106 210;
+    --drafts-accent: 212 138 232;
+    --decupagem-bg: 30 51 50;
+    --decupagem-fg: 70 166 161;
+    --decupagem-accent: 78 197 192;
+    --alerta-bg: 57 47 24;
+    --alerta-fg: 193 144 39;
+    --alerta-accent: 240 192 90;
+    --erro-bg: 57 24 24;
+    --erro-fg: 221 98 98;
+    --erro-accent: 240 112 112;
+    --sucesso-bg: 32 50 40;
+    --sucesso-fg: 80 166 118;
+    --sucesso-accent: 95 192 138;
+    --neutro-bg: 42 36 62;
+    --neutro-fg: 190 180 210;
+    --neutro-accent: 138 126 158;
+  }
+
+  /* ---- THRILLER ----
+   * Referência: giallo italiano (Argento, Bava) — luz de gel saturada sobre escuro, vermelho e
+   * azul elétrico ao mesmo tempo. Diferença pro Horror: Horror é escuro e CONTIDO (vermelho só
+   * na borda); Thriller é escuro e ESTRIDENTE (várias cores saturadas competindo nos próprios
+   * módulos). Conferir Horror × Thriller lado a lado (ver PARTE 4). */
+  [data-theme="thriller"] {
+    --page-bg: 13 13 20;
+    --page-bg-from: var(--page-bg);
+    --page-bg-via: var(--page-bg);
+    --page-bg-to: var(--page-bg);
+    --surface: 20 20 31;
+    --surface-border: 255 255 255;
+    --text: 240 232 216;
+    --text-muted: 145 125 84;
+
+    --surface-glass-alpha: 0.74;
+    --surface-glass-subtle-alpha: 0.64;
+    --surface-border-alpha: 0.1;
+    --surface-border-subtle-alpha: 0.14;
+    --surface-glass-hover-alpha: 0.82;
+    --orb-opacity: 0.1;
+
+    --scheduling-bg: 24 32 57;
+    --scheduling-fg: 103 131 228;
+    --scheduling-accent: 46 92 255;
+    --budgeting-bg: 27 55 30;
+    --budgeting-fg: 50 175 65;
+    --budgeting-accent: 74 222 92;
+    --drafts-bg: 47 24 57;
+    --drafts-fg: 188 98 227;
+    --drafts-accent: 196 58 255;
+    --decupagem-bg: 24 57 54;
+    --decupagem-fg: 31 175 161;
+    --decupagem-accent: 0 229 208;
+    --alerta-bg: 57 47 24;
+    --alerta-fg: 192 144 34;
+    --alerta-accent: 255 179 0;
+    --erro-bg: 57 24 31;
+    --erro-fg: 226 92 118;
+    --erro-accent: 255 23 68;
+    --sucesso-bg: 27 55 30;
+    --sucesso-fg: 50 175 65;
+    --sucesso-accent: 74 222 92;
+    --neutro-bg: 34 34 46;
+    --neutro-fg: 190 186 200;
+    --neutro-accent: 130 128 148;
   }
 }
 
@@ -361,5 +677,70 @@
   }
   [data-theme="noir"] .theme-status-icon {
     display: inline-flex;
+  }
+}
+
+/* Tratamento de superfície do EXPERIMENTAL (ver bloco de variáveis acima) — --radius já cobre
+ * rounded-lg/md/sm via tailwind.config.ts, mas rounded-full/xl/2xl/3xl são valores fixos do
+ * Tailwind (não leem variável), por isso precisam de override explícito aqui. Sombra vai a
+ * zero em QUALQUER elemento (o pop art do tema é sobre chapado + contraste, nunca profundidade
+ * simulada); a borda preta de 2px fica restrita a .ui-card/.ui-badge/.ui-button (ver classes
+ * nesses 3 componentes) via `outline`, não `border` — outline não compartilha box model nem
+ * cascata com border-color, então não briga com bordas que já existem por outro motivo (ex.:
+ * border-erro-accent/30 do botão destructive, border-input do outline) — só desenha por cima. */
+@layer utilities {
+  [data-theme="experimental"] [class*="shadow"] {
+    box-shadow: none;
+  }
+  [data-theme="experimental"] .rounded-full,
+  [data-theme="experimental"] .rounded-xl,
+  [data-theme="experimental"] .rounded-2xl,
+  [data-theme="experimental"] .rounded-3xl {
+    border-radius: 0.125rem;
+  }
+  [data-theme="experimental"] .ui-card,
+  [data-theme="experimental"] .ui-badge,
+  [data-theme="experimental"] .ui-button {
+    outline: 2px solid rgb(var(--text));
+    outline-offset: -2px;
+  }
+
+  /* Vazamento real encontrado na verificação: `[data-theme="experimental"] X` é um seletor de
+   * DESCENDENTE — ele casa com X se QUALQUER ancestral tiver o atributo, não só o mais próximo.
+   * Isso é diferente de variável CSS (que herda do ancestral MAIS PRÓXIMO que a redefine). Modo
+   * de Set fixa data-theme="claro" num <div> aninhado (ver (set-mode)/layout.tsx), mas esse div
+   * ainda está DENTRO de um <html data-theme="experimental">, então as regras acima continuavam
+   * casando ali mesmo com o pin — outline preto e cantos quadrados vazando pro Modo de Set.
+   * Fix: restaura os valores padrão do Tailwind explicitamente dentro do pin, com a MESMA
+   * especificidade das regras acima ([data-theme] + classe) — como estas vêm depois no arquivo,
+   * ganham em caso de empate. */
+  [data-theme="claro"] .ui-card,
+  [data-theme="claro"] .ui-badge,
+  [data-theme="claro"] .ui-button {
+    outline: none;
+  }
+  [data-theme="claro"] .rounded-full {
+    border-radius: 9999px;
+  }
+  [data-theme="claro"] .rounded-xl {
+    border-radius: 0.75rem;
+  }
+  [data-theme="claro"] .rounded-2xl {
+    border-radius: 1rem;
+  }
+  [data-theme="claro"] .rounded-3xl {
+    border-radius: 1.5rem;
+  }
+  [data-theme="claro"] .shadow-sm {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  [data-theme="claro"] .shadow {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+  [data-theme="claro"] .shadow-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  [data-theme="claro"] .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 }

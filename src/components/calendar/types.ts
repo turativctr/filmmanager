@@ -41,10 +41,18 @@ export type CalendarEventSummary = {
   elementosAfetados: string[];
 };
 
+export type CalendarTaskSummary = {
+  id: string;
+  titulo: string;
+  responsavel: string | null;
+  concluida: boolean;
+};
+
 export type CalendarDayData = {
   dateKey: string;
   dayNumber: number;
   isCurrentMonth: boolean;
   shootDay: CalendarShootDaySummary | null;
   events: CalendarEventSummary[];
+  tasks: CalendarTaskSummary[];
 };

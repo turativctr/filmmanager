@@ -15,7 +15,7 @@ export default async function CalendarPage({
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
 
-  const [project, shootDays, events, characters] = await Promise.all([
+  const [project, shootDays, events, characters, tasks] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { titulo: true, sigla: true, sistemaIdElenco: true },
@@ -47,6 +47,7 @@ export default async function CalendarPage({
       orderBy: { idCurto: "asc" },
       select: { id: true, idCurto: true, numeroElenco: true, personagem: true },
     }),
+    prisma.task.findMany({ where: { projectId: params.id } }),
   ]);
 
   const shootDaysByDate = new Map(
@@ -108,6 +109,12 @@ export default async function CalendarPage({
     eventsByDate.set(key, [...(eventsByDate.get(key) ?? []), event]);
   }
 
+  const tasksByDate = new Map<string, typeof tasks>();
+  for (const task of tasks) {
+    const key = toDateKey(task.prazo);
+    tasksByDate.set(key, [...(tasksByDate.get(key) ?? []), task]);
+  }
+
   const grid = getMonthGrid(year, month);
   const days: CalendarDayData[] = grid.map(({ date, isCurrentMonth }) => {
     const dateKey = toDateKey(date);
@@ -121,6 +128,12 @@ export default async function CalendarPage({
         tipo: e.tipo,
         nome: e.nome,
         elementosAfetados: e.elementosAfetados,
+      })),
+      tasks: (tasksByDate.get(dateKey) ?? []).map((t) => ({
+        id: t.id,
+        titulo: t.titulo,
+        responsavel: t.responsavel,
+        concluida: t.concluida,
       })),
     };
   });
@@ -159,6 +172,7 @@ export default async function CalendarPage({
         sistemaIdElenco={project.sistemaIdElenco}
         monthSummary={monthSummary}
         projeto={{ titulo: project.titulo, sigla: project.sigla }}
+        responsavelOptions={[...new Set(tasks.map((t) => t.responsavel).filter((r): r is string => Boolean(r)))]}
       />
     </div>
   );

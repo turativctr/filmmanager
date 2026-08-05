@@ -3,6 +3,7 @@ import { LayoutList } from "lucide-react";
 import Link from "next/link";
 
 import { EmptyState } from "@/components/shared/empty-state";
+import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { StripboardBoard } from "@/components/stripboard/stripboard-board";
 import type { BoardState, DayState, SceneSummary, ShotsSummary, StripItem } from "@/components/stripboard/types";
@@ -187,6 +188,21 @@ export default async function StripboardPage({ params }: { params: { id: string 
           jornada={{ limiteAlmocoMin: project.limiteAlmocoMin, duracaoAlmocoMin: project.duracaoAlmocoMin }}
         />
       )}
+
+      {(() => {
+        const primeiraSemOD = shootDays.find((d) => !d.locacaoNome || !d.chamadaGeral);
+        if (!primeiraSemOD) return null;
+        return (
+          <NextStepFooter>
+            <Link
+              href={`/projects/${params.id}/shootdays/${primeiraSemOD.id}/ordem-do-dia`}
+              className="hover:text-foreground hover:underline"
+            >
+              Montar a Ordem do Dia da Diária {primeiraSemOD.numeroDia} →
+            </Link>
+          </NextStepFooter>
+        );
+      })()}
     </div>
   );
 }

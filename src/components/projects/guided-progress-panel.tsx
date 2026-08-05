@@ -24,8 +24,10 @@ export type ProgressStep = {
 };
 
 /** Primeira etapa "pendente" — tudo antes dela já desbloqueou a seguinte (completo OU parcial
- *  contam como "passou dessa etapa"); tudo depois dela ainda está bloqueado. */
-function currentStepIndex(steps: ProgressStep[]): number {
+ *  contam como "passou dessa etapa"); tudo depois dela ainda está bloqueado. Exportada porque o
+ *  bloco "Comece por aqui" do Estado A da Visão Geral reaproveita a mesma regra de disponibilidade
+ *  num subconjunto dos passos. */
+export function currentStepIndex(steps: ProgressStep[]): number {
   const idx = steps.findIndex((s) => s.status === "pendente");
   return idx === -1 ? steps.length : idx;
 }

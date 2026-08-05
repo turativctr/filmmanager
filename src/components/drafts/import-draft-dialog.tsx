@@ -158,7 +158,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
       <DialogTrigger asChild>
         <Button>
           <Upload className="mr-2 h-4 w-4" />
-          Importar nova versão
+          Importar novo tratamento
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">

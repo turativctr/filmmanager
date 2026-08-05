@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -13,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,19 +29,24 @@ import type { CalendarEventType } from "./types";
 
 type CharacterOption = { id: string; idCurto: string; numeroElenco: number | null; personagem: string };
 
+/** Controlado de fora — o gatilho é um item do menu "Novo evento / Nova tarefa" no cabeçalho do
+ *  Calendário (ver CalendarBoard), não um botão próprio. */
 export function NewEventDialog({
   projectId,
   characters,
   sistemaIdElenco,
   defaultDate,
+  open,
+  onOpenChange,
 }: {
   projectId: string;
   characters: CharacterOption[];
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   defaultDate?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tipo, setTipo] = useState<CalendarEventType>("ENSAIO");
@@ -84,19 +87,13 @@ export function NewEventDialog({
       return;
     }
 
-    setOpen(false);
+    onOpenChange(false);
     setSelectedElementos(new Set());
     router.refresh();
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Evento
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Novo evento</DialogTitle>

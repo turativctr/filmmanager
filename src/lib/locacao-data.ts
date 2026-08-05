@@ -14,17 +14,19 @@ export type LocacaoListRow = {
 };
 
 export async function getLocacoesListData(
-  projectId: string
-): Promise<{ locacoes: LocacaoListRow[]; semLocacaoCount: number }> {
-  const [locacoes, semLocacaoCount] = await Promise.all([
+  projectId: string,
+  opts?: { semEndereco?: boolean }
+): Promise<{ locacoes: LocacaoListRow[]; semLocacaoCount: number; semEnderecoCount: number }> {
+  const [locacoes, semLocacaoCount, semEnderecoCount] = await Promise.all([
     prisma.locacao.findMany({
-      where: { projectId },
+      where: { projectId, ...(opts?.semEndereco ? { endereco: null } : {}) },
       include: {
         scenes: { select: { numero: true, set: true, shootDays: { select: { shootDayId: true } } } },
         _count: { select: { pontosApoio: true } },
       },
     }),
     prisma.scene.count({ where: { projectId, locacaoId: null } }),
+    prisma.locacao.count({ where: { projectId, endereco: null } }),
   ]);
 
   const result = locacoes.map((l) => {
@@ -47,7 +49,7 @@ export async function getLocacoesListData(
 
   result.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
-  return { locacoes: result, semLocacaoCount };
+  return { locacoes: result, semLocacaoCount, semEnderecoCount };
 }
 
 export type LocacaoDetailSceneRow = {

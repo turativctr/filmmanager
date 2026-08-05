@@ -115,6 +115,7 @@ export default async function ShootDayPage({
         data: data.shootDay.data,
         chamadaGeral: data.shootDay.chamadaGeral,
         desprodInicio: data.shootDay.desprodInicio,
+        locacaoNome: data.shootDay.locacaoNome,
       }}
       totalCenas={data.scenes.length}
       totalPaginas={data.totalPaginas}

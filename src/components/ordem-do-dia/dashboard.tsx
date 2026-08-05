@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { DailyProgressReportDialog } from "@/components/ad-documents/daily-progress-report-dialog";
 import { SceneProgressPanel } from "@/components/ordem-do-dia/scene-progress-panel";
+import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { getCharacterId } from "@/lib/character-id";
+import { gerarNomeArquivo } from "@/lib/filename";
 import type { MakeEntry, QuickChangeAlert } from "@/lib/ordem-do-dia";
 import { formatPaginas } from "@/lib/paginas";
 import type { SceneShootDayStatusValue } from "@/lib/scene-progress";
 import { minutesToTime } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+
+async function downloadOrdemDoDiaPdf(
+  projectId: string,
+  shootDayId: string,
+  numeroDia: number,
+  projeto: { titulo: string; sigla: string | null }
+) {
+  const res = await fetch(`/api/projects/${projectId}/reports/callsheet?day=${shootDayId}`);
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = gerarNomeArquivo({ projeto, tipo: "OD", variante: `Diaria${numeroDia}`, ext: "pdf" });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
 
 type TimelineBlock = { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" };
 
@@ -50,7 +71,14 @@ export function ShootDayDashboard({
   projectId: string;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   projeto: { titulo: string; sigla: string | null };
-  shootDay: { id: string; numeroDia: number; data: string; chamadaGeral: string | null; desprodInicio: string | null };
+  shootDay: {
+    id: string;
+    numeroDia: number;
+    data: string;
+    chamadaGeral: string | null;
+    desprodInicio: string | null;
+    locacaoNome: string | null;
+  };
   totalCenas: number;
   totalPaginas: number;
   totalMinutos: number;
@@ -324,6 +352,21 @@ export function ShootDayDashboard({
           </div>
         </CardContent>
       </Card>
+
+      {shootDay.locacaoNome && shootDay.chamadaGeral && (
+        <NextStepFooter>
+          <button
+            type="button"
+            onClick={() => downloadOrdemDoDiaPdf(projectId, shootDay.id, shootDay.numeroDia, projeto)}
+            className="hover:text-foreground hover:underline"
+          >
+            Baixar Ordem do Dia (PDF) →
+          </button>
+          <Link href={`/projects/${projectId}/shootdays/${shootDay.id}/set`} className="hover:text-foreground hover:underline">
+            Abrir modo set →
+          </Link>
+        </NextStepFooter>
+      )}
     </div>
   );
 }

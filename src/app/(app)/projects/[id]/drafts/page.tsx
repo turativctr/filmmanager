@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ImportDraftDialog } from "@/components/drafts/import-draft-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
+import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
@@ -38,9 +39,9 @@ export default async function DraftsPage({ params }: { params: { id: string } })
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Versões do roteiro"
+        title="Tratamentos"
         help={{
-          title: "Versões do roteiro",
+          title: "Tratamentos",
           description: "Histórico de versões importadas, com o que mudou em cada uma.",
         }}
         actions={<ImportDraftDialog projectId={params.id} />}
@@ -88,6 +89,14 @@ export default async function DraftsPage({ params }: { params: { id: string } })
             );
           })}
         </div>
+      )}
+
+      {drafts.length > 0 && (
+        <NextStepFooter>
+          <Link href={`/projects/${params.id}/scenes`} className="hover:text-foreground hover:underline">
+            Ver as cenas detectadas →
+          </Link>
+        </NextStepFooter>
       )}
     </div>
   );

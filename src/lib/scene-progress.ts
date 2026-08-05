@@ -2,6 +2,24 @@ import { minutesToTime, timeToMinutes } from "@/lib/schedule";
 
 export type SceneShootDayStatusValue = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA" | "ADIADA";
 
+// Vive aqui (não em scene-progress-panel.tsx) porque esse componente é "use client" — importar um
+// export de dado puro (não-componente) de um módulo client de dentro de um server component
+// (a home, Estado D) quebra o bundler RSC ("Could not find the module ... in the React Client
+// Manifest"). Mapas de rótulo/cor não precisam de client boundary, então moram num módulo neutro.
+export const STATUS_LABEL: Record<SceneShootDayStatusValue, string> = {
+  PENDENTE: "Pendente",
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDA: "Concluída",
+  ADIADA: "Adiada",
+};
+
+export const STATUS_BADGE_CLASS: Record<SceneShootDayStatusValue, string> = {
+  PENDENTE: "bg-muted text-muted-foreground",
+  EM_ANDAMENTO: "bg-scheduling-bg text-scheduling-fg",
+  CONCLUIDA: "bg-sucesso-bg text-sucesso-fg",
+  ADIADA: "bg-alerta-bg text-alerta-fg",
+};
+
 export type SceneProgressInput = {
   paginas: number;
   status: SceneShootDayStatusValue;

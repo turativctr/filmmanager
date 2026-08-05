@@ -11,13 +11,19 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { addMonths, formatMinutos, MONTH_NAMES, WEEKDAY_NAMES } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
 import { formatPaginas } from "@/lib/paginas";
@@ -27,6 +33,8 @@ import { CalendarBadge } from "./calendar-badge";
 import { DayDetailDialog } from "./day-detail-dialog";
 import { DraggableBadge, type CalendarDragData } from "./draggable-badge";
 import { NewEventDialog } from "./new-event-dialog";
+import { NewTaskDialog } from "./new-task-dialog";
+import { TaskBadge } from "./task-badge";
 import type { CalendarDayData, CalendarMonthSummary } from "./types";
 
 type CharacterOption = { id: string; idCurto: string; numeroElenco: number | null; personagem: string };
@@ -79,11 +87,15 @@ function DayCell({
   activeDrag,
   sistemaIdElenco,
   onOpen,
+  projectId,
+  todayKey,
 }: {
   day: CalendarDayData;
   activeDrag: CalendarDragData | null;
   sistemaIdElenco: SistemaIdElenco;
   onOpen: () => void;
+  projectId: string;
+  todayKey: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: day.dateKey, data: { dateKey: day.dateKey } });
 
@@ -163,6 +175,10 @@ function DayCell({
           {event.nome}
         </DraggableBadge>
       ))}
+
+      {day.tasks.map((task) => (
+        <TaskBadge key={task.id} projectId={projectId} task={task} atrasada={!task.concluida && day.dateKey < todayKey} />
+      ))}
     </div>
   );
 }
@@ -176,6 +192,7 @@ export function CalendarBoard({
   sistemaIdElenco,
   monthSummary,
   projeto,
+  responsavelOptions,
 }: {
   projectId: string;
   year: number;
@@ -185,6 +202,7 @@ export function CalendarBoard({
   sistemaIdElenco: SistemaIdElenco;
   monthSummary: CalendarMonthSummary;
   projeto: { titulo: string; sigla: string | null };
+  responsavelOptions: string[];
 }) {
   const router = useRouter();
   const [days, setDays] = useState(initialDays);
@@ -192,6 +210,10 @@ export function CalendarBoard({
   const [detailOpen, setDetailOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<CalendarDragData | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [newEventOpen, setNewEventOpen] = useState(false);
+  const [newTaskOpen, setNewTaskOpen] = useState(false);
+
+  const todayKey = new Date().toISOString().slice(0, 10);
 
   useEffect(() => setMounted(true), []);
   useEffect(() => setDays(initialDays), [initialDays]);
@@ -262,7 +284,32 @@ export function CalendarBoard({
           </Link>
         </Button>
       </div>
-      <NewEventDialog projectId={projectId} characters={characters} sistemaIdElenco={sistemaIdElenco} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo
+            <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>Novo evento</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setNewTaskOpen(true)}>Nova tarefa</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <NewEventDialog
+        projectId={projectId}
+        characters={characters}
+        sistemaIdElenco={sistemaIdElenco}
+        open={newEventOpen}
+        onOpenChange={setNewEventOpen}
+      />
+      <NewTaskDialog
+        projectId={projectId}
+        responsavelOptions={responsavelOptions}
+        open={newTaskOpen}
+        onOpenChange={setNewTaskOpen}
+      />
     </div>
   );
 
@@ -324,6 +371,8 @@ export function CalendarBoard({
                   activeDrag={activeDrag}
                   sistemaIdElenco={sistemaIdElenco}
                   onOpen={() => openDay(day)}
+                  projectId={projectId}
+                  todayKey={todayKey}
                 />
               ))}
             </div>

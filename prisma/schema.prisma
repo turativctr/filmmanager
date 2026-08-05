@@ -283,6 +283,7 @@ model Project {
   shots          Shot[]
   shotSchedules  ShotSchedule[]
   locacoes       Locacao[]
+  tasks          Task[]
 
   @@map("projects")
 }
@@ -756,6 +757,27 @@ model CalendarEvent {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("calendar_events")
+}
+
+// Prazo de pré-produção ("Entrega da decupagem") — diferente de CalendarEvent porque não ocupa
+// tempo num dia, é cumprido ou atrasado. Atrasada continua aparecendo até ser concluída (evento
+// passado simplesmente sai da vista). responsavel é texto livre (departamento ou nome) — sem
+// vínculo com User/CrewMember, sem permissão, sem notificação: o AD controla e cobra por fora.
+model Task {
+  id          String    @id @default(cuid())
+  projectId   String
+  titulo      String
+  descricao   String?   @db.Text
+  prazo       DateTime
+  responsavel String?
+  concluida   Boolean   @default(false)
+  concluidaEm DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
 }
 
 // ---------------------------------------------------------------------------

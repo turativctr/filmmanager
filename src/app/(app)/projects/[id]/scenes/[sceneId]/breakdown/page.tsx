@@ -7,7 +7,9 @@ import { SinopseADField } from "@/components/breakdown/sinopse-ad-field";
 import { ShotListPanel } from "@/components/breakdown/shot-list-panel";
 import { ContinuityNotesPanel } from "@/components/ad-documents/continuity-notes-panel";
 import { InfoBanner } from "@/components/shared/info-banner";
+import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { Button } from "@/components/ui/button";
+import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 
 const PERIODO_LABEL: Record<string, string> = {
@@ -31,7 +33,7 @@ export default async function BreakdownPage({
 
   if (!scene) notFound();
 
-  const [project, allCharacters, allExtras, shootDays, continuityNotes, shots] = await Promise.all([
+  const [project, allCharacters, allExtras, shootDays, continuityNotes, shots, semBreakdown] = await Promise.all([
     prisma.project.findUniqueOrThrow({ where: { id: params.id }, select: { sistemaIdElenco: true } }),
     prisma.character.findMany({
       where: { projectId: params.id },
@@ -54,7 +56,13 @@ export default async function BreakdownPage({
       orderBy: { createdAt: "desc" },
     }),
     prisma.shot.findMany({ where: { sceneId: scene.id }, orderBy: { ordem: "asc" } }),
+    prisma.scene.findMany({
+      where: { projectId: params.id, omitida: false, breakdownSheet: { is: null }, id: { not: scene.id } },
+      select: { id: true, numero: true },
+    }),
   ]);
+
+  const proximaSemBreakdown = [...semBreakdown].sort((a, b) => naturalCompare(a.numero, b.numero))[0];
 
   return (
     <div className="space-y-4">
@@ -128,6 +136,17 @@ export default async function BreakdownPage({
       />
 
       <ShotListPanel projectId={params.id} sceneId={scene.id} initialShots={shots} />
+
+      {proximaSemBreakdown && (
+        <NextStepFooter>
+          <Link
+            href={`/projects/${params.id}/scenes/${proximaSemBreakdown.id}/breakdown`}
+            className="hover:text-foreground hover:underline"
+          >
+            Próxima cena sem breakdown: cena {proximaSemBreakdown.numero} →
+          </Link>
+        </NextStepFooter>
+      )}
     </div>
   );
 }

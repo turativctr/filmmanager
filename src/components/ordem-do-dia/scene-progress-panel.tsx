@@ -6,7 +6,13 @@ import { SceneStatusIcon } from "@/components/shared/status-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPaginas } from "@/lib/paginas";
-import { computeDayProgress, isShootDayToday, type SceneShootDayStatusValue } from "@/lib/scene-progress";
+import {
+  computeDayProgress,
+  isShootDayToday,
+  STATUS_BADGE_CLASS,
+  STATUS_LABEL,
+  type SceneShootDayStatusValue,
+} from "@/lib/scene-progress";
 import { cn } from "@/lib/utils";
 
 type SceneProgressRow = {
@@ -16,24 +22,6 @@ type SceneProgressRow = {
   status: SceneShootDayStatusValue;
   horaInicioReal: string | null;
   horaFimReal: string | null;
-};
-
-const STATUS_LABEL: Record<SceneShootDayStatusValue, string> = {
-  PENDENTE: "Pendente",
-  EM_ANDAMENTO: "Em andamento",
-  CONCLUIDA: "Concluída",
-  ADIADA: "Adiada",
-};
-
-// Onda 3 — PARTE 1/5: eram cores literais do Tailwind (bg-emerald-100 etc.), independentes do
-// tema — por isso o check de "concluído" ficava frio/azulado em qualquer tema (ex.: saltava como
-// a única cor não-terrosa no Histórico). Trocado pelos tokens de módulo (sucesso/scheduling/
-// alerta), que cada tema já define com a própria temperatura.
-const STATUS_BADGE_CLASS: Record<SceneShootDayStatusValue, string> = {
-  PENDENTE: "bg-muted text-muted-foreground",
-  EM_ANDAMENTO: "bg-scheduling-bg text-scheduling-fg",
-  CONCLUIDA: "bg-sucesso-bg text-sucesso-fg",
-  ADIADA: "bg-alerta-bg text-alerta-fg",
 };
 
 function nextStatus(current: SceneShootDayStatusValue): SceneShootDayStatusValue {

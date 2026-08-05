@@ -1,8 +1,9 @@
 "use client";
 
-import { Clapperboard, ShieldCheck, Wallet } from "lucide-react";
+import { Clapperboard, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import {
   GLASS_CHROME_BG,
@@ -12,67 +13,94 @@ import {
   GLASS_CHROME_BORDER_WIDTH_T,
   GLASS_HOVER_BG,
 } from "@/lib/glass";
-import { MODULE_ACTIVE_ITEM_CLASS, type ModuleKey } from "@/lib/module-theme";
+import type { ModuleKey } from "@/lib/module-theme";
 import { cn } from "@/lib/utils";
 
+import { NavLink } from "./nav-link";
+import { SidebarGroup } from "./sidebar-group";
 import { UserMenu } from "./user-menu";
 
-// Drafts mora na seção Scheduling visualmente, mas é seu próprio módulo de cor ("criação e
-// escrita", roxo) — por isso cada item carrega seu módulo individualmente em vez de a seção
-// inteira ditar uma cor só. Elenco/Figuração não foram citados na especificação de cores; ficam
-// no módulo scheduling por padrão, junto do resto da seção.
-const SCHEDULING_ITEMS: { segment: string; label: string; module: ModuleKey }[] = [
+// Itens soltos no topo — não entram em nenhum grupo colapsável. Tratamentos carrega seu próprio
+// módulo de cor ("criação e escrita", roxo) mesmo estando fora da seção de Cadastro/Preparação.
+const TOP_ITEMS: { segment: string; label: string; module: ModuleKey }[] = [
   { segment: "", label: "Visão Geral", module: "scheduling" },
-  { segment: "scenes", label: "Cenas", module: "scheduling" },
-  { segment: "cast", label: "Elenco", module: "scheduling" },
-  { segment: "extras", label: "Figuração", module: "scheduling" },
-  { segment: "locacoes", label: "Locações", module: "scheduling" },
-  { segment: "stripboard", label: "Stripboard", module: "scheduling" },
-  { segment: "calendar", label: "Calendário", module: "scheduling" },
-  { segment: "dood", label: "DOOD", module: "scheduling" },
-  { segment: "drafts", label: "Versões do roteiro", module: "drafts" },
-  { segment: "documentos", label: "Documentos", module: "scheduling" },
+  { segment: "drafts", label: "Tratamentos", module: "drafts" },
 ];
 
-const BUDGETING_ITEMS: { segment: string; label: string; module: ModuleKey }[] = [
-  { segment: "budget/topsheet", label: "Resumo", module: "budgeting" },
-  { segment: "budget/detalhado", label: "Detalhado", module: "budgeting" },
-  { segment: "budget/globals-fringes", label: "Globais e Encargos", module: "budgeting" },
-  { segment: "budget/cenarios", label: "Cenários", module: "budgeting" },
-  { segment: "budget/acompanhamento", label: "Acompanhamento", module: "budgeting" },
-];
-
-function SectionLabel({ icon: Icon, children }: { icon: typeof Clapperboard; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-1.5 px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      <Icon className="h-3.5 w-3.5" />
-      {children}
-    </div>
-  );
-}
-
-function NavLink({
-  href,
-  label,
-  active,
-  module,
-}: {
-  href: string;
+const GROUPS: {
+  storageKey: string;
   label: string;
-  active: boolean;
   module: ModuleKey;
-}) {
+  items: { segment: string; label: string }[];
+}[] = [
+  {
+    storageKey: "cadastro",
+    label: "Cadastro",
+    module: "scheduling",
+    items: [
+      { segment: "scenes", label: "Cenas" },
+      { segment: "cast", label: "Elenco" },
+      { segment: "extras", label: "Figuração" },
+      { segment: "locacoes", label: "Locações" },
+    ],
+  },
+  {
+    storageKey: "preparacao",
+    label: "Preparação",
+    module: "scheduling",
+    items: [
+      { segment: "stripboard", label: "Stripboard" },
+      { segment: "calendar", label: "Calendário" },
+      { segment: "dood", label: "DOOD" },
+      { segment: "documentos", label: "Documentos" },
+    ],
+  },
+  {
+    storageKey: "orcamento",
+    label: "Orçamento",
+    module: "budgeting",
+    items: [
+      { segment: "budget/topsheet", label: "Resumo" },
+      { segment: "budget/detalhado", label: "Detalhado" },
+      { segment: "budget/globals-fringes", label: "Globais e Encargos" },
+      { segment: "budget/cenarios", label: "Cenários" },
+      { segment: "budget/acompanhamento", label: "Acompanhamento" },
+    ],
+  },
+];
+
+/** "Guia de preenchimento" — item com destaque próprio: âmbar (`alerta`) enquanto há passo
+ *  pendente, neutro quando os 6 passos estão completos. Sidebar é client-only e não recebe dados
+ *  de servidor, então busca a contagem via fetch (mesmo padrão já usado em `ScenePlanosPanel`). */
+function GuiaNavLink({ projectId, active }: { projectId: string; active: boolean }) {
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/projects/${projectId}/guide-status`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { pendingCount: number } | null) => {
+        if (!cancelled && data) setPendingCount(data.pendingCount);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const hasPending = (pendingCount ?? 0) > 0;
+
   return (
     <Link
-      href={href}
+      href={`/projects/${projectId}/guia`}
       className={cn(
-        "flex items-center gap-2 rounded-md border-l-[3px] border-l-transparent px-3 py-2 text-sm font-medium transition-colors",
-        active
-          ? MODULE_ACTIVE_ITEM_CLASS[module]
-          : cn("text-muted-foreground hover:text-foreground", GLASS_HOVER_BG)
+        "flex items-center justify-between gap-2 rounded-md border-l-[3px] px-3 py-2 text-sm font-medium transition-colors",
+        active ? "border-l-scheduling-accent" : "border-l-transparent",
+        hasPending ? "bg-alerta-bg text-alerta-fg" : "bg-neutro-bg text-neutro-fg"
       )}
     >
-      {label}
+      <span>Guia de preenchimento</span>
+      {hasPending && <span className="text-xs font-semibold">{pendingCount}</span>}
     </Link>
   );
 }
@@ -102,30 +130,30 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
           Film Manager
         </Link>
       </div>
-      <nav className="flex flex-1 flex-col overflow-y-auto p-3 pt-0">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 pt-2">
         {projectId ? (
           <>
-            <SectionLabel icon={Clapperboard}>Planejamento</SectionLabel>
-            <div className="flex flex-col gap-1">
-              {SCHEDULING_ITEMS.map(({ segment, label, module }) => {
-                const href = segment ? `/projects/${projectId}/${segment}` : `/projects/${projectId}`;
-                return (
-                  <NavLink key={segment} href={href} label={label} active={pathname === href} module={module} />
-                );
-              })}
-            </div>
+            {TOP_ITEMS.map(({ segment, label, module }) => {
+              const href = segment ? `/projects/${projectId}/${segment}` : `/projects/${projectId}`;
+              return (
+                <NavLink key={segment || "overview"} href={href} label={label} active={pathname === href} module={module} />
+              );
+            })}
+            <GuiaNavLink projectId={projectId} active={pathname === `/projects/${projectId}/guia`} />
 
-            <div className={cn("my-3", GLASS_CHROME_BORDER_WIDTH_T, GLASS_CHROME_BORDER_COLOR)} />
+            <div className={cn("my-2", GLASS_CHROME_BORDER_WIDTH_T, GLASS_CHROME_BORDER_COLOR)} />
 
-            <SectionLabel icon={Wallet}>Orçamento</SectionLabel>
-            <div className="flex flex-col gap-1">
-              {BUDGETING_ITEMS.map(({ segment, label, module }) => {
-                const href = `/projects/${projectId}/${segment}`;
-                return (
-                  <NavLink key={segment} href={href} label={label} active={pathname === href} module={module} />
-                );
-              })}
-            </div>
+            {GROUPS.map((group) => (
+              <SidebarGroup
+                key={group.storageKey}
+                storageKey={group.storageKey}
+                label={group.label}
+                module={group.module}
+                items={group.items}
+                projectId={projectId}
+                pathname={pathname}
+              />
+            ))}
           </>
         ) : (
           <div className="flex flex-col gap-1">

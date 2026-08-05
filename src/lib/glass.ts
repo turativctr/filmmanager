@@ -26,6 +26,16 @@ export const GLASS_HOVER_BG = "hover:bg-[rgb(var(--surface)/var(--surface-glass-
 export const GLASS_CHROME_BG = "bg-[rgb(var(--chrome-bg)/var(--surface-glass-alpha))] backdrop-blur-md";
 export const GLASS_CHROME_BORDER_COLOR = "border-[rgb(var(--chrome-border)/var(--chrome-border-alpha))]";
 
+/** Onda 4 — Horror/Thriller pediram cromo "grosso" (2px/3px), não mais o fio de 1px padrão — ver
+ *  --chrome-border-width em globals.css. Fallback `,1px` na sintaxe do valor arbitrário: temas que
+ *  não sobrescrevem a variável (todos, exceto Horror/Thriller) continuam em 1px sem precisar
+ *  declarar a variável — CSS var sem valor e sem fallback vira inválido e o navegador ignora a
+ *  declaração inteira, por isso o fallback aqui não é opcional. Uma constante por lado porque
+ *  border-width é uma propriedade por lado (border-r/-b/-t), não dá pra generalizar numa só. */
+export const GLASS_CHROME_BORDER_WIDTH_R = "border-r-[length:var(--chrome-border-width,1px)]";
+export const GLASS_CHROME_BORDER_WIDTH_B = "border-b-[length:var(--chrome-border-width,1px)]";
+export const GLASS_CHROME_BORDER_WIDTH_T = "border-t-[length:var(--chrome-border-width,1px)]";
+
 export const GLASS_PANEL = `${GLASS_BG} border ${GLASS_BORDER_COLOR}`;
 export const GLASS_PANEL_ROUNDED = `${GLASS_PANEL} rounded-2xl`;
 

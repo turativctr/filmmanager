@@ -4,7 +4,14 @@ import { Clapperboard, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
-import { GLASS_CHROME_BG, GLASS_CHROME_BORDER_COLOR, GLASS_HOVER_BG } from "@/lib/glass";
+import {
+  GLASS_CHROME_BG,
+  GLASS_CHROME_BORDER_COLOR,
+  GLASS_CHROME_BORDER_WIDTH_B,
+  GLASS_CHROME_BORDER_WIDTH_R,
+  GLASS_CHROME_BORDER_WIDTH_T,
+  GLASS_HOVER_BG,
+} from "@/lib/glass";
 import { MODULE_ACTIVE_ITEM_CLASS, type ModuleKey } from "@/lib/module-theme";
 import { cn } from "@/lib/utils";
 
@@ -78,12 +85,19 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
   return (
     <aside
       className={cn(
-        "hidden w-56 shrink-0 rounded-r-2xl border-r md:flex md:flex-col",
+        "hidden w-56 shrink-0 rounded-r-2xl md:flex md:flex-col",
+        GLASS_CHROME_BORDER_WIDTH_R,
         GLASS_CHROME_BG,
         GLASS_CHROME_BORDER_COLOR
       )}
     >
-      <div className={cn("flex h-14 items-center border-b px-4", GLASS_CHROME_BORDER_COLOR)}>
+      <div
+        className={cn(
+          "flex h-14 items-center px-4",
+          GLASS_CHROME_BORDER_WIDTH_B,
+          GLASS_CHROME_BORDER_COLOR
+        )}
+      >
         <Link href="/projects" className="text-sm font-semibold tracking-tight">
           Film Manager
         </Link>
@@ -101,7 +115,7 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
               })}
             </div>
 
-            <div className={cn("my-3 border-t", GLASS_CHROME_BORDER_COLOR)} />
+            <div className={cn("my-3", GLASS_CHROME_BORDER_WIDTH_T, GLASS_CHROME_BORDER_COLOR)} />
 
             <SectionLabel icon={Wallet}>Orçamento</SectionLabel>
             <div className="flex flex-col gap-1">

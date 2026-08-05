@@ -22,13 +22,14 @@ export default async function SetModeLayout({ children }: { children: React.Reac
     // text-foreground` é OBRIGATÓRIO aqui (não só o data-theme): sem um fundo opaco explícito
     // neste nível, o <body> (que fica FORA deste div, colado no <html> — esse sim já no tema do
     // usuário) aparece por trás em qualquer área transparente. NÃO REMOVER nem "corrigir" pra
-    // seguir o tema do usuário. Testar especificamente com Experimental ativo no <html> — era o
-    // tema que mais vazava aqui na onda 2 (o tratamento de superfície dele usava seletores de
-    // classe tipo `[data-theme="experimental"] .algo`, que casam com QUALQUER ancestral com o
-    // atributo, não só o mais próximo — diferente de variável CSS). A onda 3 removeu esse
-    // tratamento por completo (ver globals.css, comentário no bloco do Experimental), então esse
-    // vetor específico de vazamento não existe mais — mas continua sendo o teste mais exigente
-    // pra confirmar que o pin segue funcionando.
+    // seguir o tema do usuário. Testar especificamente com Futurista ativo no <html> (renomeado de
+    // Experimental na onda 4, ver theme.ts/schema.prisma) — era o tema que mais vazava aqui na
+    // onda 2, quando ainda se chamava Experimental (o tratamento de superfície dele usava
+    // seletores de classe tipo `[data-theme="experimental"] .algo`, que casam com QUALQUER
+    // ancestral com o atributo, não só o mais próximo — diferente de variável CSS). A onda 3
+    // removeu esse tratamento por completo (ver globals.css, comentário no bloco do Futurista),
+    // então esse vetor específico de vazamento não existe mais — mas continua sendo o teste mais
+    // exigente pra confirmar que o pin segue funcionando.
     <div data-theme="documentario" className="h-screen w-screen overflow-hidden bg-background text-foreground">
       {children}
       <Toaster richColors position="top-right" />

@@ -40,7 +40,8 @@ enum Role {
 }
 
 // Onda 3: CLARO renomeado pra DOCUMENTARIO (nome de gênero, como todos os outros — "claro" era o
-// único sem nome de gênero). O enum continua NÃO fechado — mais temas podem vir depois.
+// único sem nome de gênero). Onda 4: EXPERIMENTAL renomeado pra FUTURISTA (o conceito visual virou
+// neon noir, "experimental" não descrevia mais nada). O enum continua NÃO fechado.
 enum Tema {
   DOCUMENTARIO
   NOIR
@@ -49,7 +50,7 @@ enum Tema {
   HORROR
   DRAMA
   TELENOVELA
-  EXPERIMENTAL
+  FUTURISTA
   FANTASIA
   THRILLER
 }

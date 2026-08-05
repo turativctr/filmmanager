@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { GLASS_CHROME_BG, GLASS_CHROME_BORDER_COLOR } from "@/lib/glass";
+import { GLASS_CHROME_BG, GLASS_CHROME_BORDER_COLOR, GLASS_CHROME_BORDER_WIDTH_B } from "@/lib/glass";
 import { getActiveModule, MODULE_BADGE_CLASS, MODULE_LABEL } from "@/lib/module-theme";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,8 @@ export function Header() {
   return (
     <header
       className={cn(
-        "flex h-14 items-center justify-between rounded-b-2xl border-b px-4",
+        "flex h-14 items-center justify-between rounded-b-2xl px-4",
+        GLASS_CHROME_BORDER_WIDTH_B,
         GLASS_CHROME_BG,
         GLASS_CHROME_BORDER_COLOR
       )}

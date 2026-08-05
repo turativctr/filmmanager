@@ -32,7 +32,7 @@ const THEMES = [
   "horror",
   "fantasia",
   "thriller",
-  "experimental",
+  "futurista",
   "telenovela",
 ];
 

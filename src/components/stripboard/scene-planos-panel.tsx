@@ -41,6 +41,7 @@ export function ScenePlanosPanel({
   periodoColor,
   initialObservacoes,
   initialObservacoesAutoGeradas,
+  fatorResetPercent = 100,
 }: {
   projectId: string;
   sceneId: string;
@@ -49,6 +50,8 @@ export function ScenePlanosPanel({
   periodoColor?: string;
   initialObservacoes?: string | null;
   initialObservacoesAutoGeradas?: boolean;
+  /** Ritmo dos resets da diária (nível 3) — ausente no Boneyard, onde não há dia em escopo. */
+  fatorResetPercent?: number;
 }) {
   const [shots, setShots] = useState<ShotData[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,7 +185,10 @@ export function ScenePlanosPanel({
                     <ResetDivider
                       tipoReset={shot.tipoReset}
                       tempoResetMin={shot.tempoResetMin}
+                      tempoResetMinManual={shot.tempoResetMinManual}
+                      fatorResetPercent={fatorResetPercent}
                       detail={lensChangeDetail(shots[index - 1], shot)}
+                      onUpdateManual={(min) => handleUpdate(shot.id, { tempoResetMinManual: min })}
                     />
                   )}
                   <div

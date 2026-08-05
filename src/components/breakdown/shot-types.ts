@@ -18,6 +18,7 @@ export type ShotData = {
   tempoSetupMin: number;
   tempoTotalMin: number;
   tempoResetMin: number | null;
+  tempoResetMinManual: number | null;
   tipoReset: ShotTipoReset;
   notasDirecao: string | null;
   notasContinuidade: string | null;

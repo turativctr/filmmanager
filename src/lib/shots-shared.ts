@@ -13,6 +13,45 @@ export const RESET_MINUTES: Record<ShotTipoReset, number> = {
   RESET_COMPLETO: 20,
 };
 
+// Tempos de reset configuráveis, nível 1 (padrão do projeto) — classifyReset() abaixo continua
+// usando RESET_MINUTES pra decidir qual TIPO vence quando há vários gatilhos ao mesmo tempo (o
+// ranking de severidade nunca muda com a config do projeto, só o minuto do tipo já escolhido é
+// substituído depois, em recalculateScene/recalculateDaySchedule — src/lib/shots.ts). NENHUM não
+// tem campo no Project (é sempre zero).
+export type ResetMinutesConfig = Record<ShotTipoReset, number>;
+
+export function buildResetMinutesConfig(project: {
+  resetAjusteMin: number;
+  resetTrocaLenteMin: number;
+  resetTrocaCameraMin: number;
+  resetPosicaoMin: number;
+  resetCompletoMin: number;
+}): ResetMinutesConfig {
+  return {
+    NENHUM: 0,
+    AJUSTE: project.resetAjusteMin,
+    TROCA_LENTE: project.resetTrocaLenteMin,
+    TROCA_CAMERA: project.resetTrocaCameraMin,
+    RESET_POSICAO: project.resetPosicaoMin,
+    RESET_COMPLETO: project.resetCompletoMin,
+  };
+}
+
+/** Ordem de cálculo do tempo de reset efetivo: (1) ajuste manual do plano, se existir, senão (2) o
+ *  valor computado (padrão do projeto pro tipo classificado); em ambos os casos, (3) multiplica
+ *  pelo fator do dia (nível 3 — ShootDay.fatorResetPercent, 100 = sem ajuste) e arredonda pro
+ *  minuto inteiro mais próximo. O fator só existe em contexto com uma ShootDay específica em
+ *  escopo — quem não tiver um fator real disponível (ex.: página de Breakdown, que é
+ *  independente de dia) passa 100. */
+export function resolveEffectiveResetMin(
+  computedMin: number,
+  manualMin: number | null | undefined,
+  fatorPercent: number
+): number {
+  const base = manualMin ?? computedMin;
+  return Math.round((base * fatorPercent) / 100);
+}
+
 export const RESET_LABEL: Record<ShotTipoReset, string> = {
   NENHUM: "Nenhum",
   AJUSTE: "Ajuste",
@@ -136,20 +175,24 @@ export function computeTempoTotal(takesPrevistos: number, duracaoTakeMin: number
   return takesPrevistos * duracaoTakeMin + tempoSetupMin;
 }
 
-/** Rod = soma(Shot.tempoTotalMin) + soma(Shot.tempoResetMin) dos planos PENDENTE/FILMADO —
- *  DESCARTADO não conta. Também retorna o total de takes previstos, usado no resumo da tira
- *  ("81min (6 planos · 18 takes)"). */
+/** Rod = soma(Shot.tempoTotalMin) + soma(ajuste manual ?? Shot.tempoResetMin) dos planos
+ *  PENDENTE/FILMADO — DESCARTADO não conta. Usa o ajuste manual (nível 2) quando existir, porque é
+ *  uma calibração real da duração da cena; NUNCA aplica o fator do dia (nível 3) aqui — o fator é
+ *  decisão de ritmo "só por hoje", não pode vazar pro Rod/cronograma mestre (blocoManha/almoço).
+ *  Também retorna o total de takes previstos, usado no resumo da tira ("81min (6 planos · 18
+ *  takes)"). */
 export function computeSceneShotTotals(
   shots: {
     tempoTotalMin: number | null;
     tempoResetMin: number | null;
+    tempoResetMinManual?: number | null;
     takesPrevistos: number | null;
     status: ShotStatus;
   }[]
 ): { planosMin: number; resetsMin: number; totalMin: number; count: number; takesTotal: number } {
   const active = shots.filter((s) => s.status !== "DESCARTADO");
   const planosMin = active.reduce((sum, s) => sum + (s.tempoTotalMin ?? 0), 0);
-  const resetsMin = active.reduce((sum, s) => sum + (s.tempoResetMin ?? 0), 0);
+  const resetsMin = active.reduce((sum, s) => sum + (s.tempoResetMinManual ?? s.tempoResetMin ?? 0), 0);
   const takesTotal = active.reduce((sum, s) => sum + (s.takesPrevistos ?? 0), 0);
   return { planosMin, resetsMin, totalMin: planosMin + resetsMin, count: active.length, takesTotal };
 }

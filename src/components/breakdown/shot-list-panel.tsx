@@ -301,7 +301,9 @@ export function ShotListPanel({
                       <ResetDivider
                         tipoReset={shot.tipoReset}
                         tempoResetMin={shot.tempoResetMin}
+                        tempoResetMinManual={shot.tempoResetMinManual}
                         detail={lensChangeDetail(shots[index - 1], shot)}
+                        onUpdateManual={(min) => handleUpdate(shot.id, { tempoResetMinManual: min })}
                       />
                     )}
                     <SortableShotRow

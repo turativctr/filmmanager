@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
 import { recalculateAllDayBlocksForProject } from "@/lib/shootday-blocks";
+import { recalculateAllResetsForProject } from "@/lib/shots";
 import { projectUpdateSchema } from "@/lib/validation/project";
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
@@ -50,6 +51,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     rest.preparacaoInicialMin !== undefined
   ) {
     await recalculateAllDayBlocksForProject(project.id);
+  }
+
+  // Tempos de reset (nível 1) mudaram — recalcula tipoReset/tempoResetMin de TODO plano do
+  // projeto, pra "calibrar uma vez" refletir imediatamente sem precisar tocar em cada plano.
+  if (
+    rest.resetAjusteMin !== undefined ||
+    rest.resetTrocaLenteMin !== undefined ||
+    rest.resetTrocaCameraMin !== undefined ||
+    rest.resetPosicaoMin !== undefined ||
+    rest.resetCompletoMin !== undefined
+  ) {
+    await recalculateAllResetsForProject(project.id);
   }
 
   return NextResponse.json(updated);

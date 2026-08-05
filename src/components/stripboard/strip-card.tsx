@@ -38,6 +38,7 @@ export function StripCard({
   onUpdateTimes,
   projectId,
   shootDayId,
+  fatorResetPercent,
 }: {
   item: StripItem;
   characterLabels: string[];
@@ -47,6 +48,8 @@ export function StripCard({
   onUpdateTimes?: (prepMin: number | null, rodMin: number | null) => void;
   projectId?: string;
   shootDayId?: string;
+  /** Ritmo dos resets da diária (nível 3) — ausente no Boneyard/preview de drag. */
+  fatorResetPercent?: number;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.sceneId,
@@ -270,6 +273,7 @@ export function StripCard({
               periodoColor={item.scene.periodo ? PERIODO_BORDER[item.scene.periodo] : undefined}
               initialObservacoes={item.observacoes}
               initialObservacoesAutoGeradas={item.observacoesAutoGeradas}
+              fatorResetPercent={fatorResetPercent}
             />
           )}
         </div>

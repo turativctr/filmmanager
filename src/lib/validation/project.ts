@@ -20,6 +20,13 @@ export const projectUpdateSchema = z.object({
   limiteAlmocoMin: z.coerce.number().int().min(1).optional(),
   duracaoAlmocoMin: z.coerce.number().int().min(1).optional(),
   preparacaoInicialMin: z.coerce.number().int().min(0).optional(),
+  // Tempos de reset configuráveis, nível 1 — padrão do projeto por tipo classificado (ver
+  // src/lib/shots-shared.ts). NENHUM não entra aqui, é sempre zero.
+  resetAjusteMin: z.coerce.number().int().min(0).optional(),
+  resetTrocaLenteMin: z.coerce.number().int().min(0).optional(),
+  resetTrocaCameraMin: z.coerce.number().int().min(0).optional(),
+  resetPosicaoMin: z.coerce.number().int().min(0).optional(),
+  resetCompletoMin: z.coerce.number().int().min(0).optional(),
 });
 
 export type ProjectUpdateInput = z.infer<typeof projectUpdateSchema>;

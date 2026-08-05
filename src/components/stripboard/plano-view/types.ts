@@ -30,6 +30,7 @@ export type PlanoScheduleEntry = {
   ordem: number;
   bloco: "MANHA" | "TARDE" | null;
   tempoResetMin: number | null;
+  tempoResetMinManual: number | null;
   tipoReset: ShotTipoReset;
   shot: PlanoShot;
 };

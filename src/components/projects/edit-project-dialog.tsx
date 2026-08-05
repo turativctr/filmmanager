@@ -52,6 +52,11 @@ type ProjectDefaults = {
   limiteAlmocoMin: number;
   duracaoAlmocoMin: number;
   preparacaoInicialMin: number;
+  resetAjusteMin: number;
+  resetTrocaLenteMin: number;
+  resetTrocaCameraMin: number;
+  resetPosicaoMin: number;
+  resetCompletoMin: number;
 };
 
 export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
@@ -85,6 +90,11 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
       limiteAlmocoMin: form.get("limiteAlmocoMin") || undefined,
       duracaoAlmocoMin: form.get("duracaoAlmocoMin") || undefined,
       preparacaoInicialMin: form.get("preparacaoInicialMin") || undefined,
+      resetAjusteMin: form.get("resetAjusteMin") || undefined,
+      resetTrocaLenteMin: form.get("resetTrocaLenteMin") || undefined,
+      resetTrocaCameraMin: form.get("resetTrocaCameraMin") || undefined,
+      resetPosicaoMin: form.get("resetPosicaoMin") || undefined,
+      resetCompletoMin: form.get("resetCompletoMin") || undefined,
     };
 
     const res = await fetch(`/api/projects/${project.id}`, {
@@ -316,6 +326,68 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                     min={0}
                     defaultValue={project.preparacaoInicialMin}
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <div>
+                  <h4 className="text-sm font-semibold">Tempos de reset</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Tempo médio que sua equipe leva em cada tipo de troca entre planos. Calibre uma vez pelo
+                    ritmo da sua equipe — você ainda pode ajustar plano a plano depois.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resetAjusteMin">Ajuste</Label>
+                    <Input
+                      id="resetAjusteMin"
+                      name="resetAjusteMin"
+                      type="number"
+                      min={0}
+                      defaultValue={project.resetAjusteMin}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resetTrocaLenteMin">Troca de lente</Label>
+                    <Input
+                      id="resetTrocaLenteMin"
+                      name="resetTrocaLenteMin"
+                      type="number"
+                      min={0}
+                      defaultValue={project.resetTrocaLenteMin}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resetTrocaCameraMin">Troca de câmera</Label>
+                    <Input
+                      id="resetTrocaCameraMin"
+                      name="resetTrocaCameraMin"
+                      type="number"
+                      min={0}
+                      defaultValue={project.resetTrocaCameraMin}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resetPosicaoMin">Reset de posição</Label>
+                    <Input
+                      id="resetPosicaoMin"
+                      name="resetPosicaoMin"
+                      type="number"
+                      min={0}
+                      defaultValue={project.resetPosicaoMin}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="resetCompletoMin">Reset completo</Label>
+                    <Input
+                      id="resetCompletoMin"
+                      name="resetCompletoMin"
+                      type="number"
+                      min={0}
+                      defaultValue={project.resetCompletoMin}
+                    />
+                  </div>
                 </div>
               </div>
             </TabsContent>

@@ -43,3 +43,11 @@ export const shootDaySchema = z.object({
 });
 
 export type ShootDayInput = z.infer<typeof shootDaySchema>;
+
+// Rota própria e minúscula (src/app/api/projects/[id]/shoot-days/[shootDayId]/reset-fator/
+// route.ts) — de propósito SEPARADA de shootDaySchema acima, que exige numeroDia/data (não é
+// .partial()); um PATCH parcial ali corromperia `data` (new Date(undefined)). Nível 3 de "tempos
+// de reset configuráveis": ritmo dos resets DESTE dia, 100 = sem ajuste.
+export const resetFatorSchema = z.object({
+  fatorResetPercent: z.coerce.number().int().min(1).max(500),
+});

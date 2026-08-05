@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { MissingTimesDialog } from "@/components/shared/missing-times-dialog";
 import { PageHeader } from "@/components/shared/page-header";
+import { ResetFatorControl } from "@/components/shared/reset-fator-control";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { gerarNomeArquivo } from "@/lib/filename";
@@ -274,10 +275,21 @@ export function OrdemDoDiaWizard({
     handleSalvarEGerarPdf();
   }
 
+  async function handleFatorChange(fatorResetPercent: number) {
+    const res = await fetch(`/api/projects/${projectId}/shoot-days/${shootDay.id}/reset-fator`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fatorResetPercent }),
+    });
+    if (!res.ok) return;
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
         title={`Ordem do Dia — Diária ${shootDay.numeroDia} — ${new Date(shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}`}
+        actions={<ResetFatorControl value={shootDay.fatorResetPercent} onChange={handleFatorChange} />}
       />
 
       <div className="flex items-center gap-2">

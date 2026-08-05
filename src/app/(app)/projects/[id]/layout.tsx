@@ -50,6 +50,11 @@ export default async function ProjectLayout({
             limiteAlmocoMin: project.limiteAlmocoMin,
             duracaoAlmocoMin: project.duracaoAlmocoMin,
             preparacaoInicialMin: project.preparacaoInicialMin,
+            resetAjusteMin: project.resetAjusteMin,
+            resetTrocaLenteMin: project.resetTrocaLenteMin,
+            resetTrocaCameraMin: project.resetTrocaCameraMin,
+            resetPosicaoMin: project.resetPosicaoMin,
+            resetCompletoMin: project.resetCompletoMin,
           }}
         />
       </div>

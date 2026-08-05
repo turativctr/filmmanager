@@ -46,6 +46,7 @@ export function DayPlanoView({
   projectId,
   shootDayId,
   scenes,
+  fatorResetPercent = 100,
 }: {
   projectId: string;
   shootDayId: string;
@@ -53,6 +54,8 @@ export function DayPlanoView({
    *  usada tanto pra descobrir quais planos pertencem a este dia (Correção 2) quanto pelo botão
    *  "Agrupar por cena". */
   scenes: { id: string; numero: string }[];
+  /** Ritmo dos resets desta diária (nível 3 de "tempos de reset configuráveis") — 100 = sem ajuste. */
+  fatorResetPercent?: number;
 }) {
   const sceneOrder = useMemo(() => scenes.map((s) => s.id), [scenes]);
   const sceneNumeroById = useMemo(() => new Map(scenes.map((s) => [s.id, s.numero])), [scenes]);
@@ -180,6 +183,27 @@ export function DayPlanoView({
       setEntries(previous);
     } finally {
       setSavingBlocoId(null);
+    }
+  }
+
+  async function handleResetManualChange(scheduleId: string, tempoResetMinManual: number | null) {
+    if (!entries) return;
+    const previous = entries;
+    setEntries(entries.map((e) => (e.id === scheduleId ? { ...e, tempoResetMinManual } : e)));
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/shoot-days/${shootDayId}/shot-schedule/${scheduleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tempoResetMinManual }),
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const updated: PlanoScheduleEntry = await res.json();
+      setEntries((prev) => prev?.map((e) => (e.id === scheduleId ? updated : e)) ?? prev);
+    } catch (err) {
+      console.error("Erro ao salvar ajuste de reset:", err);
+      toast.error("Erro ao salvar — tente novamente");
+      setEntries(previous);
     }
   }
 
@@ -346,11 +370,14 @@ export function DayPlanoView({
                       <ResetDivider
                         tipoReset={entry.tipoReset}
                         tempoResetMin={entry.tempoResetMin}
+                        tempoResetMinManual={entry.tempoResetMinManual}
+                        fatorResetPercent={fatorResetPercent}
                         detail={
                           entry.tipoReset === "TROCA_LENTE"
                             ? lensDetail(entries[index - 1].shot.lente, entry.shot.lente)
                             : undefined
                         }
+                        onUpdateManual={(min) => handleResetManualChange(entry.id, min)}
                       />
                     )}
                     <PlanoStrip

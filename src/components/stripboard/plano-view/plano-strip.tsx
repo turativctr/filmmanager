@@ -3,36 +3,121 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ShotTipoReset } from "@prisma/client";
+import { useState } from "react";
 
-import { HEAVY_RESETS, RESET_LABEL } from "@/lib/shots-shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HEAVY_RESETS, RESET_LABEL, resolveEffectiveResetMin } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
 
 import type { PlanoScheduleEntry } from "./types";
 
 /** Divisor mostrado ANTES de um plano quando há reset em relação ao anterior NA ORDEM DO DIA —
  *  lido direto de `tipoReset`/`tempoResetMin` do ShotSchedule (já recalculado pelo servidor a cada
- *  mutação). Some quando NENHUM; destaque âmbar quando é um reset pesado (HEAVY_RESETS). */
+ *  mutação). Some quando NENHUM; destaque âmbar quando é um reset pesado (HEAVY_RESETS).
+ *
+ *  Mesma semântica de "tempos de reset configuráveis" do ResetDivider de shots/reset-divider.tsx:
+ *  `tempoResetMin` é o computado, `tempoResetMinManual` o ajuste do plano (nível 2), `fatorResetPercent`
+ *  o ritmo do dia (nível 3) — o texto mostrado é sempre o valor EFETIVO. */
 export function ResetDivider({
   tipoReset,
   tempoResetMin,
+  tempoResetMinManual = null,
+  fatorResetPercent = 100,
   detail,
+  onUpdateManual,
 }: {
   tipoReset: ShotTipoReset;
   tempoResetMin: number | null;
+  tempoResetMinManual?: number | null;
+  fatorResetPercent?: number;
   detail?: string;
+  onUpdateManual?: (min: number | null) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
   if (tipoReset === "NENHUM") return null;
   const heavy = HEAVY_RESETS.includes(tipoReset);
+  const computed = tempoResetMin ?? 0;
+  const isManual = tempoResetMinManual != null;
+  const base = tempoResetMinManual ?? computed;
+  const effective = resolveEffectiveResetMin(computed, tempoResetMinManual, fatorResetPercent);
+  const fatorApplied = fatorResetPercent !== 100;
+
+  function startEditing() {
+    setDraft(String(base));
+    setEditing(true);
+  }
+
+  function save() {
+    const value = Number(draft);
+    if (!Number.isNaN(value) && value >= 0) onUpdateManual?.(value);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <div className="my-1 ml-2 flex w-fit items-center gap-1.5 rounded px-2 py-0.5 text-[11px]">
+        <span className="text-muted-foreground">{RESET_LABEL[tipoReset]}</span>
+        <input
+          type="number"
+          autoFocus
+          min={0}
+          className="h-6 w-14 rounded border bg-background px-1 text-center text-[11px]"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") save();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          onBlur={save}
+        />
+        <span className="text-muted-foreground">min</span>
+      </div>
+    );
+  }
 
   return (
     <div
       className={cn(
-        "my-1 ml-2 flex w-fit items-center gap-1 rounded px-2 py-0.5 text-[11px]",
+        "my-1 ml-2 flex w-fit items-center gap-1.5 rounded px-2 py-0.5 text-[11px]",
         heavy ? "border border-amber-400/50 bg-amber-100 text-amber-700" : "text-muted-foreground"
       )}
     >
-      ↓ {RESET_LABEL[tipoReset]}
-      {detail && ` ${detail}`} · +{tempoResetMin ?? 0}min
+      {onUpdateManual ? (
+        <button type="button" onClick={startEditing} className="hover:underline">
+          ↓ {RESET_LABEL[tipoReset]}
+          {detail && ` ${detail}`} · +{effective}min
+        </button>
+      ) : (
+        <span>
+          ↓ {RESET_LABEL[tipoReset]}
+          {detail && ` ${detail}`} · +{effective}min
+        </span>
+      )}
+      {fatorApplied && (
+        <Tooltip>
+          <TooltipTrigger type="button" className="opacity-70">
+            (?)
+          </TooltipTrigger>
+          <TooltipContent>
+            {RESET_LABEL[tipoReset]} · {base}min × {fatorResetPercent}% = {effective}min
+          </TooltipContent>
+        </Tooltip>
+      )}
+      {isManual && (
+        <>
+          <Tooltip>
+            <TooltipTrigger className="block h-1.5 w-1.5 shrink-0 rounded-full bg-alerta-accent" />
+            <TooltipContent>Tempo manual difere do padrão do projeto</TooltipContent>
+          </Tooltip>
+          {onUpdateManual && (
+            <button type="button" className="underline opacity-80 hover:opacity-100" onClick={() => onUpdateManual(null)}>
+              usar padrão
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }

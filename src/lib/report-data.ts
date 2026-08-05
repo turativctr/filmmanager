@@ -11,7 +11,7 @@ import {
   type ComputedSchedule,
 } from "@/lib/schedule";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
-import { computeSceneShotTotals } from "@/lib/shots";
+import { computeSceneShotTotals, resolveEffectiveResetMin } from "@/lib/shots";
 import { formatTimeValue } from "@/lib/time";
 
 export type ShotRow = {
@@ -27,6 +27,9 @@ export type ShotRow = {
   duracaoTakeMin: number;
   tempoSetupMin: number;
   tempoTotalMin: number;
+  /** Já é o valor EFETIVO (ajuste manual do plano, se existir, senão o padrão do projeto — ambos
+   *  multiplicados pelo fator do dia, ver resolveEffectiveResetMin em shots-shared.ts). Quem lê
+   *  este campo (wizard da OD, PDFs) não precisa saber de fator nem de ajuste manual. */
   tempoResetMin: number | null;
   tipoReset: ShotTipoReset;
   notasDirecao: string | null;
@@ -43,6 +46,7 @@ export type ShotScheduleRow = {
   id: string;
   ordem: number;
   bloco: "MANHA" | "TARDE" | null;
+  /** Já efetivo — ver comentário equivalente em ShotRow. */
   tempoResetMin: number | null;
   tipoReset: ShotTipoReset;
   shotId: string;
@@ -154,6 +158,7 @@ export type HoraAHoraPlanoRow = {
   movimento: string | null;
   takesPrevistos: number;
   tempoTotalMin: number;
+  /** Já efetivo — ver ShotRow. buildHoraAHoraPlanos() só soma o que recebe, não resolve nada. */
   tempoResetMin: number | null;
   tipoReset: ShotTipoReset;
   status: ShotStatus;
@@ -350,6 +355,10 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
 
   if (!project || !shootDay) return null;
 
+  // Capturado numa const local (em vez de `shootDay.fatorResetPercent` direto) porque toRow() é uma
+  // function declaration aninhada — TS não propaga o narrowing de `shootDay` pra dentro dela.
+  const fatorResetPercent = shootDay.fatorResetPercent;
+
   const sceneEntries = shootDay.scenes;
   const manhaEntries = sceneEntries.filter((e) => e.bloco === "MANHA");
   const tardeEntries = sceneEntries.filter((e) => e.bloco === "TARDE");
@@ -422,7 +431,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
         duracaoTakeMin: shot.duracaoTakeMin,
         tempoSetupMin: shot.tempoSetupMin,
         tempoTotalMin: shot.tempoTotalMin,
-        tempoResetMin: shot.tempoResetMin,
+        tempoResetMin: resolveEffectiveResetMin(shot.tempoResetMin ?? 0, shot.tempoResetMinManual, fatorResetPercent),
         tipoReset: shot.tipoReset,
         notasDirecao: shot.notasDirecao,
         notasContinuidade: shot.notasContinuidade,
@@ -543,7 +552,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     id: entry.id,
     ordem: entry.ordem,
     bloco: entry.bloco,
-    tempoResetMin: entry.tempoResetMin,
+    tempoResetMin: resolveEffectiveResetMin(entry.tempoResetMin ?? 0, entry.tempoResetMinManual, fatorResetPercent),
     tipoReset: entry.tipoReset,
     shotId: entry.shot.id,
     sceneId: entry.shot.sceneId,
@@ -578,6 +587,10 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       data: shootDay.data.toISOString(),
       chamadaGeral: shootDay.chamadaGeral,
       lancheHorario: shootDay.lancheHorario,
+      // Nível 3 de "tempos de reset configuráveis" — os tempoResetMin acima já vêm com este fator
+      // aplicado (ver resolveEffectiveResetMin), mas o valor crú também é exposto pra UI mostrar o
+      // aviso "Resets a N%" e a conta no tooltip ("15min × 70% = 11min").
+      fatorResetPercent,
       blocoManhaInicio: shootDay.blocoManhaInicio,
       almocoInicio: shootDay.almocoInicio,
       almocoFim: shootDay.almocoFim,

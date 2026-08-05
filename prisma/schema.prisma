@@ -260,6 +260,17 @@ model Project {
   duracaoAlmocoMin     Int @default(60)
   preparacaoInicialMin Int @default(60) // chamada geral -> início da 1ª cena
 
+  // Padrão de tempos de reset entre planos, por tipo classificado por classifyReset() (ver
+  // src/lib/shots-shared.ts) — calibrável por projeto, porque equipe entrosada e locação apertada
+  // mudam quanto tempo cada troca realmente leva. NENHUM não tem campo (é sempre zero). Defaults
+  // idênticos aos valores que antes eram fixos em RESET_MINUTES, pra nada mudar visualmente até
+  // alguém calibrar de propósito.
+  resetAjusteMin      Int @default(3)
+  resetTrocaLenteMin  Int @default(8)
+  resetTrocaCameraMin Int @default(10)
+  resetPosicaoMin     Int @default(15)
+  resetCompletoMin    Int @default(20)
+
   scenes         Scene[]
   characters     Character[]
   shootDays      ShootDay[]
@@ -388,8 +399,10 @@ model PontoApoio {
 }
 
 // Decupagem da cena — um plano por linha, ordenado por `ordem` (editável via drag-and-drop).
-// tempoResetMin é calculado por classifyReset() (comparando com o plano anterior na mesma `ordem`),
-// mas fica gravado no banco e é editável manualmente — ver PARTE 3 do pedido original.
+// tempoResetMin/tipoReset são calculados por classifyReset() (comparando com o plano anterior na
+// mesma `ordem`) + o padrão de tempos do Project — SEMPRE recalculados no servidor, nunca aceitos
+// como input direto (mesma convenção de tempoTotalMin). tempoResetMinManual é o ajuste calibrado
+// plano a plano (nulo = segue o padrão do projeto) — só ele é editável.
 model Shot {
   id                String        @id @default(cuid())
   sceneId           String
@@ -404,12 +417,13 @@ model Shot {
   // takesPrevistos/duracaoTakeMin/tempoSetupMin são editáveis; tempoTotalMin é sempre recalculado
   // no servidor a partir dos três (takesPrevistos × duracaoTakeMin + tempoSetupMin) — nunca aceito
   // como input direto da API, mesma convenção de tipoReset/tempoResetMin.
-  takesPrevistos    Int           @default(3)
-  duracaoTakeMin    Int           @default(2)
-  tempoSetupMin     Int           @default(0)
-  tempoTotalMin     Int           @default(6)
-  tempoResetMin     Int?
-  tipoReset         ShotTipoReset @default(NENHUM)
+  takesPrevistos      Int           @default(3)
+  duracaoTakeMin      Int           @default(2)
+  tempoSetupMin       Int           @default(0)
+  tempoTotalMin       Int           @default(6)
+  tempoResetMin       Int?
+  tempoResetMinManual Int?
+  tipoReset           ShotTipoReset @default(NENHUM)
   notasDirecao      String?       @db.Text
   notasContinuidade String?       @db.Text
   status            ShotStatus    @default(PENDENTE)
@@ -428,16 +442,18 @@ model Shot {
 // dia, independente da ordem/vínculo das cenas de origem (Shot.sceneId nunca muda). Um Shot sem
 // ShotSchedule ainda não foi agendado num dia específico. `ordem` é a posição global no dia (cruza
 // cenas); `tempoResetMin`/`tipoReset` aqui são o reset entre planos NO DIA — diferente dos mesmos
-// campos em Shot, que refletem a ordem dentro da própria cena.
+// campos em Shot, que refletem a ordem dentro da própria cena. `tempoResetMinManual` é o mesmo
+// conceito de ajuste calibrado do Shot, só que pra este contexto (nulo = segue o padrão do projeto).
 model ShotSchedule {
-  id            String         @id @default(cuid())
-  shotId        String         @unique
-  shootDayId    String
-  projectId     String
-  ordem         Int
-  bloco         SceneBlock?
-  tempoResetMin Int?
-  tipoReset     ShotTipoReset  @default(NENHUM)
+  id                  String         @id @default(cuid())
+  shotId              String         @unique
+  shootDayId          String
+  projectId           String
+  ordem               Int
+  bloco               SceneBlock?
+  tempoResetMin       Int?
+  tempoResetMinManual Int?
+  tipoReset           ShotTipoReset  @default(NENHUM)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -555,6 +571,12 @@ model ShootDay {
   observacoesGerais  String?  @db.Text
   observacaoCronogramaElenco String? @db.Text // nota de rodapé por diária no Cronograma de Elenco
   observacaoPlanoSimples     String? @db.Text // texto livre no Plano Simplificado para as Diárias
+
+  // Ritmo dos resets DESTE dia — decisão de direção ("hoje vamos apertar"), não re-estimativa.
+  // Multiplica o tempo de reset (base = ajuste manual do plano ou padrão do projeto) só em tempo de
+  // leitura, nos lugares com esta diária em escopo (Stripboard, wizard da OD, PDFs) — nunca é
+  // gravado em Shot/ShotSchedule nem entra no cálculo de Rod/blocoManha/almoço.
+  fatorResetPercent Int @default(100)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

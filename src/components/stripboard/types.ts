@@ -39,6 +39,8 @@ export type DayState = {
   almocoFim: string | null;
   blocoTardeInicio: string | null;
   desprodInicio: string | null;
+  /** Ritmo dos resets desta diária (nível 3 de "tempos de reset configuráveis") — 100 = sem ajuste. */
+  fatorResetPercent: number;
   /** Lista única do dia, já na ordem de filmagem (SceneShootDay.ordem) — bloco não existe mais como
    *  duas listas separadas: itens em índice < almocoIndex são manhã, os demais são tarde. */
   scenes: StripItem[];

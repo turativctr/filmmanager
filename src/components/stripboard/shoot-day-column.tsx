@@ -13,6 +13,7 @@ import { StripCard } from "@/components/stripboard/strip-card";
 import { StripDropZone } from "@/components/stripboard/strip-drop-zone";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { MissingTimesDialog } from "@/components/shared/missing-times-dialog";
+import { ResetFatorControl } from "@/components/shared/reset-fator-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -163,6 +164,16 @@ export function ShootDayColumn({
     router.refresh();
   }
 
+  async function handleFatorChange(fatorResetPercent: number) {
+    const res = await fetch(`/api/projects/${projectId}/shoot-days/${day.id}/reset-fator`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fatorResetPercent }),
+    });
+    if (!res.ok) return;
+    router.refresh();
+  }
+
   return (
     <Card id={`shoot-day-${day.id}`} className="scroll-mt-4">
       <CardHeader className="space-y-2">
@@ -177,7 +188,8 @@ export function ShootDayColumn({
               {formatPaginas(totalPaginas)} páginas · {totalMinutos} min estimados
             </p>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <ResetFatorControl value={day.fatorResetPercent} onChange={handleFatorChange} />
             <Button variant="outline" size="sm" asChild>
               <Link href={`/projects/${projectId}/shootdays/${day.id}/ordem-do-dia`}>
                 <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
@@ -234,6 +246,7 @@ export function ShootDayColumn({
               onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
               projectId={projectId}
               shootDayId={day.id}
+              fatorResetPercent={day.fatorResetPercent}
             />
           ))}
           {allItems.length > 0 && (
@@ -254,6 +267,7 @@ export function ShootDayColumn({
               onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
               projectId={projectId}
               shootDayId={day.id}
+              fatorResetPercent={day.fatorResetPercent}
             />
           ))}
         </StripDropZone>
@@ -287,6 +301,7 @@ export function ShootDayColumn({
               projectId={projectId}
               shootDayId={day.id}
               scenes={allItems.map((item) => ({ id: item.sceneId, numero: item.scene.numero }))}
+              fatorResetPercent={day.fatorResetPercent}
             />
           )}
         </SheetContent>

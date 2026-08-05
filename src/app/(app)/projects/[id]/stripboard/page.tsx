@@ -14,13 +14,20 @@ import { computeSceneShotTotals } from "@/lib/shots";
 
 const shotsSelect = {
   orderBy: { ordem: "asc" as const },
-  select: { tempoTotalMin: true, tempoResetMin: true, takesPrevistos: true, status: true },
+  select: {
+    tempoTotalMin: true,
+    tempoResetMin: true,
+    tempoResetMinManual: true,
+    takesPrevistos: true,
+    status: true,
+  },
 };
 
 function toShotsSummary(
   shots: {
     tempoTotalMin: number | null;
     tempoResetMin: number | null;
+    tempoResetMinManual: number | null;
     takesPrevistos: number | null;
     status: ShotStatus;
   }[]
@@ -141,6 +148,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
       almocoFim: day.almocoFim,
       blocoTardeInicio: day.blocoTardeInicio,
       desprodInicio: day.desprodInicio,
+      fatorResetPercent: day.fatorResetPercent,
       scenes: sceneItems,
       almocoIndex,
     };

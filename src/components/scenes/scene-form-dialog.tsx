@@ -44,7 +44,7 @@ type SceneDefaults = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
   set: string | null;
   locacao: { id: string; nome: string } | null;
   sinopse: string | null;
@@ -218,6 +218,8 @@ export function SceneFormDialog({
                   <SelectItem value="AMANHECER">Amanhecer</SelectItem>
                   <SelectItem value="CONTINUO">Contínuo</SelectItem>
                   <SelectItem value="DEPOIS">Depois</SelectItem>
+                  <SelectItem value="NOITE_PARA_DIA">Noite para dia</SelectItem>
+                  <SelectItem value="DIA_PARA_NOITE">Dia para noite</SelectItem>
                   <SelectItem value={PERIODO_INDEFINIDO}>Não definido</SelectItem>
                 </SelectContent>
               </Select>

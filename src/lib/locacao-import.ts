@@ -34,3 +34,31 @@ export async function resolveLocacaoIdForSet(
   setToLocacaoId.set(set, created.id);
   return created.id;
 }
+
+/** Variante usada quando o roteiro já distingue set de locação (import de PDF, convenção
+ *  "LOCAL; SET" — ver pdf-script-parser.ts): resolve pelo NOME da locação em vez do valor de
+ *  set, já que vários sets diferentes ("SALA", "COZINHA") devem cair na MESMA locação ("CASA").
+ *  A checagem de reuso busca por nome (não por scene.set, que aqui é só o cômodo) — mesma regra
+ *  de nunca recriar/repontar uma locação já existente. */
+export async function resolveLocacaoIdByNome(
+  tx: Tx,
+  projectId: string,
+  locacaoNome: string | null,
+  nomeToLocacaoId: Map<string, string>
+): Promise<string | null> {
+  if (!locacaoNome) return null;
+  const nome = normalizeLocacaoNome(locacaoNome);
+
+  const cached = nomeToLocacaoId.get(nome);
+  if (cached) return cached;
+
+  const existing = await tx.locacao.findFirst({ where: { projectId, nome } });
+  if (existing) {
+    nomeToLocacaoId.set(nome, existing.id);
+    return existing.id;
+  }
+
+  const created = await tx.locacao.create({ data: { projectId, nome } });
+  nomeToLocacaoId.set(nome, created.id);
+  return created.id;
+}

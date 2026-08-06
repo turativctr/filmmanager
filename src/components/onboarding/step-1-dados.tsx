@@ -87,7 +87,7 @@ export function Step1Dados({
       <div className="space-y-1.5 rounded-md border border-dashed p-4">
         <Label htmlFor="roteiro-file" className="flex items-center gap-1.5">
           <Upload className="h-3.5 w-3.5" />
-          Roteiro (.fdx ou .wdz) — opcional
+          Roteiro (.fdx, .wdz ou .pdf) — opcional
         </Label>
         <p className="text-xs text-muted-foreground">
           Envie a exportação do Final Draft ou WriterDuet para criar automaticamente as cenas e
@@ -98,10 +98,11 @@ export function Step1Dados({
           ref={fileInputRef}
           id="roteiro-file"
           type="file"
-          accept=".fdx,.wdz"
+          accept=".fdx,.wdz,.pdf"
           className="block w-full rounded-md border px-3 py-2 text-sm"
           onChange={handleFileChange}
         />
+        <p className="text-xs text-muted-foreground">PDF funciona, mas .fdx e .wdz são mais precisos.</p>
         {fileName && <p className="text-xs text-muted-foreground">Selecionado: {fileName}</p>}
       </div>
     </div>

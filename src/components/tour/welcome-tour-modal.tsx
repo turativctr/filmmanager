@@ -18,7 +18,7 @@ const STEPS = [
   {
     icon: FileText,
     title: "Importe o roteiro",
-    description: "Faça upload do .fdx para detectar cenas e personagens automaticamente",
+    description: "Faça upload do .fdx, .wdz ou .pdf para detectar cenas e personagens automaticamente",
   },
   {
     icon: CalendarRange,

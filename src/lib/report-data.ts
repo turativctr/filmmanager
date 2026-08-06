@@ -71,7 +71,7 @@ export type ReportSceneRow = {
   bloco: "MANHA" | "TARDE";
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
   set: string | null;
   locacao: string | null;
   /** Id da Locacao vinculada (ou null) — usado pra derivar o prefill de logística da Ordem do Dia. */

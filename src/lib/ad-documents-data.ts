@@ -370,7 +370,7 @@ export async function getContinuityNotesReportData(projectId: string): Promise<C
 export type EscaletaSceneRow = {
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
   local: string;
   sinopse: string | null;
   paginas: number;
@@ -455,7 +455,7 @@ export async function getEscaletaData(projectId: string): Promise<EscaletaData> 
 export type CastScheduleSceneStrip = {
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
   sinopse: string | null;
   personagens: string[];
 };

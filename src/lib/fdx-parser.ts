@@ -9,7 +9,15 @@ import { XMLParser } from "fast-xml-parser";
 
 import { suggestTempoEstimadoMin } from "@/lib/paginas";
 
-export type FdxPeriodo = "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS";
+export type FdxPeriodo =
+  | "DIA"
+  | "NOITE"
+  | "ENTARDECER"
+  | "AMANHECER"
+  | "CONTINUO"
+  | "DEPOIS"
+  | "NOITE_PARA_DIA"
+  | "DIA_PARA_NOITE";
 
 export type FdxScene = {
   numero: string;
@@ -22,8 +30,16 @@ export type FdxScene = {
   tipo: "INT" | "EXT" | null;
   periodo: FdxPeriodo | null;
   set: string | null;
+  // Só populado pelo parser de PDF, quando o cabeçalho segue a convenção "LOCAL; SET" — o que
+  // vem antes do ";" agrupa vários `set` na MESMA Locacao (ver locacao-import.ts). Ausente/null
+  // em .fdx/.wdz, que preservam o comportamento de sempre (1 Locacao por valor de `set`).
+  locacaoNome?: string | null;
   sinopse: string | null;
   personagens: string[];
+  // Subconjunto de `personagens` detectado só pela heurística de primeira menção em maiúscula
+  // na ação (não tem parágrafo Character/fala) — só populado pelo parser de PDF. A prévia marca
+  // esses como descartáveis antes de confirmar, já que a heurística pode errar.
+  personagensSemFala?: string[];
   paginas: number;
   tempoEstimadoMinSugerido: number;
 };
@@ -35,10 +51,12 @@ export type FdxParseResult = {
   avisos: string[];
 };
 
-const PERIODO_MAP: Record<string, FdxPeriodo> = {
+export const PERIODO_MAP: Record<string, FdxPeriodo> = {
   DIA: "DIA",
   DAY: "DIA",
   TARDE: "DIA",
+  MANHÃ: "DIA",
+  MORNING: "DIA",
   NOITE: "NOITE",
   NIGHT: "NOITE",
   ENTARDECER: "ENTARDECER",
@@ -47,9 +65,13 @@ const PERIODO_MAP: Record<string, FdxPeriodo> = {
   DAWN: "AMANHECER",
   CONTINUO: "CONTINUO",
   CONTÍNUO: "CONTINUO",
+  CONTINUA: "CONTINUO",
+  CONTÍNUA: "CONTINUO",
   CONTINUOUS: "CONTINUO",
   DEPOIS: "DEPOIS",
   LATER: "DEPOIS",
+  "NOITE PARA DIA": "NOITE_PARA_DIA",
+  "DIA PARA NOITE": "DIA_PARA_NOITE",
 };
 
 // Algumas exportações do Final Draft (ex.: roteiros escritos com um rótulo de cena separado
@@ -99,7 +121,7 @@ function paragraphText(paragraph: FdxNode): string {
     .trim();
 }
 
-function normalizeCharacterName(raw: string): string {
+export function normalizeCharacterName(raw: string): string {
   return raw
     .replace(/\([^)]*\)/g, "")
     .replace(/\s+/g, " ")

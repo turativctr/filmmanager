@@ -111,6 +111,10 @@ enum SceneShift {
   AMANHECER
   CONTINUO
   DEPOIS
+  // Cena que atravessa de um período para o outro dentro dela mesma (roteiro real, não é
+  // convenção de "noite americana") — filmada em dois momentos de luz distintos.
+  NOITE_PARA_DIA
+  DIA_PARA_NOITE
 }
 
 enum CharacterCategoria {

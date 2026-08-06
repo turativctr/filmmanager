@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { resolveCharacterId } from "@/lib/character-import";
 import type { FdxScene } from "@/lib/fdx-parser";
-import { resolveLocacaoIdForSet } from "@/lib/locacao-import";
+import { resolveLocacaoIdByNome, resolveLocacaoIdForSet } from "@/lib/locacao-import";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
 import { fdxImportConfirmSchema } from "@/lib/validation/fdx-import";
@@ -40,6 +40,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // um import anterior), reusa a mesma; só cria locação nova pra set genuinamente novo. O trabalho
     // de dividir/unificar que o AD já fez não pode ser desfeito por uma reimportação.
     const setToLocacaoId = new Map<string, string>();
+    const nomeToLocacaoId = new Map<string, string>();
 
     for (const scene of scenes as FdxScene[]) {
       const existing = sceneByNumero.get(scene.numero);
@@ -65,7 +66,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // pro AD pra uma locação diferente da que o set sugeriria) — só resolve por set pra cena nova
       // ou pra uma existente que ainda não tinha locação nenhuma.
       const locacaoId =
-        existing?.locacaoId ?? (await resolveLocacaoIdForSet(tx, params.id, scene.set, setToLocacaoId));
+        existing?.locacaoId ??
+        (scene.locacaoNome
+          ? await resolveLocacaoIdByNome(tx, params.id, scene.locacaoNome, nomeToLocacaoId)
+          : await resolveLocacaoIdForSet(tx, params.id, scene.set, setToLocacaoId));
 
       const sceneData = {
         tipo: scene.tipo,

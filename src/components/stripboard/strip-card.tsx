@@ -27,6 +27,14 @@ const PERIODO_BORDER: Record<string, string> = {
   DEPOIS: "#64748B",
 };
 
+// Cenas que atravessam de um período pro outro (NOITE_PARA_DIA/DIA_PARA_NOITE) ganham uma
+// faixa em degradê entre as duas cores em vez de uma única — sinaliza visualmente que a
+// filmagem precisa de dois momentos de luz distintos, sem inventar uma terceira cor "neutra".
+const PERIODO_BORDER_GRADIENT: Record<string, string> = {
+  NOITE_PARA_DIA: `linear-gradient(to bottom, ${PERIODO_BORDER.NOITE}, ${PERIODO_BORDER.DIA})`,
+  DIA_PARA_NOITE: `linear-gradient(to bottom, ${PERIODO_BORDER.DIA}, ${PERIODO_BORDER.NOITE})`,
+};
+
 const MAX_CAST_BADGES = 4;
 
 export function StripCard({
@@ -89,7 +97,9 @@ export function StripCard({
   }
 
   const canExpand = Boolean(projectId);
-  const borderColor = !neutral && item.scene.periodo ? PERIODO_BORDER[item.scene.periodo] : undefined;
+  const periodo = item.scene.periodo;
+  const borderGradient = !neutral && periodo ? PERIODO_BORDER_GRADIENT[periodo] : undefined;
+  const borderColor = !neutral && periodo && !borderGradient ? PERIODO_BORDER[periodo] : undefined;
 
   const visibleCast = characterLabels.slice(0, MAX_CAST_BADGES);
   const overflowCast = characterLabels.length - visibleCast.length;
@@ -102,7 +112,11 @@ export function StripCard({
     >
       <div
         className={cn("flex h-11 items-center gap-2 border-l-[3px] pr-3", canExpand && "cursor-pointer")}
-        style={{ borderLeftColor: borderColor ?? "transparent" }}
+        style={
+          borderGradient
+            ? { borderImage: `${borderGradient} 1` }
+            : { borderLeftColor: borderColor ?? "transparent" }
+        }
         onClick={() => {
           if (canExpand) setExpanded((e) => !e);
         }}
@@ -270,7 +284,14 @@ export function StripCard({
               projectId={projectId}
               sceneId={item.sceneId}
               shootDayId={shootDayId}
-              periodoColor={item.scene.periodo ? PERIODO_BORDER[item.scene.periodo] : undefined}
+              periodoColor={
+                item.scene.periodo
+                  ? PERIODO_BORDER[item.scene.periodo] ??
+                    // Painel de planos usa uma faixa sólida (sem degradê) — cenas em transição
+                    // mostram a cor do período de DESTINO (pra onde a cena vai).
+                    (item.scene.periodo === "NOITE_PARA_DIA" ? PERIODO_BORDER.DIA : PERIODO_BORDER.NOITE)
+                  : undefined
+              }
               initialObservacoes={item.observacoes}
               initialObservacoesAutoGeradas={item.observacoesAutoGeradas}
               fatorResetPercent={fatorResetPercent}

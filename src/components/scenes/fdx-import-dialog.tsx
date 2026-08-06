@@ -68,7 +68,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
   async function handleAnalyze() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setError("Selecione um arquivo .fdx ou .wdz.");
+      setError("Selecione um arquivo .fdx, .wdz ou .pdf.");
       return;
     }
     if (!isAcceptedScriptFile(file.name)) {
@@ -183,7 +183,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar roteiro (.fdx ou .wdz)</DialogTitle>
+          <DialogTitle>Importar roteiro (.fdx, .wdz ou .pdf)</DialogTitle>
           <DialogDescription>
             Envie a exportação do Final Draft ou WriterDuet para detectar cenas automaticamente.
           </DialogDescription>
@@ -202,17 +202,18 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
         ) : !scenes ? (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="fdx-file">Arquivo .fdx ou .wdz</Label>
+              <Label htmlFor="fdx-file">Arquivo .fdx, .wdz ou .pdf</Label>
               <input
                 ref={fileInputRef}
                 id="fdx-file"
                 type="file"
-                accept=".fdx,.wdz"
+                accept=".fdx,.wdz,.pdf"
                 onChange={handleFileChange}
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
+              <p className="text-xs text-muted-foreground">PDF funciona, mas .fdx e .wdz são mais precisos.</p>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-erro-fg">{error}</p>}
             <DialogFooter>
               {analyzing && (
                 <Button variant="outline" onClick={handleCancel}>
@@ -245,7 +246,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
               </label>
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-erro-fg">{error}</p>}
             <DialogFooter>
               {importing ? (
                 <Button variant="outline" onClick={handleCancel}>

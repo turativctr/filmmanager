@@ -176,7 +176,7 @@ export function OnboardingWizard() {
         </CardContent>
       </Card>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-erro-fg">{error}</p>}
 
       <div className="flex justify-between">
         <Button

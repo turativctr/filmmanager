@@ -53,7 +53,7 @@ export default async function ScenesPage({
         help={{
           title: "Cenas",
           description:
-            "As cenas são a base de todo o projeto. Cada cena contém as informações que alimentam o Breakdown, o Stripboard e os documentos gerados. Importe do roteiro (.fdx) ou cadastre manualmente.",
+            "As cenas são a base de todo o projeto. Cada cena contém as informações que alimentam o Breakdown, o Stripboard e os documentos gerados. Importe do roteiro (.fdx, .wdz ou .pdf) ou cadastre manualmente.",
         }}
         actions={
           <>
@@ -75,7 +75,7 @@ export default async function ScenesPage({
           description={
             semLocacaoAtivo
               ? "Todas as cenas já têm locação definida."
-              : "Importe o roteiro (.fdx) para detectar cenas automaticamente, ou cadastre manualmente."
+              : "Importe o roteiro (.fdx, .wdz ou .pdf) para detectar cenas automaticamente, ou cadastre manualmente."
           }
         />
       ) : (

@@ -1,7 +1,7 @@
-const ACCEPTED_SCRIPT_EXTENSIONS = [".fdx", ".wdz"];
+const ACCEPTED_SCRIPT_EXTENSIONS = [".fdx", ".wdz", ".pdf"];
 
 export const UNSUPPORTED_SCRIPT_FORMAT_MESSAGE =
-  "Formato não suportado. Envie um arquivo .fdx (Final Draft) ou .wdz (Writer Duet).";
+  "Formato não suportado. Envie um arquivo .fdx (Final Draft), .wdz (Writer Duet) ou .pdf.";
 
 /** Checagem client-side pela extensão do arquivo, ANTES de qualquer requisição — o servidor
  *  ainda valida o conteúdo de verdade (ver /api/.../import/fdx), mas barrar aqui evita disparar

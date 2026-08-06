@@ -5,7 +5,10 @@ import { isValidPaginasInput } from "@/lib/paginas";
 export const sceneSchema = z.object({
   numero: z.string().min(1),
   tipo: z.enum(["INT", "EXT"]).optional().nullable(),
-  periodo: z.enum(["DIA", "NOITE", "ENTARDECER", "AMANHECER", "CONTINUO", "DEPOIS"]).optional().nullable(),
+  periodo: z
+    .enum(["DIA", "NOITE", "ENTARDECER", "AMANHECER", "CONTINUO", "DEPOIS", "NOITE_PARA_DIA", "DIA_PARA_NOITE"])
+    .optional()
+    .nullable(),
   set: z
     .string()
     .optional()

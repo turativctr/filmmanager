@@ -61,7 +61,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   async function handleAnalyze() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setError("Selecione um arquivo .fdx ou .wdz.");
+      setError("Selecione um arquivo .fdx, .wdz ou .pdf.");
       return;
     }
     if (!isAcceptedScriptFile(file.name)) {
@@ -165,7 +165,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
         <DialogHeader>
           <DialogTitle>Importar nova versão do roteiro</DialogTitle>
           <DialogDescription>
-            Envie a nova exportação (.fdx ou .wdz). O sistema compara com o roteiro atual e
+            Envie a nova exportação (.fdx, .wdz ou .pdf). O sistema compara com o roteiro atual e
             registra automaticamente o que mudou.
           </DialogDescription>
         </DialogHeader>
@@ -194,17 +194,18 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
         ) : !parsed ? (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="draft-file">Arquivo .fdx ou .wdz</Label>
+              <Label htmlFor="draft-file">Arquivo .fdx, .wdz ou .pdf</Label>
               <input
                 ref={fileInputRef}
                 id="draft-file"
                 type="file"
-                accept=".fdx,.wdz"
+                accept=".fdx,.wdz,.pdf"
                 onChange={handleFileChange}
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
+              <p className="text-xs text-muted-foreground">PDF funciona, mas .fdx e .wdz são mais precisos.</p>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-erro-fg">{error}</p>}
             <DialogFooter>
               {analyzing && (
                 <Button variant="outline" onClick={handleCancel}>
@@ -227,7 +228,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
               O sistema vai comparar essas cenas com o roteiro atual do projeto e registrar
               automaticamente o que foi adicionado, removido (marcado OMITIDA) ou modificado.
             </p>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-erro-fg">{error}</p>}
             <DialogFooter>
               {importing ? (
                 <Button variant="outline" onClick={handleCancel}>

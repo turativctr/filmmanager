@@ -15,6 +15,8 @@ const PERIODO_LABEL: Record<string, string> = {
   AMANHECER: "Amanhecer",
   CONTINUO: "Contínuo",
   DEPOIS: "Depois",
+  NOITE_PARA_DIA: "Noite para dia",
+  DIA_PARA_NOITE: "Dia para noite",
 };
 
 const styles = StyleSheet.create({

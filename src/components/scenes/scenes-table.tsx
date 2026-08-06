@@ -26,6 +26,8 @@ const PERIODO_LABEL: Record<string, string> = {
   AMANHECER: "Amanhecer",
   CONTINUO: "Contínuo",
   DEPOIS: "Depois",
+  NOITE_PARA_DIA: "Noite para dia",
+  DIA_PARA_NOITE: "Dia para noite",
 };
 
 type CharacterOption = {
@@ -39,7 +41,16 @@ type SceneRow = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo:
+    | "DIA"
+    | "NOITE"
+    | "ENTARDECER"
+    | "AMANHECER"
+    | "CONTINUO"
+    | "DEPOIS"
+    | "NOITE_PARA_DIA"
+    | "DIA_PARA_NOITE"
+    | null;
   set: string | null;
   locacao: { id: string; nome: string } | null;
   sinopse: string | null;

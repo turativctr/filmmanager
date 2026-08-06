@@ -56,7 +56,7 @@ export type LocacaoDetailSceneRow = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | null;
+  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
   set: string | null;
   sinopse: string | null;
   numeroDia: number | null;

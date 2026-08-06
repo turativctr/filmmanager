@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Arquivo .fdx, .wdz ou .pdf não enviado." }, { status: 400 });
+    return NextResponse.json({ error: "Arquivo .fdx ou .pdf não enviado." }, { status: 400 });
   }
 
   if (/\.pdf$/i.test(file.name)) {

@@ -15,7 +15,7 @@ import type { FdxParseResult, FdxScene } from "@/lib/fdx-parser";
 export class PdfScriptStructureError extends Error {}
 
 const UNRECOGNIZED_STRUCTURE_MESSAGE =
-  "Não foi possível reconhecer a estrutura deste PDF. Ele pode ser um documento escaneado ou não seguir a formatação padrão de roteiro. Envie um arquivo .fdx ou .wdz.";
+  "Não foi possível reconhecer a estrutura deste PDF. Ele pode ser um documento escaneado ou não seguir a formatação padrão de roteiro. Envie um arquivo .fdx.";
 
 // Abaixo desse total de caracteres extraídos do documento inteiro, tratamos como PDF escaneado
 // (imagem sem camada de texto) — não tentamos OCR, só recusamos com mensagem clara.

@@ -68,7 +68,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
   async function handleAnalyze() {
     const file = fileInputRef.current?.files?.[0];
     if (!file) {
-      setError("Selecione um arquivo .fdx, .wdz ou .pdf.");
+      setError("Selecione um arquivo .fdx ou .pdf.");
       return;
     }
     if (!isAcceptedScriptFile(file.name)) {
@@ -183,9 +183,9 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar roteiro (.fdx, .wdz ou .pdf)</DialogTitle>
+          <DialogTitle>Importar roteiro (.fdx ou .pdf)</DialogTitle>
           <DialogDescription>
-            Envie a exportação do Final Draft ou WriterDuet para detectar cenas automaticamente.
+            Envie a exportação do Final Draft ou um PDF do roteiro para detectar cenas automaticamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -202,16 +202,19 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
         ) : !scenes ? (
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="fdx-file">Arquivo .fdx, .wdz ou .pdf</Label>
+              <Label htmlFor="fdx-file">Arquivo .fdx ou .pdf</Label>
               <input
                 ref={fileInputRef}
                 id="fdx-file"
                 type="file"
-                accept=".fdx,.wdz,.pdf"
+                accept=".fdx,.pdf"
                 onChange={handleFileChange}
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
-              <p className="text-xs text-muted-foreground">PDF funciona, mas .fdx e .wdz são mais precisos.</p>
+              <p className="text-xs text-muted-foreground">
+                Importe o roteiro em .fdx ou .pdf. O .pdf pode não trazer todos os dados com precisão. Revise os
+                dados
+              </p>
             </div>
             {error && <p className="text-sm text-erro-fg">{error}</p>}
             <DialogFooter>

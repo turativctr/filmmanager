@@ -83,7 +83,7 @@ export async function computeProjectSteps(projectId: string): Promise<ProgressSt
       etapa: "ROTEIRO",
       icon: FileText,
       title: "Importe seu roteiro",
-      description: "Faça upload do .fdx ou .wdz para detectar cenas, personagens e oitavas automaticamente.",
+      description: "Faça upload do .fdx ou .pdf para detectar cenas, personagens e oitavas automaticamente.",
       status: roteiro.status,
       isManual: roteiro.isManual,
       actionLabel: scriptDraftsCount > 0 ? "Ver roteiro importado" : "Importar roteiro",

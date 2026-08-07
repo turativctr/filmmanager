@@ -11,15 +11,31 @@ import { suggestTempoEstimadoMin } from "@/lib/paginas";
 import { normalizeCharacterName, PERIODO_MAP } from "@/lib/fdx-parser";
 
 import type { FdxParseResult, FdxScene } from "@/lib/fdx-parser";
+import type { ExtractedPage, Line, RawItem } from "@/lib/pdf-script-types";
 
 export class PdfScriptStructureError extends Error {}
 
 const UNRECOGNIZED_STRUCTURE_MESSAGE =
   "Não foi possível reconhecer a estrutura deste PDF. Ele pode ser um documento escaneado ou não seguir a formatação padrão de roteiro. Envie um arquivo .fdx.";
+const INVALID_PAYLOAD_MESSAGE =
+  "Não foi possível processar os dados extraídos do PDF. Selecione o arquivo novamente.";
 
 // Abaixo desse total de caracteres extraídos do documento inteiro, tratamos como PDF escaneado
-// (imagem sem camada de texto) — não tentamos OCR, só recusamos com mensagem clara.
+// (imagem sem camada de texto) — não tentamos OCR, só recusamos com mensagem clara. A mesma
+// checagem roda no navegador (pdf-script-extract-browser.ts, pra falhar rápido) E aqui (defesa —
+// o servidor nunca confia cegamente no que o cliente diz ter extraído).
 const MIN_TOTAL_CHARS = 50;
+
+// Limites de sanidade pro payload já extraído que o navegador envia — nada aqui deveria nunca ser
+// ultrapassado por uma extração real de roteiro (mesmo um longa de 150 páginas fica bem abaixo),
+// então estourar qualquer um destes é tratado como payload malformado/adulterado, não como um
+// roteiro grande demais.
+const MAX_PAGES = 500;
+const MAX_LINES_PER_PAGE = 500;
+const MAX_ITEMS_PER_LINE = 200;
+const MAX_ITEM_TEXT_LENGTH = 1000;
+const MAX_LINE_TEXT_LENGTH = 4000;
+const MAX_COORDINATE = 20000;
 
 // Alinhamento em cluster: duas linhas pertencem à mesma margem se o X inicial delas está dentro
 // dessa tolerância uma da outra. Cabeçalhos de ato (texto CENTRALIZADO, não alinhado a uma
@@ -35,92 +51,69 @@ const PARENTETICO_PATTERN = /^\(.*\)$/;
 const MONTAGEM_PATTERN = /^(INÍCIO DE MONTAGEM|FIM(?: DA MONTAGEM)?\.?|--.*)$/i;
 const LOCAL_PERIODO_SEPARATOR = /\s+(?:[-–—]|\/)\s+/g;
 
-type RawItem = { text: string; x0: number; x1: number };
-type Line = { page: number; y: number; items: RawItem[]; text: string };
-
-// pdfjs-dist tenta usar o pacote opcional @napi-rs/canvas em Node (só pra RENDERIZAR página em
-// imagem — nunca chamamos isso, só getTextContent). O problema: um `const SCALE_MATRIX = new
-// DOMMatrix()` no topo do módulo executa incondicionalmente ao importar, então sem @napi-rs/canvas
-// instalado (ex.: build da Vercel, onde o binário nativo opcional não instala) o módulo inteiro
-// falha ao carregar com "DOMMatrix is not defined" — mesmo pra extração de texto pura. As únicas
-// propriedades lidas/escritas nesse caminho (confirmado lendo o código-fonte do pdfjs-dist) são
-// a/b/c/d/e/f; nenhum método é chamado antes de page.render(), que nunca é invocado aqui. Reproduzido
-// localmente removendo @napi-rs/canvas do node_modules e confirmado que esse polyfill mínimo resolve.
-class MinimalDOMMatrix {
-  a = 1;
-  b = 0;
-  c = 0;
-  d = 1;
-  e = 0;
-  f = 0;
-  constructor(init?: number[]) {
-    if (Array.isArray(init) && init.length === 6) {
-      [this.a, this.b, this.c, this.d, this.e, this.f] = init;
-    }
-  }
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
-if (typeof globalThis.DOMMatrix === "undefined") {
-  (globalThis as { DOMMatrix?: unknown }).DOMMatrix = MinimalDOMMatrix;
+
+function validateRawItem(raw: unknown): RawItem {
+  if (
+    !raw ||
+    typeof raw !== "object" ||
+    typeof (raw as RawItem).text !== "string" ||
+    (raw as RawItem).text.length > MAX_ITEM_TEXT_LENGTH ||
+    !isFiniteNumber((raw as RawItem).x0) ||
+    Math.abs((raw as RawItem).x0) > MAX_COORDINATE ||
+    !isFiniteNumber((raw as RawItem).x1) ||
+    Math.abs((raw as RawItem).x1) > MAX_COORDINATE
+  ) {
+    throw new PdfScriptStructureError(INVALID_PAYLOAD_MESSAGE);
+  }
+  const item = raw as RawItem;
+  return { text: item.text, x0: item.x0, x1: item.x1 };
 }
-// Log de diagnóstico único por cold start — confirma que este módulo (e o polyfill acima) de fato
-// carregou no runtime de produção, e com o resultado de qual ramo do if acima. Se isso nunca
-// aparecer nos logs da função, o problema é anterior a este arquivo (ex.: o próprio route.ts não
-// está sendo alcançado, ou falha noutro import estático antes deste).
-console.log(
-  "[pdf-script-parser] módulo carregado — globalThis.DOMMatrix:",
-  typeof globalThis.DOMMatrix,
-  globalThis.DOMMatrix === MinimalDOMMatrix ? "(polyfill aplicado)" : "(já existia antes do polyfill)"
-);
 
-async function extractLines(buffer: Buffer): Promise<{ lines: Line[]; pageWidth: number; pageHeight: number }[]> {
-  // Import dinâmico: pdfjs-dist só roda no runtime Node do servidor (ver next.config.mjs —
-  // precisou virar serverExternalPackages pra webpack não quebrar a resolução do worker).
-  console.log(
-    "[pdf-script-parser] antes do import de pdfjs-dist — globalThis.DOMMatrix:",
-    typeof globalThis.DOMMatrix
-  );
-  let pdfjs: typeof import("pdfjs-dist/legacy/build/pdf.mjs");
-  try {
-    pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    console.log("[pdf-script-parser] pdfjs-dist importado com sucesso, versão:", pdfjs.version);
-  } catch (err) {
-    console.error("[pdf-script-parser] FALHA ao importar pdfjs-dist:", err);
-    console.error(
-      "[pdf-script-parser] globalThis.DOMMatrix no momento da falha:",
-      typeof globalThis.DOMMatrix
-    );
-    throw err;
+function validateLine(raw: unknown): Line {
+  if (
+    !raw ||
+    typeof raw !== "object" ||
+    !isFiniteNumber((raw as Line).page) ||
+    !isFiniteNumber((raw as Line).y) ||
+    Math.abs((raw as Line).y) > MAX_COORDINATE ||
+    typeof (raw as Line).text !== "string" ||
+    (raw as Line).text.length > MAX_LINE_TEXT_LENGTH ||
+    !Array.isArray((raw as Line).items) ||
+    (raw as Line).items.length > MAX_ITEMS_PER_LINE
+  ) {
+    throw new PdfScriptStructureError(INVALID_PAYLOAD_MESSAGE);
   }
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), useWorkerFetch: false }).promise;
+  const line = raw as Line;
+  return { page: line.page, y: line.y, text: line.text, items: line.items.map(validateRawItem) };
+}
 
-  const pages: { lines: Line[]; pageWidth: number; pageHeight: number }[] = [];
-  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
-    const page = await doc.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 1 });
-    const content = await page.getTextContent();
-
-    const byY = new Map<number, RawItem[]>();
-    for (const raw of content.items) {
-      const item = raw as { str: string; transform: number[]; width?: number };
-      if (!item.str) continue;
-      const y = Math.round(item.transform[5] * 2) / 2;
-      const entry: RawItem = { text: item.str, x0: item.transform[4], x1: item.transform[4] + (item.width ?? 0) };
-      const bucket = byY.get(y);
-      if (bucket) bucket.push(entry);
-      else byY.set(y, [entry]);
+/** Valida a estrutura do JSON que o navegador extraiu antes de processar — o servidor nunca
+ *  confia cegamente no payload recebido, mesmo vindo da própria UI do app. */
+export function parseExtractedPagesPayload(raw: unknown): ExtractedPage[] {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_PAGES) {
+    throw new PdfScriptStructureError(INVALID_PAYLOAD_MESSAGE);
+  }
+  return raw.map((rawPage) => {
+    if (
+      !rawPage ||
+      typeof rawPage !== "object" ||
+      !isFiniteNumber((rawPage as ExtractedPage).pageWidth) ||
+      (rawPage as ExtractedPage).pageWidth <= 0 ||
+      (rawPage as ExtractedPage).pageWidth > MAX_COORDINATE ||
+      !isFiniteNumber((rawPage as ExtractedPage).pageHeight) ||
+      (rawPage as ExtractedPage).pageHeight <= 0 ||
+      (rawPage as ExtractedPage).pageHeight > MAX_COORDINATE ||
+      !Array.isArray((rawPage as ExtractedPage).lines) ||
+      (rawPage as ExtractedPage).lines.length > MAX_LINES_PER_PAGE
+    ) {
+      throw new PdfScriptStructureError(INVALID_PAYLOAD_MESSAGE);
     }
-
-    const lines: Line[] = [...byY.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .map(([y, items]) => {
-        const sorted = [...items].sort((a, b) => a.x0 - b.x0);
-        return { page: pageNumber, y, items: sorted, text: sorted.map((i) => i.text).join("").trim() };
-      })
-      .filter((line) => line.text.length > 0);
-
-    pages.push({ lines, pageWidth: viewport.width, pageHeight: viewport.height });
-  }
-  return pages;
+    const page = rawPage as ExtractedPage;
+    return { pageWidth: page.pageWidth, pageHeight: page.pageHeight, lines: page.lines.map(validateLine) };
+  });
 }
 
 /** X do conteúdo "de verdade" da linha — pula um eventual número de cena isolado (item só de
@@ -266,8 +259,11 @@ function extractCapsPhrasesWithContext(text: string): { phrase: string; before: 
   return results;
 }
 
-export async function parsePdfScript(buffer: Buffer): Promise<FdxParseResult> {
-  const pages = await extractLines(buffer);
+/** Recebe as páginas já extraídas no navegador (ver pdf-script-extract-browser.ts) e faz toda a
+ *  interpretação geométrica — clusters de margem, classificação de elementos, oitavos, heurística
+ *  de personagem/objeto. Nenhuma dependência de pdfjs aqui: essa função é pura sobre a estrutura
+ *  { lines, pageWidth, pageHeight }[], por isso roda no servidor sem precisar de canvas/DOMMatrix. */
+export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult {
   const allLines = pages.flatMap((p) => p.lines);
   const totalChars = allLines.reduce((sum, l) => sum + l.text.length, 0);
   if (totalChars < MIN_TOTAL_CHARS) {

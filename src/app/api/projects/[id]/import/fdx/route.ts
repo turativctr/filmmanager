@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { parseFdx, parseFdxTitlePage } from "@/lib/fdx-parser";
-import { parsePdfScript, PdfScriptStructureError } from "@/lib/pdf-script-parser";
+import { buildScriptFromPdfPages, parseExtractedPagesPayload, PdfScriptStructureError } from "@/lib/pdf-script-parser";
 import { findOwnedProject } from "@/lib/project-access";
 import { extractFdxXmlFromWdz } from "@/lib/wdz-parser";
 
@@ -17,22 +17,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!project) return NextResponse.json({ error: "Projeto não encontrado." }, { status: 404 });
 
   const formData = await request.formData();
-  const file = formData.get("file");
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Arquivo .fdx ou .pdf não enviado." }, { status: 400 });
-  }
 
-  if (/\.pdf$/i.test(file.name)) {
+  // Roteiro em .pdf: o texto já vem extraído do navegador (ver pdf-script-extract-browser.ts) —
+  // pdfjs nunca roda no servidor. Aqui só validamos a estrutura recebida (o servidor não confia
+  // cegamente no payload) e processamos.
+  const extractedPagesRaw = formData.get("extractedPages");
+  if (typeof extractedPagesRaw === "string") {
     let result: FdxParseResult;
     try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      result = await parsePdfScript(buffer);
+      const pages = parseExtractedPagesPayload(JSON.parse(extractedPagesRaw));
+      result = buildScriptFromPdfPages(pages);
     } catch (error) {
       if (error instanceof PdfScriptStructureError) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
-      // Log completo (erro + stack) — a mensagem genérica devolvida ao cliente não diz o motivo
-      // real; isso é o que aparece nos logs da função pra diagnosticar sem precisar adivinhar.
       console.error("[import/fdx] Falha ao processar PDF:", error);
       return NextResponse.json({ error: "Não foi possível ler o arquivo PDF enviado." }, { status: 400 });
     }
@@ -47,6 +45,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
       contatoProducao: null,
     };
     return NextResponse.json({ ...result, titlePage });
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "Arquivo .fdx ou .pdf não enviado." }, { status: 400 });
+  }
+
+  // Sem fallback server-side pra PDF: um .pdf sempre deveria chegar aqui já extraído (branch
+  // acima). Se chegou como arquivo bruto, o cliente está desatualizado ou pulou a extração.
+  if (/\.pdf$/i.test(file.name)) {
+    return NextResponse.json(
+      { error: "Não foi possível processar o PDF no navegador. Recarregue a página e tente novamente." },
+      { status: 400 }
+    );
   }
 
   let xml: string;

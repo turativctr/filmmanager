@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { buildScriptFormData, PdfScriptStructureError } from "@/lib/build-script-form-data";
 import type { FdxScene, FdxTitlePage } from "@/lib/fdx-parser";
 import { cn } from "@/lib/utils";
 
@@ -63,8 +64,7 @@ export function OnboardingWizard() {
 
     setParsing(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = await buildScriptFormData(file);
       const res = await fetch("/api/projects/onboarding/parse", { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));
 
@@ -77,8 +77,12 @@ export function OnboardingWizard() {
       setAvisos((data.avisos as string[]) ?? []);
       setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
       setStep(2);
-    } catch {
-      setError(NETWORK_ERROR_MESSAGE);
+    } catch (err) {
+      if (err instanceof PdfScriptStructureError) {
+        setError(err.message);
+      } else {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
     } finally {
       setParsing(false);
     }

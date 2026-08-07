@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
+import { buildScriptFormData, PdfScriptStructureError } from "@/lib/build-script-form-data";
 import type { FdxScene } from "@/lib/fdx-parser";
 import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
@@ -97,8 +98,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
     abortControllerRef.current = controller;
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const formData = await buildScriptFormData(file);
 
       const res = await fetch(`/api/projects/${projectId}/import/fdx`, {
         method: "POST",
@@ -115,7 +115,9 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
       setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
       setAvisos((data.avisos as string[]) ?? []);
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortError")) {
+      if (err instanceof PdfScriptStructureError) {
+        setError(err.message);
+      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
         setError(NETWORK_ERROR_MESSAGE);
       }
     } finally {

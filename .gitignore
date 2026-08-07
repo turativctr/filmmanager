@@ -28,6 +28,10 @@ backup.sql
 /public/worker-*.js.map
 /public/fallback-*.js
 
+# pdfjs assets (regenerated a partir de node_modules/pdfjs-dist no postinstall —
+# ver scripts/copy-pdfjs-assets.mjs)
+/public/pdfjs/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

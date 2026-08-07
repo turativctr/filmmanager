@@ -1,11 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { buildScriptFormData, PdfScriptStructureError } from "@/lib/build-script-form-data";
+import {
+  buildScriptFormData,
+  OPERATION_TIMEOUT_MESSAGE,
+  PdfScriptStructureError,
+  SCRIPT_OPERATION_TIMEOUT_MS,
+} from "@/lib/build-script-form-data";
 import type { FdxScene, FdxTitlePage } from "@/lib/fdx-parser";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +36,15 @@ function mergeTitlePage(current: ProjectFormState, titlePage: FdxTitlePage): Pro
 
 export function OnboardingWizard() {
   const router = useRouter();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Incrementado a cada operação nova e no cancelamento — permite ignorar resultados/erros de uma
+  // extração ou requisição que já foi cancelada mas cujo await ainda não voltou (ex.: extração de
+  // PDF que trava: abortar o signal não garante que a promise do pdfjs realmente se resolve).
+  const operationIdRef = useRef(0);
+  // Distingue abort manual (Cancelar) de abort por timeout — os dois disparam o mesmo AbortError,
+  // mas só o timeout deve mostrar uma mensagem de erro.
+  const cancelledManuallyRef = useRef(false);
+
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<ProjectFormState>(EMPTY_PROJECT_FORM);
   const [file, setFile] = useState<File | null>(null);
@@ -63,10 +77,23 @@ export function OnboardingWizard() {
     }
 
     setParsing(true);
+    const operationId = ++operationIdRef.current;
+    cancelledManuallyRef.current = false;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    // Teto pra extração (client-side) + requisição juntas — ver SCRIPT_OPERATION_TIMEOUT_MS.
+    const timeoutId = setTimeout(() => controller.abort(), SCRIPT_OPERATION_TIMEOUT_MS);
     try {
-      const formData = await buildScriptFormData(file);
-      const res = await fetch("/api/projects/onboarding/parse", { method: "POST", body: formData });
+      const formData = await buildScriptFormData(file, controller.signal);
+      if (operationIdRef.current !== operationId) return; // cancelado enquanto extraía
+
+      const res = await fetch("/api/projects/onboarding/parse", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
       const data = await res.json().catch(() => ({}));
+      if (operationIdRef.current !== operationId) return;
 
       if (!res.ok) {
         setError(data.error ?? "Não foi possível analisar o roteiro.");
@@ -78,19 +105,46 @@ export function OnboardingWizard() {
       setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
       setStep(2);
     } catch (err) {
+      if (operationIdRef.current !== operationId) return; // já cancelado, ignora erro tardio
       if (err instanceof PdfScriptStructureError) {
         setError(err.message);
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        if (!cancelledManuallyRef.current) setError(OPERATION_TIMEOUT_MESSAGE);
       } else {
         setError(NETWORK_ERROR_MESSAGE);
       }
     } finally {
-      setParsing(false);
+      clearTimeout(timeoutId);
+      if (operationIdRef.current === operationId) {
+        setParsing(false);
+        abortControllerRef.current = null;
+      }
     }
+  }
+
+  // Cobre parsing E creating (só um dos dois está em andamento por vez): invalida a operação
+  // corrente na hora — mesmo que a extração no navegador não seja de fato interrompível em todo
+  // caso, o resultado dela passa a ser ignorado (ver checagens de operationIdRef acima) — então o
+  // wizard nunca fica preso esperando algo que talvez nunca volte (o que perderia o formulário
+  // já preenchido, já que a única saída seria recarregar a página).
+  function handleCancel() {
+    cancelledManuallyRef.current = true;
+    operationIdRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setParsing(false);
+    setCreating(false);
   }
 
   async function handleCreate() {
     setCreating(true);
     setError(null);
+
+    const operationId = ++operationIdRef.current;
+    cancelledManuallyRef.current = false;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), SCRIPT_OPERATION_TIMEOUT_MS);
 
     try {
       const selected = (scenes ?? []).filter((s) => s.selected).map(({ selected: _selected, ...scene }) => scene);
@@ -113,8 +167,10 @@ export function OnboardingWizard() {
           scenes: selected,
           arquivoNome: file?.name,
         }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
+      if (operationIdRef.current !== operationId) return;
 
       if (!res.ok) {
         setError(data.error ?? "Não foi possível criar o projeto.");
@@ -123,10 +179,19 @@ export function OnboardingWizard() {
 
       router.push(`/projects/${data.id}`);
       router.refresh();
-    } catch {
-      setError(NETWORK_ERROR_MESSAGE);
+    } catch (err) {
+      if (operationIdRef.current !== operationId) return;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        if (!cancelledManuallyRef.current) setError(OPERATION_TIMEOUT_MESSAGE);
+      } else {
+        setError(NETWORK_ERROR_MESSAGE);
+      }
     } finally {
-      setCreating(false);
+      clearTimeout(timeoutId);
+      if (operationIdRef.current === operationId) {
+        setCreating(false);
+        abortControllerRef.current = null;
+      }
     }
   }
 
@@ -192,9 +257,16 @@ export function OnboardingWizard() {
           Voltar
         </Button>
         {step === 1 && (
-          <Button type="button" onClick={handleAdvanceFromStep1} disabled={parsing}>
-            {parsing ? "Analisando roteiro..." : "Avançar"}
-          </Button>
+          <div className="flex gap-2">
+            {parsing && (
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Cancelar
+              </Button>
+            )}
+            <Button type="button" onClick={handleAdvanceFromStep1} disabled={parsing}>
+              {parsing ? "Analisando roteiro..." : "Avançar"}
+            </Button>
+          </div>
         )}
         {step === 2 && (
           <Button type="button" onClick={() => setStep(3)}>
@@ -202,9 +274,16 @@ export function OnboardingWizard() {
           </Button>
         )}
         {step === 3 && (
-          <Button type="button" onClick={handleCreate} disabled={creating}>
-            {creating ? "Criando..." : "Criar projeto"}
-          </Button>
+          <div className="flex gap-2">
+            {creating && (
+              <Button type="button" variant="outline" onClick={handleCancel}>
+                Cancelar
+              </Button>
+            )}
+            <Button type="button" onClick={handleCreate} disabled={creating}>
+              {creating ? "Criando..." : "Criar projeto"}
+            </Button>
+          </div>
         )}
       </div>
     </div>

@@ -15,7 +15,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { buildScriptFormData, PdfScriptStructureError } from "@/lib/build-script-form-data";
+import {
+  buildScriptFormData,
+  OPERATION_TIMEOUT_MESSAGE,
+  PdfScriptStructureError,
+  SCRIPT_OPERATION_TIMEOUT_MS,
+} from "@/lib/build-script-form-data";
 import type { FdxScene, FdxTitlePage } from "@/lib/fdx-parser";
 import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
@@ -31,6 +36,13 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Incrementado a cada operação nova e no cancelamento — permite ignorar resultados/erros de uma
+  // extração ou requisição que já foi cancelada mas cujo await ainda não voltou (ex.: extração de
+  // PDF que trava: abortar o signal não garante que a promise do pdfjs realmente se resolve).
+  const operationIdRef = useRef(0);
+  // Distingue abort manual (Cancelar) de abort por timeout — os dois disparam o mesmo AbortError,
+  // mas só o timeout deve mostrar uma mensagem de erro.
+  const cancelledManuallyRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -43,6 +55,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   const uploading = analyzing || importing;
 
   function reset() {
+    operationIdRef.current += 1;
     setParsed(null);
     setResult(null);
     setError(null);
@@ -53,6 +66,8 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Valida a extensão AQUI, antes de qualquer requisição ou extração — nada é iniciado pra um
+    // arquivo de formato errado, então não há como isso deixar o diálogo num estado de carregando.
     if (!isAcceptedScriptFile(file.name)) {
       setError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE);
       setFileName(null);
@@ -87,11 +102,16 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
     setAnalyzing(true);
     setError(null);
 
+    const operationId = ++operationIdRef.current;
+    cancelledManuallyRef.current = false;
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    // Teto pra extração (client-side) + requisição juntas — ver SCRIPT_OPERATION_TIMEOUT_MS.
+    const timeoutId = setTimeout(() => controller.abort(), SCRIPT_OPERATION_TIMEOUT_MS);
 
     try {
-      const formData = await buildScriptFormData(file);
+      const formData = await buildScriptFormData(file, controller.signal);
+      if (operationIdRef.current !== operationId) return; // cancelado enquanto extraía
 
       const res = await fetch(`/api/projects/${projectId}/import/fdx`, {
         method: "POST",
@@ -99,6 +119,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
         signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
+      if (operationIdRef.current !== operationId) return;
 
       if (!res.ok) {
         setError(data.error ?? "Não foi possível analisar o arquivo.");
@@ -107,14 +128,20 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
 
       setParsed({ scenes: data.scenes, titlePage: data.titlePage });
     } catch (err) {
+      if (operationIdRef.current !== operationId) return; // já cancelado, ignora erro tardio
       if (err instanceof PdfScriptStructureError) {
         setError(err.message);
-      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        if (!cancelledManuallyRef.current) setError(OPERATION_TIMEOUT_MESSAGE);
+      } else {
         setError(NETWORK_ERROR_MESSAGE);
       }
     } finally {
-      setAnalyzing(false);
-      abortControllerRef.current = null;
+      clearTimeout(timeoutId);
+      if (operationIdRef.current === operationId) {
+        setAnalyzing(false);
+        abortControllerRef.current = null;
+      }
     }
   }
 
@@ -123,8 +150,11 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
     setImporting(true);
     setError(null);
 
+    const operationId = ++operationIdRef.current;
+    cancelledManuallyRef.current = false;
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), SCRIPT_OPERATION_TIMEOUT_MS);
 
     try {
       const fileName = fileInputRef.current?.files?.[0]?.name;
@@ -140,6 +170,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
         signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
+      if (operationIdRef.current !== operationId) return;
 
       if (!res.ok) {
         setError(data.error ?? "Não foi possível importar a nova versão.");
@@ -149,17 +180,32 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
       setResult(data as ImportResult);
       router.refresh();
     } catch (err) {
-      if (!(err instanceof DOMException && err.name === "AbortError")) {
+      if (operationIdRef.current !== operationId) return;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        if (!cancelledManuallyRef.current) setError(OPERATION_TIMEOUT_MESSAGE);
+      } else {
         setError(NETWORK_ERROR_MESSAGE);
       }
     } finally {
-      setImporting(false);
-      abortControllerRef.current = null;
+      clearTimeout(timeoutId);
+      if (operationIdRef.current === operationId) {
+        setImporting(false);
+        abortControllerRef.current = null;
+      }
     }
   }
 
+  // Cobre analyzing E importing (só um dos dois está em andamento por vez): invalida a operação
+  // corrente na hora — mesmo que a extração no navegador não seja de fato interrompível em todo
+  // caso, o resultado dela passa a ser ignorado (ver checagens de operationIdRef acima) — então o
+  // diálogo nunca fica preso esperando algo que talvez nunca volte.
   function handleCancel() {
+    cancelledManuallyRef.current = true;
+    operationIdRef.current += 1;
     abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setAnalyzing(false);
+    setImporting(false);
   }
 
   function handleOpenChange(next: boolean) {

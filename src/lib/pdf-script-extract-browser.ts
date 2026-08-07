@@ -25,7 +25,16 @@ const PDFJS_WORKER_SRC = "/pdfjs/pdf.worker.min.mjs";
 const PDFJS_CMAP_URL = "/pdfjs/cmaps/";
 const PDFJS_STANDARD_FONT_DATA_URL = "/pdfjs/standard_fonts/";
 
-export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPage[]> {
+function abortError(): DOMException {
+  return new DOMException("A extração do PDF foi cancelada.", "AbortError");
+}
+
+/** signal opcional: permite interromper a extração de fato (não só ignorar o resultado depois) —
+ *  destruir a loading task do pdfjs pára o worker imediatamente em vez de deixá-lo rodando em
+ *  segundo plano até terminar sozinho (ou nunca terminar, no caso de um PDF que trava o parser). */
+export async function extractPdfPagesInBrowser(file: File, signal?: AbortSignal): Promise<ExtractedPage[]> {
+  if (signal?.aborted) throw abortError();
+
   // Build "legacy": não é sobre versão do pdfjs, é a variante com transpilação/polyfills pra
   // navegadores mais antigos — a mesma preocupação de compatibilidade que já existia pro uso no
   // servidor (Node), só que agora relevante para Safari/iPad. A build "moderna" assume
@@ -40,11 +49,14 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
     cMapPacked: true,
     standardFontDataUrl: PDFJS_STANDARD_FONT_DATA_URL,
   });
-  const doc = await loadingTask.promise;
+  const onAbort = () => loadingTask.destroy();
+  signal?.addEventListener("abort", onAbort);
 
   const pages: ExtractedPage[] = [];
   try {
+    const doc = await loadingTask.promise;
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
+      if (signal?.aborted) throw abortError();
       const page = await doc.getPage(pageNumber);
       const viewport = page.getViewport({ scale: 1 });
       const content = await page.getTextContent();
@@ -71,8 +83,11 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
       pages.push({ lines, pageWidth: viewport.width, pageHeight: viewport.height });
     }
   } finally {
-    await loadingTask.destroy();
+    signal?.removeEventListener("abort", onAbort);
+    await loadingTask.destroy().catch(() => {});
   }
+
+  if (signal?.aborted) throw abortError();
 
   const totalChars = pages.reduce((sum, p) => sum + p.lines.reduce((s, l) => s + l.text.length, 0), 0);
   if (totalChars < MIN_TOTAL_CHARS) {

@@ -38,6 +38,31 @@ const LOCAL_PERIODO_SEPARATOR = /\s+(?:[-–—]|\/)\s+/g;
 type RawItem = { text: string; x0: number; x1: number };
 type Line = { page: number; y: number; items: RawItem[]; text: string };
 
+// pdfjs-dist tenta usar o pacote opcional @napi-rs/canvas em Node (só pra RENDERIZAR página em
+// imagem — nunca chamamos isso, só getTextContent). O problema: um `const SCALE_MATRIX = new
+// DOMMatrix()` no topo do módulo executa incondicionalmente ao importar, então sem @napi-rs/canvas
+// instalado (ex.: build da Vercel, onde o binário nativo opcional não instala) o módulo inteiro
+// falha ao carregar com "DOMMatrix is not defined" — mesmo pra extração de texto pura. As únicas
+// propriedades lidas/escritas nesse caminho (confirmado lendo o código-fonte do pdfjs-dist) são
+// a/b/c/d/e/f; nenhum método é chamado antes de page.render(), que nunca é invocado aqui. Reproduzido
+// localmente removendo @napi-rs/canvas do node_modules e confirmado que esse polyfill mínimo resolve.
+class MinimalDOMMatrix {
+  a = 1;
+  b = 0;
+  c = 0;
+  d = 1;
+  e = 0;
+  f = 0;
+  constructor(init?: number[]) {
+    if (Array.isArray(init) && init.length === 6) {
+      [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+    }
+  }
+}
+if (typeof globalThis.DOMMatrix === "undefined") {
+  (globalThis as { DOMMatrix?: unknown }).DOMMatrix = MinimalDOMMatrix;
+}
+
 async function extractLines(buffer: Buffer): Promise<{ lines: Line[]; pageWidth: number; pageHeight: number }[]> {
   // Import dinâmico: pdfjs-dist só roda no runtime Node do servidor (ver next.config.mjs —
   // precisou virar serverExternalPackages pra webpack não quebrar a resolução do worker).

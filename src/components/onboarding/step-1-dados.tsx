@@ -103,7 +103,9 @@ export function Step1Dados({
           onChange={handleFileChange}
         />
         <p className="text-xs text-muted-foreground">
-          Importe o roteiro em .fdx ou .pdf. O .pdf pode não trazer todos os dados com precisão. Revise os dados
+          Importe o roteiro em .fdx ou .pdf.
+          <br />
+          O .pdf pode não trazer todos os dados com precisão, revise-os.
         </p>
         {fileName && <p className="text-xs text-muted-foreground">Selecionado: {fileName}</p>}
       </div>

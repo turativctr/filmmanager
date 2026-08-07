@@ -204,8 +204,9 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
               <p className="text-xs text-muted-foreground">
-                Importe o roteiro em .fdx ou .pdf. O .pdf pode não trazer todos os dados com precisão. Revise os
-                dados
+                Importe o roteiro em .fdx ou .pdf.
+                <br />
+                O .pdf pode não trazer todos os dados com precisão, revise-os.
               </p>
             </div>
             {error && <p className="text-sm text-erro-fg">{error}</p>}

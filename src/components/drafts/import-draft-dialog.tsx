@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -37,6 +37,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState<{ scenes: FdxScene[]; titlePage: FdxTitlePage } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const uploading = analyzing || importing;
 
@@ -44,6 +45,7 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
     setParsed(null);
     setResult(null);
     setError(null);
+    setFileName(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -52,10 +54,21 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
     if (!file) return;
     if (!isAcceptedScriptFile(file.name)) {
       setError(UNSUPPORTED_SCRIPT_FORMAT_MESSAGE);
+      setFileName(null);
       e.target.value = "";
       return;
     }
     setError(null);
+    setFileName(file.name);
+  }
+
+  // Sem isso, depois de um erro (ex.: falha no servidor ao analisar) a única forma de trocar ou
+  // desistir do arquivo era reabrir o seletor do sistema — nada indicava que dava pra fazer isso,
+  // e não havia como simplesmente "limpar" a seleção e voltar ao estado inicial do campo.
+  function handleClearFile() {
+    setFileName(null);
+    setError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleAnalyze() {
@@ -203,6 +216,19 @@ export function ImportDraftDialog({ projectId }: { projectId: string }) {
                 onChange={handleFileChange}
                 className="block w-full rounded-md border px-3 py-2 text-sm"
               />
+              {fileName && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="truncate">Selecionado: {fileName}</span>
+                  <button
+                    type="button"
+                    onClick={handleClearFile}
+                    aria-label="Remover arquivo selecionado"
+                    className="shrink-0 rounded p-0.5 hover:bg-muted"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Importe o roteiro em .fdx ou .pdf.
                 <br />

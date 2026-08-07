@@ -1,6 +1,6 @@
 "use client";
 
-import { Upload } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { useRef } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,15 @@ export function Step1Dados({
     }
     onFileError(null);
     onFileSelect(file);
+  }
+
+  // Sem isso, depois de um erro (ex.: falha no servidor ao analisar) a única forma de trocar ou
+  // desistir do arquivo era reabrir o seletor do sistema — nada indicava que dava pra fazer isso,
+  // e no wizard, ficar "presa" custava recarregar a página e perder o resto do formulário.
+  function handleClearFile() {
+    onFileSelect(null);
+    onFileError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   return (
@@ -107,7 +116,19 @@ export function Step1Dados({
           <br />
           O .pdf pode não trazer todos os dados com precisão, revise-os.
         </p>
-        {fileName && <p className="text-xs text-muted-foreground">Selecionado: {fileName}</p>}
+        {fileName && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="truncate">Selecionado: {fileName}</span>
+            <button
+              type="button"
+              onClick={handleClearFile}
+              aria-label="Remover arquivo selecionado"
+              className="shrink-0 rounded p-0.5 hover:bg-muted"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

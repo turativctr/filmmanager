@@ -31,6 +31,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       if (error instanceof PdfScriptStructureError) {
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
+      // Log completo (erro + stack) — a mensagem genérica devolvida ao cliente não diz o motivo
+      // real; isso é o que aparece nos logs da função pra diagnosticar sem precisar adivinhar.
+      console.error("[import/fdx] Falha ao processar PDF:", error);
       return NextResponse.json({ error: "Não foi possível ler o arquivo PDF enviado." }, { status: 400 });
     }
     if (result.scenes.length === 0) {

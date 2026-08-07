@@ -62,11 +62,35 @@ class MinimalDOMMatrix {
 if (typeof globalThis.DOMMatrix === "undefined") {
   (globalThis as { DOMMatrix?: unknown }).DOMMatrix = MinimalDOMMatrix;
 }
+// Log de diagnóstico único por cold start — confirma que este módulo (e o polyfill acima) de fato
+// carregou no runtime de produção, e com o resultado de qual ramo do if acima. Se isso nunca
+// aparecer nos logs da função, o problema é anterior a este arquivo (ex.: o próprio route.ts não
+// está sendo alcançado, ou falha noutro import estático antes deste).
+console.log(
+  "[pdf-script-parser] módulo carregado — globalThis.DOMMatrix:",
+  typeof globalThis.DOMMatrix,
+  globalThis.DOMMatrix === MinimalDOMMatrix ? "(polyfill aplicado)" : "(já existia antes do polyfill)"
+);
 
 async function extractLines(buffer: Buffer): Promise<{ lines: Line[]; pageWidth: number; pageHeight: number }[]> {
   // Import dinâmico: pdfjs-dist só roda no runtime Node do servidor (ver next.config.mjs —
   // precisou virar serverExternalPackages pra webpack não quebrar a resolução do worker).
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  console.log(
+    "[pdf-script-parser] antes do import de pdfjs-dist — globalThis.DOMMatrix:",
+    typeof globalThis.DOMMatrix
+  );
+  let pdfjs: typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+  try {
+    pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    console.log("[pdf-script-parser] pdfjs-dist importado com sucesso, versão:", pdfjs.version);
+  } catch (err) {
+    console.error("[pdf-script-parser] FALHA ao importar pdfjs-dist:", err);
+    console.error(
+      "[pdf-script-parser] globalThis.DOMMatrix no momento da falha:",
+      typeof globalThis.DOMMatrix
+    );
+    throw err;
+  }
   const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), useWorkerFetch: false }).promise;
 
   const pages: { lines: Line[]; pageWidth: number; pageHeight: number }[] = [];

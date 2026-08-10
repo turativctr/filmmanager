@@ -12,15 +12,6 @@ import { Button } from "@/components/ui/button";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-};
-
 export default async function BreakdownPage({
   params,
 }: {
@@ -77,7 +68,7 @@ export default async function BreakdownPage({
           Breakdown — Cena {scene.numero}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {scene.tipo ?? "—"} · {scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}
+          {scene.tipo ?? "—"} · {scene.periodo ?? "—"}
           {scene.set ? ` · ${scene.set}` : ""}
           {scene.locacao ? ` · ${scene.locacao.nome}` : ""}
         </p>

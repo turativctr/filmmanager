@@ -71,7 +71,8 @@ export type ReportSceneRow = {
   bloco: "MANHA" | "TARDE";
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
+  periodo: string | null;
+  classeLuz: "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
   set: string | null;
   locacao: string | null;
   /** Id da Locacao vinculada (ou null) — usado pra derivar o prefill de logística da Ordem do Dia. */
@@ -171,6 +172,7 @@ export type HoraAHoraSceneBlock = {
   numero: string;
   tipo: "INT" | "EXT" | null;
   periodo: ReportSceneRow["periodo"];
+  classeLuz: ReportSceneRow["classeLuz"];
   setLocacaoDisplay: string;
   sinopseAD: string;
   cast: ReportSceneRow["cast"];
@@ -197,6 +199,7 @@ function buildHoraAHoraPlanos(
       numero: scene.numero,
       tipo: scene.tipo,
       periodo: scene.periodo,
+      classeLuz: scene.classeLuz,
       setLocacaoDisplay: scene.setLocacaoDisplay,
       sinopseAD: resolveSinopseAD(scene),
       cast: scene.cast,
@@ -388,6 +391,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       numero: scene.numero,
       tipo: scene.tipo,
       periodo: scene.periodo,
+      classeLuz: scene.classeLuz,
       set: scene.set,
       locacao: scene.locacao?.nome ?? null,
       locacaoId: scene.locacaoId,

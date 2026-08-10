@@ -31,7 +31,7 @@ function SceneRow({ scene }: { scene: EscaletaSceneRow }) {
         <Text style={styles.sceneNumText}>{scene.numero}</Text>
       </View>
       <Td width="8%">{scene.tipo ?? "—"}</Td>
-      <Td width="6%">{periodoAbrev(scene.periodo)}</Td>
+      <Td width="6%">{periodoAbrev(scene.classeLuz)}</Td>
       <Td width="16%">{scene.local}</Td>
       <Td width="28%">{scene.sinopse || "—"}</Td>
       <Td width="6%" align="right">

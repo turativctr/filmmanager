@@ -24,7 +24,7 @@ import {
   PdfScriptStructureError,
   SCRIPT_OPERATION_TIMEOUT_MS,
 } from "@/lib/build-script-form-data";
-import type { FdxScene } from "@/lib/fdx-parser";
+import type { FdxScene, FusionSuggestion } from "@/lib/fdx-parser";
 import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
 type PreviewScene = FdxScene & { selected: boolean };
@@ -51,6 +51,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [scenes, setScenes] = useState<PreviewScene[] | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
+  const [sugestoesFusao, setSugestoesFusao] = useState<FusionSuggestion[]>([]);
   const [substituirExistentes, setSubstituirExistentes] = useState(false);
   const [criarPersonagens, setCriarPersonagens] = useState(true);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -62,6 +63,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
     operationIdRef.current += 1;
     setScenes(null);
     setAvisos([]);
+    setSugestoesFusao([]);
     setError(null);
     setResult(null);
     setSubstituirExistentes(false);
@@ -135,6 +137,7 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
 
       setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
       setAvisos((data.avisos as string[]) ?? []);
+      setSugestoesFusao((data.sugestoesFusao as FusionSuggestion[]) ?? []);
     } catch (err) {
       if (operationIdRef.current !== operationId) return; // já cancelado, ignora erro tardio
       if (err instanceof PdfScriptStructureError) {
@@ -161,6 +164,19 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
       prev
         ? prev.map((s) => (s.numero === numero ? { ...s, selected: !s.selected } : s))
         : prev
+    );
+  }
+
+  // Nunca decide sozinho — só aplica a fusão que o AD confirmou explicitamente clicando
+  // "Unificar" (ver fdx-scene-preview.tsx). Reescreve locacaoNome nas cenas soltas afetadas (o
+  // que vai pro POST de confirmação) e remove só o par (set, locação) aceito da lista de
+  // sugestões — o mesmo set pode ainda aparecer sugerido pra outra locação-pai.
+  function acceptFusion(setName: string, locacaoNome: string, cenasSolto: string[]) {
+    setScenes((prev) => (prev ? prev.map((s) => (cenasSolto.includes(s.numero) ? { ...s, locacaoNome } : s)) : prev));
+    setSugestoesFusao((prev) =>
+      prev
+        .map((s) => (s.set === setName ? { ...s, aninhadoEm: s.aninhadoEm.filter((p) => p.locacaoNome !== locacaoNome) } : s))
+        .filter((s) => s.aninhadoEm.length > 0)
     );
   }
 
@@ -308,7 +324,13 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <FdxScenePreview scenes={scenes} avisos={avisos} onToggleScene={toggleScene} />
+            <FdxScenePreview
+              scenes={scenes}
+              avisos={avisos}
+              sugestoesFusao={sugestoesFusao}
+              onToggleScene={toggleScene}
+              onAcceptFusion={acceptFusion}
+            />
 
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm">

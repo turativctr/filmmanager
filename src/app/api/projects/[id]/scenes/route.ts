@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
+import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { parsePaginas } from "@/lib/paginas";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
@@ -44,9 +45,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: "Já existe uma cena com esse número." }, { status: 409 });
   }
 
+  const { classeLuz, periodoFim } = deriveClasseLuz(data.periodo ?? null);
+
   const scene = await prisma.scene.create({
     data: {
       ...data,
+      classeLuz,
+      periodoFim,
       paginas: parsePaginas(paginas)!.toString(),
       projectId: params.id,
       cast: characterIds?.length

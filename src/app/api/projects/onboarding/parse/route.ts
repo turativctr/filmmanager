@@ -70,9 +70,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  let scenes, avisos;
+  let result: FdxParseResult;
   try {
-    ({ scenes, avisos } = parseFdx(xml));
+    result = parseFdx(xml);
   } catch {
     return NextResponse.json(
       { error: "Não foi possível ler o roteiro. Verifique se é um .fdx/.wdz válido." },
@@ -80,11 +80,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (scenes.length === 0) {
+  if (result.scenes.length === 0) {
     return NextResponse.json({ error: "Nenhuma cena encontrada no roteiro." }, { status: 400 });
   }
 
   const titlePage = parseFdxTitlePage(xml);
 
-  return NextResponse.json({ scenes, avisos, titlePage });
+  return NextResponse.json({ ...result, titlePage });
 }

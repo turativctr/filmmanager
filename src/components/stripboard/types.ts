@@ -2,7 +2,13 @@ export type SceneSummary = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
+  // Texto livre — ver o comentário em FdxScene.periodo (src/lib/fdx-parser.ts). classeLuz é o
+  // que decide a cor da tira (ver strip-card.tsx); classeLuzFim só existe quando classeLuz é
+  // TRANSICAO — é a classe (DIA/NOITE) da PONTA FINAL, resolvida no servidor a partir de
+  // periodoFim, pra decidir a direção do degradê sem duplicar deriveClasseLuz no bundle cliente.
+  periodo: string | null;
+  classeLuz: "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
+  classeLuzFim: "DIA" | "NOITE" | null;
   set: string | null;
   locacao: string | null;
   sinopse: string | null;

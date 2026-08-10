@@ -402,19 +402,18 @@ export function formatBRL(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-const PERIODO_ABREVIACAO: Record<string, string> = {
+const CLASSE_LUZ_ABREVIACAO: Record<string, string> = {
   DIA: "D",
   NOITE: "N",
-  ENTARDECER: "E",
-  AMANHECER: "A",
-  CONTINUO: "C",
-  DEPOIS: "P",
+  TRANSICAO: "T",
 };
 
-/** Abreviação de 1 letra pro período de uma cena (D/N/E/A/C/P) — "?" quando não detectado. */
-export function periodoAbrev(periodo: string | null): string {
-  if (!periodo) return "?";
-  return PERIODO_ABREVIACAO[periodo] ?? "?";
+/** Abreviação de 1 letra pra classeLuz de uma cena (D/N/T) — "?" quando INDEFINIDO ou não
+ *  informado. Chave em classeLuz (não no texto livre de `periodo`, que não cabe numa coluna
+ *  estreita e não tem forma fechada de abreviar — ver comentário em FdxScene.periodo). */
+export function periodoAbrev(classeLuz: string | null | undefined): string {
+  if (!classeLuz) return "?";
+  return CLASSE_LUZ_ABREVIACAO[classeLuz] ?? "?";
 }
 
 /** Cabeçalho padrão de 3 linhas: projeto (14pt) / Direção · Produtora (9pt) / título do documento sublinhado (12pt). */

@@ -38,7 +38,7 @@ function SceneStripGroup({ group, showSetLabel }: { group: CastScheduleSetGroup;
               {scene.numero}
             </Td>
             <Td width="15%">{scene.tipo ?? "—"}</Td>
-            <Td width="10%">{periodoAbrev(scene.periodo)}</Td>
+            <Td width="10%">{periodoAbrev(scene.classeLuz)}</Td>
             <Td width="40%">{scene.sinopse || "—"}</Td>
             <Td width="23%">{scene.personagens.join(", ") || "—"}</Td>
           </Tr>

@@ -5,10 +5,14 @@ import { isValidPaginasInput } from "@/lib/paginas";
 export const sceneSchema = z.object({
   numero: z.string().min(1),
   tipo: z.enum(["INT", "EXT"]).optional().nullable(),
+  // Texto livre — ver o comentário em FdxScene.periodo (src/lib/fdx-parser.ts) pro porquê não é
+  // mais um enum fechado. classeLuz/periodoFim NÃO vêm do cliente: são sempre derivados aqui no
+  // servidor (ver deriveClasseLuz), nunca aceitos como entrada direta do formulário.
   periodo: z
-    .enum(["DIA", "NOITE", "ENTARDECER", "AMANHECER", "CONTINUO", "DEPOIS", "NOITE_PARA_DIA", "DIA_PARA_NOITE"])
+    .string()
     .optional()
-    .nullable(),
+    .nullable()
+    .transform((v) => (v ? v.trim().toUpperCase() : v || null)),
   set: z
     .string()
     .optional()

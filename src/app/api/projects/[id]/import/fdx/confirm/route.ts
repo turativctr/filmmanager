@@ -163,6 +163,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
             projectId: params.id,
             tipo: scene.tipo,
             periodo: scene.periodo,
+            periodoFim: scene.periodoFim,
+            classeLuz: scene.classeLuz,
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, null),
             sinopse: scene.sinopse,
@@ -185,6 +187,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
           data: {
             tipo: scene.tipo,
             periodo: scene.periodo,
+            periodoFim: scene.periodoFim,
+            classeLuz: scene.classeLuz,
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, existingLocacaoId),
             sinopse: scene.sinopse,

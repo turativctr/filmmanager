@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StripboardBoard } from "@/components/stripboard/stripboard-board";
 import type { BoardState, DayState, SceneSummary, ShotsSummary, StripItem } from "@/components/stripboard/types";
 import { Button } from "@/components/ui/button";
+import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
@@ -78,11 +79,17 @@ export default async function StripboardPage({ params }: { params: { id: string 
   );
 
   function toSceneSummary(scene: (typeof scenes)[number]): SceneSummary {
+    // classeLuzFim só importa pra cena em TRANSICAO (decide a direção do degradê na tira — ver
+    // strip-card.tsx); pra qualquer outra classe fica null, sem custo de calcular à toa.
+    const classeLuzFim =
+      scene.classeLuz === "TRANSICAO" && scene.periodoFim ? deriveClasseLuz(scene.periodoFim).classeLuz : null;
     return {
       id: scene.id,
       numero: scene.numero,
       tipo: scene.tipo,
       periodo: scene.periodo,
+      classeLuz: scene.classeLuz,
+      classeLuzFim: classeLuzFim === "DIA" || classeLuzFim === "NOITE" ? classeLuzFim : null,
       set: scene.set,
       locacao: scene.locacao?.nome ?? null,
       sinopse: scene.sinopse,

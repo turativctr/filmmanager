@@ -9,31 +9,36 @@ import { XMLParser } from "fast-xml-parser";
 
 import { suggestTempoEstimadoMin } from "@/lib/paginas";
 
-export type FdxPeriodo =
-  | "DIA"
-  | "NOITE"
-  | "ENTARDECER"
-  | "AMANHECER"
-  | "CONTINUO"
-  | "DEPOIS"
-  | "NOITE_PARA_DIA"
-  | "DIA_PARA_NOITE";
+// Deixou de ser enum fechado — roteiro brasileiro usa MADRUGADA, AMANHECER, ENTARDECER,
+// CREPÚSCULO, PÔR DO SOL, MAGIC HOUR, ALVORADA, "X PARA Y" e qualquer outra combinação que o
+// roteirista escrever; uma lista fechada quebra no próximo roteiro. `periodo` guarda o texto
+// exatamente como apareceu no cabeçalho (só maiúscula); `classeLuz` é o que é FECHADO e
+// derivado dele (ver deriveClasseLuz) — é o que stripboard/DOOD/ordem de diária consultam.
+export type ClasseLuz = "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
 
 export type FdxScene = {
   numero: string;
   // true quando não foi possível extrair um número real da fonte (rótulo "CENA N"/atributo
   // Number do FDX) e a numeração sequencial (1, 2, 3...) foi usada como último recurso.
   numeroGerado: boolean;
-  // null = não detectado no heading — o roteiro não segue o padrão "INT./EXT. ..." ou o
-  // cabeçalho não tem período reconhecível. O usuário preenche depois; nunca inventamos um
-  // valor (ex.: não presumimos INT nem DIA como default).
+  // null = não detectado no heading — o roteiro não segue o padrão "INT./EXT. ..." O usuário
+  // preenche depois; nunca inventamos um valor (ex.: não presumimos INT como default).
   tipo: "INT" | "EXT" | null;
-  periodo: FdxPeriodo | null;
+  // Texto livre, exatamente como apareceu depois do último separador do cabeçalho (maiúscula) —
+  // ver parseHeading. null só quando o cabeçalho não tinha separador nenhum pra cortar; NUNCA
+  // null por "não reconhecer" a palavra (isso vira classeLuz=INDEFINIDO, preservando o texto).
+  periodo: string | null;
+  // Só populado quando `periodo` é uma transição "X PARA Y" — a ponta final (Y), maiúscula. Ver
+  // deriveClasseLuz e a herança de classeLuz em cenas CONTÍNUO/INDEFINIDO.
+  periodoFim: string | null;
+  // Derivado de `periodo` (nunca digitado à mão) — o que alimenta cor de tira no stripboard,
+  // DOOD e ordem de diária. Ver deriveClasseLuz e applyClasseLuzInheritance.
+  classeLuz: ClasseLuz;
   set: string | null;
-  // Só populado pelo parser de PDF, quando o cabeçalho segue a convenção "LOCAL; SET" — o que
-  // vem antes do ";" agrupa vários `set` na MESMA Locacao (ver locacao-import.ts). Ausente/null
-  // em .fdx/.wdz, que preservam o comportamento de sempre (1 Locacao por valor de `set`).
-  locacaoNome?: string | null;
+  // Nome da locação (agrupador) — sempre populado por ambos os parsers agora. Convenção "LOCAL;
+  // SET" no cabeçalho: o que vem antes do ";" agrupa vários `set` na MESMA Locacao (ver
+  // resolveLocacaoId nas rotas de import); sem ";", locação e set são o mesmo valor.
+  locacaoNome: string | null;
   sinopse: string | null;
   personagens: string[];
   // Subconjunto de `personagens` detectado só pela heurística de primeira menção em maiúscula
@@ -48,35 +53,181 @@ export type FdxScene = {
   tempoEstimadoMinSugerido: number;
 };
 
+// Sugestão de unificação de sets homônimos (ex.: "QUARTO DOS PAIS" aparece solto E dentro de
+// "CASA") — NUNCA aplicada sozinha, só oferecida na prévia de importação pro AD confirmar. Ver
+// detectSetFusionSuggestions.
+export type FusionSuggestion = {
+  // Nome do set em comum (grafia da primeira ocorrência solta), normalizado só pra comparação —
+  // exibido com a grafia original.
+  set: string;
+  cenasSolto: string[];
+  aninhadoEm: { locacaoNome: string; cenas: string[] }[];
+};
+
 export type FdxParseResult = {
   scenes: FdxScene[];
   // Mensagens prontas para exibir no preview de importação — vazio quando o roteiro não
   // apresentou nenhuma irregularidade de formatação.
   avisos: string[];
+  sugestoesFusao: FusionSuggestion[];
 };
 
-export const PERIODO_MAP: Record<string, FdxPeriodo> = {
-  DIA: "DIA",
-  DAY: "DIA",
-  TARDE: "DIA",
-  MANHÃ: "DIA",
-  MORNING: "DIA",
-  NOITE: "NOITE",
-  NIGHT: "NOITE",
-  ENTARDECER: "ENTARDECER",
-  DUSK: "ENTARDECER",
-  AMANHECER: "AMANHECER",
-  DAWN: "AMANHECER",
-  CONTINUO: "CONTINUO",
-  CONTÍNUO: "CONTINUO",
-  CONTINUA: "CONTINUO",
-  CONTÍNUA: "CONTINUO",
-  CONTINUOUS: "CONTINUO",
-  DEPOIS: "DEPOIS",
-  LATER: "DEPOIS",
-  "NOITE PARA DIA": "NOITE_PARA_DIA",
-  "DIA PARA NOITE": "DIA_PARA_NOITE",
-};
+// Palavras reconhecidas — mas NUNCA uma lista fechada pro campo `periodo` em si (ver o comentário
+// no topo do arquivo): serve só pra DERIVAR `classeLuz`. Texto não listado aqui é preservado tal
+// qual em `periodo`, vira classeLuz=INDEFINIDO (herda da cena anterior) e soma no aviso de
+// "período não reconhecido" — nunca é rejeitado nem reescrito.
+const DIA_WORDS = new Set(["DIA", "MANHA", "MANHÃ", "TARDE", "DAY", "MORNING", "AFTERNOON"]);
+// MADRUGADA é NOITE pra fins de luz (é o gaffer que consulta classeLuz) mas continua "MADRUGADA"
+// no texto (é a AD que precisa da distinção pra chamada) — ver o comentário de `periodo` acima.
+const NOITE_WORDS = new Set([
+  "NOITE",
+  "MADRUGADA",
+  "NIGHT",
+  "DAWN",
+  "AMANHECER",
+  "ALVORADA",
+  "DUSK",
+  "ENTARDECER",
+  "CREPUSCULO",
+  "CREPÚSCULO",
+  "POR DO SOL",
+  "PÔR DO SOL",
+  "ANOITECER",
+  "MAGIC HOUR",
+]);
+// Cenas que continuam a anterior sem período próprio — resolvidas por herança (ver
+// applyClasseLuzInheritance), nunca por si mesmas. DEPOIS/LATER mantém a semântica do antigo
+// enum (cena adiante no tempo, sem período determinado) sob a mesma regra de herança.
+const INDEFINIDO_WORDS = new Set([
+  "CONTINUO",
+  "CONTÍNUO",
+  "CONTINUA",
+  "CONTÍNUA",
+  "CONTINUOUS",
+  "MOMENTOS DEPOIS",
+  "DEPOIS",
+  "LATER",
+]);
+const TRANSICAO_PATTERN = /^(.+?)\s+PARA\s+(.+)$/i;
+
+function classifyPeriodoWord(texto: string): "DIA" | "NOITE" | "INDEFINIDO" | null {
+  const upper = texto.trim().toUpperCase();
+  if (DIA_WORDS.has(upper)) return "DIA";
+  if (NOITE_WORDS.has(upper)) return "NOITE";
+  if (INDEFINIDO_WORDS.has(upper)) return "INDEFINIDO";
+  return null;
+}
+
+/** Deriva classeLuz (fechado, o que stripboard/DOOD/ordem de diária consultam) a partir do texto
+ *  livre de período. "X PARA Y" é sempre TRANSICAO, mesmo que X/Y não sejam palavras reconhecidas
+ *  (guarda os dois lados; deriveClasseLuz(periodoFim) resolve a ponta final na herança). Texto que
+ *  não é transição nem está nas listas acima cai em INDEFINIDO igual a CONTÍNUO — a diferença entre
+ *  "contínuo esperado" e "palavra não reconhecida" só importa pro aviso de revisão, não pro cálculo
+ *  em si (ver isPeriodoTextoReconhecido). */
+export function deriveClasseLuz(periodoTexto: string | null): { classeLuz: ClasseLuz; periodoFim: string | null } {
+  if (!periodoTexto) return { classeLuz: "INDEFINIDO", periodoFim: null };
+  const texto = periodoTexto.trim().toUpperCase();
+  const transicao = texto.match(TRANSICAO_PATTERN);
+  if (transicao) return { classeLuz: "TRANSICAO", periodoFim: transicao[2].trim() };
+  const classified = classifyPeriodoWord(texto);
+  if (classified === "DIA" || classified === "NOITE") return { classeLuz: classified, periodoFim: null };
+  return { classeLuz: "INDEFINIDO", periodoFim: null };
+}
+
+export function isPeriodoTextoReconhecido(texto: string): boolean {
+  return TRANSICAO_PATTERN.test(texto) || classifyPeriodoWord(texto) !== null;
+}
+
+/** Passe sequencial (ordem do roteiro importa) que resolve classeLuz das cenas INDEFINIDO por
+ *  herança da cena anterior JÁ RESOLVIDA — ver o pedido original pra o raciocínio completo.
+ *  Regra chave: quando a cena anterior é TRANSICAO, herda-se a PONTA FINAL (periodoFim), não a
+ *  inicial (cena 13 termina em MADRUGADA → cena 14 herda NOITE, não o NOITE do início da 13).
+ *  Cena INDEFINIDO que não achou o que herdar (primeira cena do roteiro, ou cadeia de herança
+ *  quebrada) fica INDEFINIDO mesmo e conta no aviso de revisão — nunca inventa um valor. */
+export function applyClasseLuzInheritance(scenes: Pick<FdxScene, "classeLuz" | "periodoFim">[]): number {
+  let lastResolved: ClasseLuz | null = null;
+  let lastPeriodoFim: string | null = null;
+  let semHeranca = 0;
+
+  for (const scene of scenes) {
+    if (scene.classeLuz === "INDEFINIDO") {
+      if (lastResolved === "TRANSICAO" && lastPeriodoFim) {
+        const { classeLuz: fimClasse } = deriveClasseLuz(lastPeriodoFim);
+        if (fimClasse === "DIA" || fimClasse === "NOITE") {
+          scene.classeLuz = fimClasse;
+        } else {
+          semHeranca += 1;
+        }
+      } else if (lastResolved === "DIA" || lastResolved === "NOITE") {
+        scene.classeLuz = lastResolved;
+      } else {
+        semHeranca += 1;
+      }
+    }
+
+    // Só avança o estado de rastreamento com uma classe JÁ RESOLVIDA — uma cena que ficou
+    // INDEFINIDO por falta de herança não deve propagar esse "vazio" adiante como se fosse um
+    // valor válido pra próxima cena herdar.
+    if (scene.classeLuz !== "INDEFINIDO") {
+      lastResolved = scene.classeLuz;
+      lastPeriodoFim = scene.classeLuz === "TRANSICAO" ? scene.periodoFim : null;
+    }
+  }
+
+  return semHeranca;
+}
+
+/** Normaliza nome de set/locação SÓ pra comparação de fusão — maiúscula, sem acento, espaço
+ *  colapsado. Mesmo padrão de normalizeEndereco (src/lib/locacao.ts), propositalmente sem
+ *  similaridade difusa: um falso positivo aqui funde dois sets errados e corrompe a decupagem. */
+function normalizeForFusion(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Detecta sets que aparecem TANTO soltos (sem locação-pai distinta) QUANTO aninhados dentro de
+ *  outra locação — ex.: "QUARTO DOS PAIS" batendo cena a cena ora sozinho, ora dentro de "CASA".
+ *  Só SUGERE (retorna a lista pro AD revisar); nunca decide nem reescreve nada aqui. */
+export function detectSetFusionSuggestions(
+  scenes: Pick<FdxScene, "numero" | "set" | "locacaoNome">[]
+): FusionSuggestion[] {
+  const standalone = new Map<string, { display: string; cenas: string[] }>();
+  const nested = new Map<string, Map<string, { display: string; cenas: string[] }>>();
+
+  for (const scene of scenes) {
+    if (!scene.set) continue;
+    const normalizedSet = normalizeForFusion(scene.set);
+    const isStandalone = !scene.locacaoNome || normalizeForFusion(scene.locacaoNome) === normalizedSet;
+    if (isStandalone) {
+      const entry = standalone.get(normalizedSet) ?? { display: scene.set, cenas: [] };
+      entry.cenas.push(scene.numero);
+      standalone.set(normalizedSet, entry);
+    } else {
+      const byLocacao = nested.get(normalizedSet) ?? new Map<string, { display: string; cenas: string[] }>();
+      const key = normalizeForFusion(scene.locacaoNome as string);
+      const entry = byLocacao.get(key) ?? { display: scene.locacaoNome as string, cenas: [] };
+      entry.cenas.push(scene.numero);
+      byLocacao.set(key, entry);
+      nested.set(normalizedSet, byLocacao);
+    }
+  }
+
+  const suggestions: FusionSuggestion[] = [];
+  for (const [normalizedSet, standaloneEntry] of standalone) {
+    const nestedEntry = nested.get(normalizedSet);
+    if (!nestedEntry || nestedEntry.size === 0) continue;
+    suggestions.push({
+      set: standaloneEntry.display,
+      cenasSolto: standaloneEntry.cenas,
+      aninhadoEm: [...nestedEntry.values()].map((v) => ({ locacaoNome: v.display, cenas: v.cenas })),
+    });
+  }
+  return suggestions;
+}
 
 // Algumas exportações do Final Draft (ex.: roteiros escritos com um rótulo de cena separado
 // do cabeçalho técnico) usam um Scene Heading "CENA N:"/"Cena N: <descrição>" só como rótulo,
@@ -153,32 +304,61 @@ export function normalizeCharacterName(raw: string): string {
     .toUpperCase();
 }
 
-function parseHeading(raw: string): { tipo: FdxScene["tipo"]; set: string | null; periodo: FdxScene["periodo"] } {
+type ParsedHeading = {
+  tipo: FdxScene["tipo"];
+  locacaoNome: string | null;
+  set: string | null;
+  periodo: string | null;
+  periodoFim: string | null;
+  classeLuz: ClasseLuz;
+};
+
+/** O que vem depois do ÚLTIMO separador é SEMPRE período — sem exceção, sem gate contra lista
+ *  fechada (esse gate era o defeito: cabeçalho com período não reconhecido, ex. "MADRUGADA",
+ *  ficava com o texto inteiro intacto, período incluso, virando uma locação nova a cada variação
+ *  de período). Sublocalização ("APTO - BANHEIRO - NOITE") tem mais de um separador; o local ainda
+ *  é "tudo antes do último". Período não reconhecido é preservado no texto e sinalizado pra
+ *  revisão (ver isPeriodoTextoReconhecido) — nunca volta a fazer parte do nome do local. */
+function splitLocalPeriodo(body: string): { local: string; periodoTexto: string | null } {
+  const matches = [...body.matchAll(LOCAL_PERIODO_SEPARATOR)];
+  if (matches.length === 0) return { local: body, periodoTexto: null };
+  const last = matches[matches.length - 1];
+  const lastIndex = last.index ?? 0;
+  const before = body.slice(0, lastIndex).trim();
+  const after = body.slice(lastIndex + last[0].length).trim();
+  return { local: before, periodoTexto: after ? after.toUpperCase() : null };
+}
+
+/** Convenção "LOCAL; SET" — o que vem antes do primeiro ";" agrupa vários `set` na mesma
+ *  Locacao; sem ";", locação e set são o mesmo valor. Mais de um ";": só o primeiro separa,
+ *  o resto fica concatenado no set (ex.: "CASA; QUARTO; ARMÁRIO" → locação CASA, set
+ *  "QUARTO; ARMÁRIO"), igual à convenção já usada pelo parser de PDF. */
+function splitLocacaoSet(local: string): { locacaoNome: string | null; set: string | null } {
+  const semicolon = local.indexOf(";");
+  if (semicolon < 0) {
+    const value = local.trim().toUpperCase() || null;
+    return { locacaoNome: value, set: value };
+  }
+  const locacaoNome = local.slice(0, semicolon).trim().toUpperCase() || null;
+  const set = local.slice(semicolon + 1).trim().toUpperCase() || null;
+  return { locacaoNome, set: set ?? locacaoNome };
+}
+
+function parseHeading(raw: string): ParsedHeading {
   const heading = stripInsertPrefix(raw.trim());
-  if (!heading) return { tipo: null, set: null, periodo: null };
+  if (!heading) {
+    return { tipo: null, locacaoNome: null, set: null, periodo: null, periodoFim: null, classeLuz: "INDEFINIDO" };
+  }
 
   const hasTipoPrefix = TIPO_PREFIX_PATTERN.test(heading);
   const tipo: FdxScene["tipo"] = hasTipoPrefix ? (/^EXT/i.test(heading) ? "EXT" : "INT") : null;
   const body = (hasTipoPrefix ? heading.replace(TIPO_PREFIX_PATTERN, "") : heading).trim() || heading;
 
-  // Só divide em local/período no ÚLTIMO separador — e só se o texto depois dele for um
-  // período reconhecido. Sublocalização ("APTO - BANHEIRO - NOITE") tem mais de um separador,
-  // mas o local ainda é "tudo antes do último"; se o que vem depois do último separador não
-  // bater com nenhum período (ex.: o hífen faz parte do próprio nome do local), não dividimos
-  // nada — o texto inteiro vira local e o período fica em branco, em vez de cortar errado.
-  const matches = [...body.matchAll(LOCAL_PERIODO_SEPARATOR)];
-  if (matches.length > 0) {
-    const last = matches[matches.length - 1];
-    const lastIndex = last.index ?? 0;
-    const before = body.slice(0, lastIndex).trim();
-    const after = body.slice(lastIndex + last[0].length).trim();
-    const periodo = PERIODO_MAP[after.toUpperCase()];
-    if (periodo) {
-      return { tipo, set: before ? before.toUpperCase() : null, periodo };
-    }
-  }
+  const { local, periodoTexto } = splitLocalPeriodo(body);
+  const { locacaoNome, set } = splitLocacaoSet(local);
+  const { classeLuz, periodoFim } = deriveClasseLuz(periodoTexto);
 
-  return { tipo, set: body ? body.toUpperCase() : null, periodo: null };
+  return { tipo, locacaoNome, set, periodo: periodoTexto, periodoFim, classeLuz };
 }
 
 // O rótulo "quem está na cena" que o roteirista marca manualmente no Scene Heading
@@ -242,7 +422,7 @@ function countLinhasSimulado(paragraphs: FdxNode[]): number {
 
 function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]): FdxScene {
   const heading = paragraphs.find((p) => paragraphType(p) === "Scene Heading");
-  const { tipo, set, periodo } = parseHeading(heading ? paragraphText(heading) : "");
+  const { tipo, locacaoNome, set, periodo, periodoFim, classeLuz } = parseHeading(heading ? paragraphText(heading) : "");
 
   const actionParagraphs = paragraphs.filter((p) => paragraphType(p) === "Action");
   const dialogueParagraphs = paragraphs.filter((p) => paragraphType(p) === "Dialogue");
@@ -272,7 +452,10 @@ function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]
     numeroGerado,
     tipo,
     periodo,
+    periodoFim,
+    classeLuz,
     set,
+    locacaoNome,
     sinopse,
     personagens,
     paginas,
@@ -365,7 +548,7 @@ export function parseFdx(xml: string): FdxParseResult {
   const doc = parser.parse(xml) as FdxNode;
   const root = (doc.FinalDraft as FdxNode) ?? doc;
   const content = root?.Content as FdxNode | undefined;
-  if (!content) return { scenes: [], avisos: [] };
+  if (!content) return { scenes: [], avisos: [], sugestoesFusao: [] };
 
   const { groups, semHeadingDetectado } = extractSceneGroups(content);
   const scenes = groups.map((group, index) => {
@@ -379,15 +562,26 @@ export function parseFdx(xml: string): FdxParseResult {
       "Nenhum cabeçalho de cena encontrado. O roteiro pode não estar formatado em Master Scenes. Verifique a formatação no Final Draft."
     );
   } else {
+    // Ordem do roteiro importa pra herança (cena N pode herder de N-1) — roda ANTES de contar
+    // os avisos, senão "sem herança" contaria cenas que a própria herança já resolveu.
+    const semHeranca = applyClasseLuzInheritance(scenes);
+
     const semTipo = scenes.filter((s) => s.tipo == null).length;
     const semPeriodo = scenes.filter((s) => s.periodo == null).length;
+    const naoReconhecidas = scenes.filter((s) => s.periodo != null && !isPeriodoTextoReconhecido(s.periodo)).length;
     const numerosGerados = scenes.filter((s) => s.numeroGerado).length;
     if (semTipo > 0) avisos.push(`${semTipo} cenas sem cabeçalho INT/EXT detectado`);
     if (semPeriodo > 0) avisos.push(`${semPeriodo} cenas sem período (Dia/Noite) detectado`);
+    if (naoReconhecidas > 0)
+      avisos.push(`${naoReconhecidas} cenas com período não reconhecido — confira classificação dia/noite`);
+    if (semHeranca > 0)
+      avisos.push(`${semHeranca} cenas sem período determinável (ex.: 1ª cena do roteiro é "contínuo") — revise manualmente`);
     if (numerosGerados > 0) avisos.push("Numeração de cenas gerada automaticamente");
   }
 
-  return { scenes, avisos };
+  const sugestoesFusao = detectSetFusionSuggestions(scenes);
+
+  return { scenes, avisos, sugestoesFusao };
 }
 
 // ---------------------------------------------------------------------------

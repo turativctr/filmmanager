@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -9,42 +10,50 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { FdxScene } from "@/lib/fdx-parser";
+import type { FdxScene, FusionSuggestion } from "@/lib/fdx-parser";
 import { formatPaginas } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-  NOITE_PARA_DIA: "Noite para dia",
-  DIA_PARA_NOITE: "Dia para noite",
-};
-
 const NAO_DETECTADO_TITLE = "Não detectado — preencha após importar";
+const PERIODO_INDEFINIDO_TITLE = "Período não reconhecido ou dependente de herança — confira antes de importar";
 
-function UncertainCell({ value, uncertain }: { value: string; uncertain: boolean }) {
+function UncertainCell({
+  value,
+  uncertain,
+  title = NAO_DETECTADO_TITLE,
+}: {
+  value: string;
+  uncertain: boolean;
+  title?: string;
+}) {
   return (
-    <TableCell
-      className={cn(uncertain && "bg-amber-100 text-amber-900")}
-      title={uncertain ? NAO_DETECTADO_TITLE : undefined}
-    >
+    <TableCell className={cn(uncertain && "bg-amber-100 text-amber-900")} title={uncertain ? title : undefined}>
       {value}
     </TableCell>
   );
 }
 
+/** Nome de exibição pro local de uma cena — mostra "Locação · Set" só quando os dois diferem
+ *  (convenção "LOCAL; SET" no cabeçalho, ver fdx-parser.ts); sem ";" no cabeçalho os dois valores
+ *  já chegam iguais, então mostrar só um evita redundância tipo "CARRO · CARRO". */
+function localDisplay(scene: Pick<FdxScene, "set" | "locacaoNome">): string {
+  if (!scene.set) return scene.locacaoNome ?? "—";
+  if (!scene.locacaoNome || scene.locacaoNome === scene.set) return scene.set;
+  return `${scene.locacaoNome} · ${scene.set}`;
+}
+
 export function FdxScenePreview({
   scenes,
   avisos,
+  sugestoesFusao,
   onToggleScene,
+  onAcceptFusion,
 }: {
   scenes: (FdxScene & { selected: boolean })[];
   avisos: string[];
+  sugestoesFusao?: FusionSuggestion[];
   onToggleScene: (numero: string) => void;
+  onAcceptFusion?: (setName: string, locacaoNome: string, cenasSolto: string[]) => void;
 }) {
   const totalPersonagens = new Set(scenes.flatMap((s) => s.personagens)).size;
   const totalPaginas = scenes.reduce((sum, s) => sum + s.paginas, 0);
@@ -66,6 +75,38 @@ export function FdxScenePreview({
             {avisos.map((aviso) => (
               <li key={aviso}>{aviso}</li>
             ))}
+          </ul>
+        </div>
+      )}
+
+      {sugestoesFusao && sugestoesFusao.length > 0 && (
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">
+          <p className="font-medium">
+            Sets possivelmente duplicados — mesmo nome aparece solto e dentro de outra locação. Roteiro é
+            inconsistente por natureza; confirme antes de unificar.
+          </p>
+          <ul className="mt-2 space-y-2">
+            {sugestoesFusao.map((s) =>
+              s.aninhadoEm.map((parent) => (
+                <li key={`${s.set}::${parent.locacaoNome}`} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    <strong>{s.set}</strong> aparece solto (cenas {s.cenasSolto.join(", ")}) e dentro de{" "}
+                    <strong>{parent.locacaoNome}</strong> (cenas {parent.cenas.join(", ")})
+                  </span>
+                  {onAcceptFusion && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 border-blue-400 bg-white hover:bg-blue-100"
+                      onClick={() => onAcceptFusion(s.set, parent.locacaoNome, s.cenasSolto)}
+                    >
+                      Unificar com {parent.locacaoNome}
+                    </Button>
+                  )}
+                </li>
+              ))
+            )}
           </ul>
         </div>
       )}
@@ -95,12 +136,13 @@ export function FdxScenePreview({
                 </TableCell>
                 <UncertainCell value={scene.numero} uncertain={scene.numeroGerado} />
                 <UncertainCell value={scene.tipo ?? "—"} uncertain={scene.tipo == null} />
-                <TableCell className="max-w-[160px] truncate" title={scene.set ?? undefined}>
-                  {scene.set ?? "—"}
+                <TableCell className="max-w-[200px] truncate" title={localDisplay(scene)}>
+                  {localDisplay(scene)}
                 </TableCell>
                 <UncertainCell
-                  value={scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}
-                  uncertain={scene.periodo == null}
+                  value={scene.periodo ?? "—"}
+                  uncertain={scene.classeLuz === "INDEFINIDO"}
+                  title={PERIODO_INDEFINIDO_TITLE}
                 />
                 <TableCell className="max-w-[200px] truncate">
                   {scene.personagens.length > 0

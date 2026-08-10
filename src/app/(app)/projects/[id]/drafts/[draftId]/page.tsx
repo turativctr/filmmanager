@@ -10,15 +10,6 @@ import { formatPaginas } from "@/lib/paginas";
 import { diffSinopse } from "@/lib/script-diff";
 import { cn } from "@/lib/utils";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-};
-
 const TIPO_LABEL: Record<DraftDiffRow["tipo"], string> = {
   ADICIONADA: "Nova",
   REMOVIDA: "Omitida",
@@ -142,7 +133,7 @@ export default async function DraftDetailPage({ params }: { params: { id: string
                   <div className="space-y-1 text-sm">
                     <p className="text-muted-foreground">
                       {diff.scene.tipo ?? "—"} ·{" "}
-                      {diff.scene.periodo ? PERIODO_LABEL[diff.scene.periodo] ?? diff.scene.periodo : "—"} ·{" "}
+                      {diff.scene.periodo ?? "—"} ·{" "}
                       {diff.scene.locacao || diff.scene.set || "—"} · {formatPaginas(diff.scene.paginas)}
                     </p>
                     <p>{diff.scene.sinopse || "Sem sinopse."}</p>

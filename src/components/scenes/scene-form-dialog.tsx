@@ -36,15 +36,32 @@ type CharacterOption = {
 };
 
 const TIPO_INDEFINIDO = "INDEFINIDO";
-const PERIODO_INDEFINIDO = "INDEFINIDO";
 const SEM_LOCACAO = "__sem_locacao__";
 const CRIAR_NOVA_LOCACAO = "__criar_nova_locacao__";
+
+// Texto livre (ver comentário em FdxScene.periodo, src/lib/fdx-parser.ts) — não é mais uma lista
+// fechada, então o campo é um input com sugestões (<datalist>), não um <Select>. Essas são só
+// atalho de digitação; qualquer outro texto é aceito igual (classeLuz é derivado no servidor a
+// partir do que for digitado, ver deriveClasseLuz).
+const SUGESTOES_PERIODO = [
+  "DIA",
+  "NOITE",
+  "MANHÃ",
+  "TARDE",
+  "MADRUGADA",
+  "ENTARDECER",
+  "AMANHECER",
+  "CONTÍNUO",
+  "NOITE PARA DIA",
+  "DIA PARA NOITE",
+  "MADRUGADA PARA DIA",
+];
 
 type SceneDefaults = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
+  periodo: string | null;
   set: string | null;
   locacao: { id: string; nome: string } | null;
   sinopse: string | null;
@@ -76,7 +93,7 @@ export function SceneFormDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tipo, setTipo] = useState<string>(scene ? scene.tipo ?? TIPO_INDEFINIDO : "INT");
-  const [periodo, setPeriodo] = useState<string>(scene ? scene.periodo ?? PERIODO_INDEFINIDO : "DIA");
+  const [periodo, setPeriodo] = useState(scene ? scene.periodo ?? "" : "DIA");
   const [locacaoId, setLocacaoId] = useState<string>(scene?.locacao?.id ?? SEM_LOCACAO);
   const [novaLocacaoNome, setNovaLocacaoNome] = useState("");
   const [selectedCast, setSelectedCast] = useState<Set<string>>(
@@ -133,7 +150,7 @@ export function SceneFormDialog({
     const payload = {
       numero: form.get("numero"),
       tipo: tipo === TIPO_INDEFINIDO ? null : tipo,
-      periodo: periodo === PERIODO_INDEFINIDO ? null : periodo,
+      periodo: periodo.trim() || null,
       set: form.get("set") || undefined,
       locacaoId: resolvedLocacaoId,
       sinopse: form.get("sinopse") || undefined,
@@ -206,23 +223,19 @@ export function SceneFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Período</Label>
-              <Select value={periodo} onValueChange={setPeriodo}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DIA">Dia</SelectItem>
-                  <SelectItem value="NOITE">Noite</SelectItem>
-                  <SelectItem value="ENTARDECER">Entardecer</SelectItem>
-                  <SelectItem value="AMANHECER">Amanhecer</SelectItem>
-                  <SelectItem value="CONTINUO">Contínuo</SelectItem>
-                  <SelectItem value="DEPOIS">Depois</SelectItem>
-                  <SelectItem value="NOITE_PARA_DIA">Noite para dia</SelectItem>
-                  <SelectItem value="DIA_PARA_NOITE">Dia para noite</SelectItem>
-                  <SelectItem value={PERIODO_INDEFINIDO}>Não definido</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="periodo">Período</Label>
+              <Input
+                id="periodo"
+                list="periodo-sugestoes"
+                placeholder="ex.: MADRUGADA, NOITE PARA DIA..."
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
+              />
+              <datalist id="periodo-sugestoes">
+                {SUGESTOES_PERIODO.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </div>
           </div>
 

@@ -104,17 +104,21 @@ enum SceneEnvironment {
   EXT
 }
 
-enum SceneShift {
+// Fechado — o que stripboard (cor da tira), DOOD/escaleta e ordem de diária consultam. Derivado
+// de Scene.periodo (texto livre, nunca um enum — roteiro brasileiro usa MADRUGADA, ENTARDECER,
+// CREPÚSCULO, "X PARA Y" e qualquer combinação que o roteirista escrever; um enum fechado quebra
+// no próximo roteiro), nunca digitado à mão. Ver deriveClasseLuz em src/lib/fdx-parser.ts.
+enum ClasseLuz {
   DIA
   NOITE
-  ENTARDECER
-  AMANHECER
-  CONTINUO
-  DEPOIS
-  // Cena que atravessa de um período para o outro dentro dela mesma (roteiro real, não é
-  // convenção de "noite americana") — filmada em dois momentos de luz distintos.
-  NOITE_PARA_DIA
-  DIA_PARA_NOITE
+  // Cena que atravessa de um período para o outro dentro dela mesma (ex.: "NOITE PARA
+  // MADRUGADA") — filmada em dois momentos de luz distintos. Scene.periodoFim guarda a ponta
+  // final.
+  TRANSICAO
+  // Período não determinado (roteiro diz "CONTÍNUO"/"MOMENTOS DEPOIS", ou o texto não foi
+  // reconhecido) — herda a classe da cena anterior na importação; se não há cena anterior pra
+  // herdar, fica INDEFINIDO mesmo e é sinalizado pra revisão do AD.
+  INDEFINIDO
 }
 
 enum CharacterCategoria {
@@ -322,7 +326,16 @@ model Scene {
   projectId         String
   numero            String
   tipo              SceneEnvironment?
-  periodo           SceneShift?
+  // Texto livre normalizado em maiúscula, exatamente como veio do cabeçalho do roteiro (ex.:
+  // "MADRUGADA", "NOITE PARA MADRUGADA") — nunca comparado contra uma lista fechada. Ver
+  // classeLuz abaixo pro que alimenta cor de tira/DOOD/ordem de diária.
+  periodo           String?
+  // Só preenchido quando periodo é uma transição "X PARA Y" — a ponta final (Y). Usado na
+  // herança de classeLuz da cena seguinte quando ela é CONTÍNUO/indefinida (ver
+  // applyClasseLuzInheritance em src/lib/fdx-parser.ts).
+  periodoFim        String?
+  // Derivado de periodo (nunca digitado à mão) — ver comentário no enum ClasseLuz.
+  classeLuz         ClasseLuz        @default(INDEFINIDO)
   // Set = lugar da ficção, vem do roteiro ("RUA", "APARTAMENTO DE ANA CLARA") — texto livre.
   // Locação = lugar real onde se filma, decisão de produção — entidade própria (ver Locacao). O
   // roteiro não conhece a locação: "EXT. RUA" pode virar três ruas diferentes na produção.

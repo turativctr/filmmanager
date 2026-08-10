@@ -3,6 +3,7 @@
 import { FdxScenePreview } from "@/components/shared/fdx-scene-preview";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { FusionSuggestion } from "@/lib/fdx-parser";
 
 import type { PreviewScene, ProjectFormState } from "./types";
 
@@ -11,13 +12,17 @@ export function Step2Revisao({
   onChange,
   scenes,
   avisos,
+  sugestoesFusao,
   onToggleScene,
+  onAcceptFusion,
 }: {
   form: ProjectFormState;
   onChange: (patch: Partial<ProjectFormState>) => void;
   scenes: PreviewScene[] | null;
   avisos: string[];
+  sugestoesFusao: FusionSuggestion[];
   onToggleScene: (numero: string) => void;
+  onAcceptFusion: (setName: string, locacaoNome: string, cenasSolto: string[]) => void;
 }) {
   return (
     <div className="space-y-5">
@@ -75,7 +80,13 @@ export function Step2Revisao({
             importar um roteiro depois na aba Cenas.
           </p>
         ) : (
-          <FdxScenePreview scenes={scenes} avisos={avisos} onToggleScene={onToggleScene} />
+          <FdxScenePreview
+            scenes={scenes}
+            avisos={avisos}
+            sugestoesFusao={sugestoesFusao}
+            onToggleScene={onToggleScene}
+            onAcceptFusion={onAcceptFusion}
+          />
         )}
       </div>
     </div>

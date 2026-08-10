@@ -101,15 +101,21 @@ export async function POST(request: Request) {
           await tx.character.createMany({ data: characterRows });
         }
 
-        // Locações: uma por set distinto, nome = set, sem endereço (ver ESCOPO: preenchimento de
-        // endereço é manual, feito depois em /locacoes).
-        const setToLocacaoId = new Map<string, string>();
+        // Locações: agrupadas por locacaoNome — o "LOCAL" antes do ";" no cabeçalho ("LOCAL; SET",
+        // ver fdx-parser.ts), que é o que agrupa vários `set` distintos numa MESMA Locacao (ex.:
+        // "CASA; COZINHA" e "CASA; QUARTO" compartilham a Locacao "CASA"). Sem locacaoNome
+        // (cabeçalho sem ";"), cai pro set — locação e set têm o mesmo nome, igual ao
+        // comportamento de sempre. Sem endereço (preenchimento manual, feito depois em /locacoes).
+        const nomeToLocacaoId = new Map<string, string>();
         const locacaoRows: Prisma.LocacaoCreateManyInput[] = [];
         for (const scene of typedScenes) {
-          if (!scene.set || setToLocacaoId.has(scene.set)) continue;
+          const nome = scene.locacaoNome ?? scene.set;
+          if (!nome) continue;
+          const key = normalizeLocacaoNome(nome);
+          if (nomeToLocacaoId.has(key)) continue;
           const id = randomUUID();
-          setToLocacaoId.set(scene.set, id);
-          locacaoRows.push({ id, projectId: created.id, nome: normalizeLocacaoNome(scene.set) });
+          nomeToLocacaoId.set(key, id);
+          locacaoRows.push({ id, projectId: created.id, nome: normalizeLocacaoNome(nome) });
         }
         if (locacaoRows.length > 0) {
           await tx.locacao.createMany({ data: locacaoRows });
@@ -126,8 +132,13 @@ export async function POST(request: Request) {
             projectId: created.id,
             tipo: scene.tipo,
             periodo: scene.periodo,
+            periodoFim: scene.periodoFim,
+            classeLuz: scene.classeLuz,
             set: scene.set,
-            locacaoId: scene.set ? setToLocacaoId.get(scene.set) ?? null : null,
+            locacaoId: (() => {
+              const nome = scene.locacaoNome ?? scene.set;
+              return nome ? nomeToLocacaoId.get(normalizeLocacaoNome(nome)) ?? null : null;
+            })(),
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
             linhas: scene.linhas,

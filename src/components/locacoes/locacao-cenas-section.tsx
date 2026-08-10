@@ -17,17 +17,6 @@ import {
 
 import type { LocacaoDetailSceneRow } from "@/lib/locacao-data";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-  NOITE_PARA_DIA: "Noite para dia",
-  DIA_PARA_NOITE: "Dia para noite",
-};
-
 export function LocacaoCenasSection({
   projectId,
   locacaoId,
@@ -82,7 +71,7 @@ export function LocacaoCenasSection({
                 </TableCell>
                 <TableCell className="font-medium">{scene.numero}</TableCell>
                 <TableCell>{scene.tipo ?? "—"}</TableCell>
-                <TableCell>{scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}</TableCell>
+                <TableCell>{scene.periodo ?? "—"}</TableCell>
                 <TableCell>{scene.set ?? "—"}</TableCell>
                 <TableCell className="max-w-[220px] truncate text-muted-foreground" title={scene.sinopse ?? undefined}>
                   {scene.sinopse ?? "—"}

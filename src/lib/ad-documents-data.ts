@@ -370,7 +370,8 @@ export async function getContinuityNotesReportData(projectId: string): Promise<C
 export type EscaletaSceneRow = {
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
+  periodo: string | null;
+  classeLuz: "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
   local: string;
   sinopse: string | null;
   paginas: number;
@@ -426,15 +427,19 @@ export async function getEscaletaData(projectId: string): Promise<EscaletaData> 
   const rows: EscaletaSceneRow[] = scenes
     .map((scene) => {
       const local = formatSetLocacao(scene.set, scene.locacao?.nome ?? null);
+      // classeLuz (não o texto livre de periodo) decide a categoria — MADRUGADA/ENTARDECER/
+      // CREPÚSCULO etc. contam como "noite" igual a NOITE simples, o que o antigo `=== "NOITE"`
+      // (só o valor exato do enum) deixava passar batido pra "principal".
       let corCategoria: EscaletaSceneRow["corCategoria"] = "principal";
       if (scene.diaNarrativo === 0) corCategoria = "dia0";
-      else if (scene.periodo === "NOITE") corCategoria = "noite";
-      else if (scene.periodo === "DIA" && local !== mainLocation) corCategoria = "especial";
+      else if (scene.classeLuz === "NOITE") corCategoria = "noite";
+      else if (scene.classeLuz === "DIA" && local !== mainLocation) corCategoria = "especial";
 
       return {
         numero: scene.numero,
         tipo: scene.tipo,
         periodo: scene.periodo,
+        classeLuz: scene.classeLuz,
         local,
         sinopse: scene.sinopse,
         paginas: Number(scene.paginas),
@@ -455,7 +460,8 @@ export async function getEscaletaData(projectId: string): Promise<EscaletaData> 
 export type CastScheduleSceneStrip = {
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo: "DIA" | "NOITE" | "ENTARDECER" | "AMANHECER" | "CONTINUO" | "DEPOIS" | "NOITE_PARA_DIA" | "DIA_PARA_NOITE" | null;
+  periodo: string | null;
+  classeLuz: "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
   sinopse: string | null;
   personagens: string[];
 };
@@ -513,6 +519,7 @@ export async function getCastScheduleData(projectId: string): Promise<CastSchedu
         numero: scene.numero,
         tipo: scene.tipo,
         periodo: scene.periodo,
+        classeLuz: scene.classeLuz,
         sinopse: scene.sinopse,
         personagens: scene.cast.map((c) => getCharacterId(c, project)),
       });

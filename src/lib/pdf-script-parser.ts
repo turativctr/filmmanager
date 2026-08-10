@@ -8,7 +8,14 @@
  * valores medidos foram ~108/180/208.8/252pt, não os "padrão" 108/180/223/266).
  */
 import { suggestTempoEstimadoMin } from "@/lib/paginas";
-import { LINHAS_POR_PAGINA_PADRAO, normalizeCharacterName, PERIODO_MAP } from "@/lib/fdx-parser";
+import {
+  applyClasseLuzInheritance,
+  deriveClasseLuz,
+  detectSetFusionSuggestions,
+  isPeriodoTextoReconhecido,
+  LINHAS_POR_PAGINA_PADRAO,
+  normalizeCharacterName,
+} from "@/lib/fdx-parser";
 
 import type { FdxParseResult, FdxScene } from "@/lib/fdx-parser";
 import type { ExtractedPage, Line, RawItem } from "@/lib/pdf-script-types";
@@ -192,24 +199,27 @@ function parseHeadingBody(raw: string): {
   tipo: FdxScene["tipo"];
   set: string | null;
   locacaoNome: string | null;
-  periodo: FdxScene["periodo"];
+  periodo: string | null;
+  periodoFim: string | null;
+  classeLuz: FdxScene["classeLuz"];
 } {
   const hasTipoPrefix = TIPO_PREFIX_PATTERN.test(raw);
   const tipo: FdxScene["tipo"] = hasTipoPrefix ? (/^EXT/i.test(raw) ? "EXT" : "INT") : null;
   const body = (hasTipoPrefix ? raw.replace(TIPO_PREFIX_PATTERN, "") : raw).trim() || raw;
 
+  // O que vem depois do ÚLTIMO separador é SEMPRE período, sem gate contra lista fechada — ver
+  // o mesmo raciocínio (e o defeito que isso corrige) em parseHeading/fdx-parser.ts. Texto não
+  // reconhecido é preservado aqui e classificado como INDEFINIDO por deriveClasseLuz, nunca
+  // devolvido pro nome do local.
   let local = body;
-  let periodo: FdxScene["periodo"] = null;
+  let periodoTexto: string | null = null;
   const matches = [...body.matchAll(LOCAL_PERIODO_SEPARATOR)];
   if (matches.length > 0) {
     const last = matches[matches.length - 1];
     const before = body.slice(0, last.index ?? 0).trim();
     const after = body.slice((last.index ?? 0) + last[0].length).trim();
-    const mapped = PERIODO_MAP[after.toUpperCase()];
-    if (mapped) {
-      local = before;
-      periodo = mapped;
-    }
+    local = before;
+    periodoTexto = after ? after.toUpperCase() : null;
   }
 
   // Convenção "LOCAL; SET" (ver comentário no topo do arquivo e em locacao-import.ts) — o que
@@ -218,14 +228,10 @@ function parseHeadingBody(raw: string): {
   const semicolon = local.indexOf(";");
   const locacaoNome = semicolon >= 0 ? local.slice(0, semicolon).trim().toUpperCase() || null : null;
   const set = (semicolon >= 0 ? local.slice(semicolon + 1).trim() : local).toUpperCase() || null;
+  const { classeLuz, periodoFim } = deriveClasseLuz(periodoTexto);
 
-  return { tipo, set, locacaoNome: locacaoNome ?? set, periodo };
+  return { tipo, set, locacaoNome: locacaoNome ?? set, periodo: periodoTexto, periodoFim, classeLuz };
 }
-
-// Uma cena que atravessa de um período pro outro (ex.: "NOITE PARA DIA") tem consequência real de
-// produção — luz de dois momentos distintos — e precisa aparecer distinta de DIA/NOITE simples.
-// A checagem acima já cobre isso: "NOITE PARA DIA"/"DIA PARA NOITE" são chaves normais do
-// PERIODO_MAP (ver fdx-parser.ts), então caem no mesmo caminho de split-por-separador.
 
 // Pistas de descrição de pessoa (idade/nacionalidade/parentesco) — ver comentário na função que
 // usa este padrão. Não é uma lista fechada; é propositalmente ampla pra favorecer recall (melhor
@@ -472,7 +478,7 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
       if (inAction) {
         const { text, leftNumber, rightNumber } = stripSceneNumbers(line.items, page.pageWidth, actionCluster.center);
         if (TIPO_PREFIX_PATTERN.test(text)) {
-          const { tipo, set, locacaoNome, periodo } = parseHeadingBody(text);
+          const { tipo, set, locacaoNome, periodo, periodoFim, classeLuz } = parseHeadingBody(text);
           const numero = leftNumber ?? rightNumber;
           sequencial += 1;
           accumulators.push({
@@ -481,6 +487,8 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
               numeroGerado: numero == null,
               tipo,
               periodo,
+              periodoFim,
+              classeLuz,
               set,
               locacaoNome,
               sinopse: null,
@@ -571,7 +579,7 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
         if (!nome || nome.length < 2) continue;
         if (knownNamesUpper.has(nome)) continue;
         if (nome === acc.scene.set || nome === acc.scene.locacaoNome) continue;
-        if (PERIODO_MAP[nome]) continue;
+        if (isPeriodoTextoReconhecido(nome)) continue;
         if (MONTAGEM_PATTERN.test(nome)) continue;
         const isPerson =
           PERSON_DESCRIPTOR_PATTERN.test(after) ||
@@ -588,13 +596,25 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
   }
 
   const scenes = accumulators.map((a) => a.scene);
+
+  // Ordem do documento importa pra herança (cena N pode herdar de N-1) — roda antes de contar
+  // os avisos, senão "sem herança" contaria cenas que a própria herança já resolveu.
+  const semHeranca = applyClasseLuzInheritance(scenes);
+
   const avisos: string[] = [];
   const semPeriodo = scenes.filter((s) => s.periodo == null).length;
+  const naoReconhecidas = scenes.filter((s) => s.periodo != null && !isPeriodoTextoReconhecido(s.periodo)).length;
   const semNumero = scenes.filter((s) => s.numeroGerado).length;
   const semFalaTotal = scenes.reduce((sum, s) => sum + (s.personagensSemFala?.length ?? 0), 0);
   if (semPeriodo > 0) avisos.push(`${semPeriodo} cenas sem período reconhecido`);
+  if (naoReconhecidas > 0)
+    avisos.push(`${naoReconhecidas} cenas com período não reconhecido — confira classificação dia/noite`);
+  if (semHeranca > 0)
+    avisos.push(`${semHeranca} cenas sem período determinável (ex.: 1ª cena do roteiro é "contínuo") — revise manualmente`);
   if (semNumero > 0) avisos.push(`${semNumero} cenas sem número reconhecido no PDF`);
   if (semFalaTotal > 0) avisos.push(`${semFalaTotal} personagens detectados sem fala — revise antes de confirmar`);
 
-  return { scenes, avisos };
+  const sugestoesFusao = detectSetFusionSuggestions(scenes);
+
+  return { scenes, avisos, sugestoesFusao };
 }

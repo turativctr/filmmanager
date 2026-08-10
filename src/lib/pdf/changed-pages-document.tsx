@@ -8,17 +8,6 @@ import { colors, kit, StandardFooter, SummaryCard, SummaryCardsRow } from "@/lib
 import { revisionColorHex } from "@/lib/revision-colors";
 import { diffSinopse } from "@/lib/script-diff";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-  NOITE_PARA_DIA: "Noite para dia",
-  DIA_PARA_NOITE: "Dia para noite",
-};
-
 const styles = StyleSheet.create({
   header: { marginBottom: 12 },
   headerProject: { fontSize: 14, fontWeight: 700, color: colors.black },
@@ -95,7 +84,7 @@ function SceneSnapshot({
   return (
     <View style={styles.sceneBody}>
       <Text style={styles.metaLine}>
-        {scene.tipo ?? "—"} · {scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"} ·{" "}
+        {scene.tipo ?? "—"} · {scene.periodo ?? "—"} ·{" "}
         {scene.locacao || scene.set || "—"} ·{" "}
         {formatPaginas(scene.paginas)}
       </Text>

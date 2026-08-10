@@ -378,7 +378,7 @@ function HoraAHoraBox({
     <View style={{ borderWidth: 0.75, borderColor: colors.borderV2, marginBottom: 6 }} wrap={false}>
       <View style={styles.hhBoxHeader}>
         <Text style={styles.hhBoxHeaderText}>
-          Cena {block.numero} · {block.tipo ?? "—"} · {periodoAbrev(block.periodo)} · {block.setLocacaoDisplay} —{" "}
+          Cena {block.numero} · {block.tipo ?? "—"} · {periodoAbrev(block.classeLuz)} · {block.setLocacaoDisplay} —{" "}
           {block.sinopseAD || "—"} · {castLabel}
         </Text>
       </View>

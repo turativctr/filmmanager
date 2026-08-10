@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
+import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { parsePaginas } from "@/lib/paginas";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
@@ -68,11 +69,18 @@ export async function PATCH(
   const newPaginas = parsePaginas(paginas)!;
   const paginasChanged = newPaginas !== Number(scene.paginas);
   const tempoChanged = data.tempoEstimadoMin !== undefined && data.tempoEstimadoMin !== scene.tempoEstimadoMin;
+  // classeLuz/periodoFim são sempre re-derivados do periodo enviado — nunca aceitos direto do
+  // cliente (ver comentário em validation/scene.ts). Sem contexto de cena anterior aqui (edição
+  // avulsa, fora da ordem do roteiro), então sem herança: período tipo "CONTÍNUO" digitado à mão
+  // fica INDEFINIDO até o AD corrigir, igual ao caso de 1ª cena do roteiro na importação.
+  const { classeLuz, periodoFim } = deriveClasseLuz(data.periodo ?? null);
 
   const updated = await prisma.scene.update({
     where: { id: scene.id },
     data: {
       ...data,
+      classeLuz,
+      periodoFim,
       paginas: newPaginas.toString(),
       ...(paginasChanged || tempoChanged ? { paginasEditadoManualmente: true, linhas: null } : {}),
       ...(characterIds

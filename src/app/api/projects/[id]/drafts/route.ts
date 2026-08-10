@@ -163,18 +163,28 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
 
       // Nunca recria nem reponta locações já existentes — o trabalho de dividir/unificar que o AD
-      // já fez não pode ser desfeito por uma reimportação. Uma consulta só pra achar as que já
-      // existem (por set — esta rota não distingue locacaoNome, igual a /api/projects), depois um
+      // já fez não pode ser desfeito por uma reimportação. Prefere locacaoNome (o "LOCAL" antes do
+      // ";" no cabeçalho — ver fdx-parser.ts) igual a import/fdx/confirm/route.ts; cai pro set só
+      // pra cena sem locacaoNome (caso legado). Uma consulta por nome, uma por set, depois um
       // createMany só pras que faltam.
+      const nomeToLocacaoId = new Map<string, string>();
       const setToLocacaoId = new Map<string, string>();
-      const neededSets = new Set<string>();
+      const neededByNome = new Set<string>();
+      const neededBySet = new Set<string>();
       for (const scene of scenesToProcess) {
         if (updateByNumero.get(scene.numero)?.existingLocacaoId) continue;
-        if (scene.set) neededSets.add(scene.set);
+        if (scene.locacaoNome) neededByNome.add(normalizeLocacaoNome(scene.locacaoNome));
+        else if (scene.set) neededBySet.add(scene.set);
       }
-      if (neededSets.size > 0) {
+      if (neededByNome.size > 0) {
+        const found = await tx.locacao.findMany({
+          where: { projectId: params.id, nome: { in: [...neededByNome] } },
+        });
+        for (const l of found) nomeToLocacaoId.set(l.nome, l.id);
+      }
+      if (neededBySet.size > 0) {
         const found = await tx.scene.findMany({
-          where: { projectId: params.id, set: { in: [...neededSets] }, locacaoId: { not: null } },
+          where: { projectId: params.id, set: { in: [...neededBySet] }, locacaoId: { not: null } },
           select: { set: true, locacaoId: true },
         });
         for (const s of found) {
@@ -182,7 +192,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
         }
       }
       const newLocacaoRows: Prisma.LocacaoCreateManyInput[] = [];
-      for (const set of neededSets) {
+      for (const nome of neededByNome) {
+        if (nomeToLocacaoId.has(nome)) continue;
+        const id = randomUUID();
+        nomeToLocacaoId.set(nome, id);
+        newLocacaoRows.push({ id, projectId: params.id, nome });
+      }
+      for (const set of neededBySet) {
         if (setToLocacaoId.has(set)) continue;
         const id = randomUUID();
         setToLocacaoId.set(set, id);
@@ -194,6 +210,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
       function resolveLocacaoId(scene: FdxScene, existingLocacaoId: string | null): string | null {
         if (existingLocacaoId) return existingLocacaoId;
+        if (scene.locacaoNome) return nomeToLocacaoId.get(normalizeLocacaoNome(scene.locacaoNome)) ?? null;
         if (scene.set) return setToLocacaoId.get(scene.set) ?? null;
         return null;
       }
@@ -209,6 +226,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
             projectId: params.id,
             tipo: scene.tipo,
             periodo: scene.periodo,
+            periodoFim: scene.periodoFim,
+            classeLuz: scene.classeLuz,
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, null),
             sinopse: scene.sinopse,
@@ -230,6 +249,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
           data: {
             tipo: scene.tipo,
             periodo: scene.periodo,
+            periodoFim: scene.periodoFim,
+            classeLuz: scene.classeLuz,
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, existingLocacaoId),
             sinopse: scene.sinopse,

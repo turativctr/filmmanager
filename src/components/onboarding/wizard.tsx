@@ -11,7 +11,7 @@ import {
   PdfScriptStructureError,
   SCRIPT_OPERATION_TIMEOUT_MS,
 } from "@/lib/build-script-form-data";
-import type { FdxScene, FdxTitlePage } from "@/lib/fdx-parser";
+import type { FdxScene, FdxTitlePage, FusionSuggestion } from "@/lib/fdx-parser";
 import { cn } from "@/lib/utils";
 
 import { Step1Dados } from "./step-1-dados";
@@ -50,6 +50,7 @@ export function OnboardingWizard() {
   const [file, setFile] = useState<File | null>(null);
   const [scenes, setScenes] = useState<PreviewScene[] | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
+  const [sugestoesFusao, setSugestoesFusao] = useState<FusionSuggestion[]>([]);
   const [parsing, setParsing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +59,22 @@ export function OnboardingWizard() {
     setFile(next);
     setScenes(null);
     setAvisos([]);
+    setSugestoesFusao([]);
   }
 
   function toggleScene(numero: string) {
     setScenes((prev) => (prev ? prev.map((s) => (s.numero === numero ? { ...s, selected: !s.selected } : s)) : prev));
+  }
+
+  // Ver o mesmo comentário em fdx-import-dialog.tsx — nunca decide sozinho, só aplica a fusão
+  // explicitamente confirmada pelo AD.
+  function acceptFusion(setName: string, locacaoNome: string, cenasSolto: string[]) {
+    setScenes((prev) => (prev ? prev.map((s) => (cenasSolto.includes(s.numero) ? { ...s, locacaoNome } : s)) : prev));
+    setSugestoesFusao((prev) =>
+      prev
+        .map((s) => (s.set === setName ? { ...s, aninhadoEm: s.aninhadoEm.filter((p) => p.locacaoNome !== locacaoNome) } : s))
+        .filter((s) => s.aninhadoEm.length > 0)
+    );
   }
 
   async function handleAdvanceFromStep1() {
@@ -102,6 +115,7 @@ export function OnboardingWizard() {
 
       setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
       setAvisos((data.avisos as string[]) ?? []);
+      setSugestoesFusao((data.sugestoesFusao as FusionSuggestion[]) ?? []);
       setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
       setStep(2);
     } catch (err) {
@@ -238,7 +252,9 @@ export function OnboardingWizard() {
               onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
               scenes={scenes}
               avisos={avisos}
+              sugestoesFusao={sugestoesFusao}
               onToggleScene={toggleScene}
+              onAcceptFusion={acceptFusion}
             />
           )}
           {step === 3 && <Step3Confirmacao form={form} scenes={scenes} />}

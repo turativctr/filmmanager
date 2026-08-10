@@ -19,17 +19,6 @@ import {
 import { formatPaginas } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
-const PERIODO_LABEL: Record<string, string> = {
-  DIA: "Dia",
-  NOITE: "Noite",
-  ENTARDECER: "Entardecer",
-  AMANHECER: "Amanhecer",
-  CONTINUO: "Contínuo",
-  DEPOIS: "Depois",
-  NOITE_PARA_DIA: "Noite para dia",
-  DIA_PARA_NOITE: "Dia para noite",
-};
-
 type CharacterOption = {
   id: string;
   idCurto: string;
@@ -41,16 +30,9 @@ type SceneRow = {
   id: string;
   numero: string;
   tipo: "INT" | "EXT" | null;
-  periodo:
-    | "DIA"
-    | "NOITE"
-    | "ENTARDECER"
-    | "AMANHECER"
-    | "CONTINUO"
-    | "DEPOIS"
-    | "NOITE_PARA_DIA"
-    | "DIA_PARA_NOITE"
-    | null;
+  // Texto livre, exibido tal qual — já é português legível (ver comentário em
+  // FdxScene.periodo, src/lib/fdx-parser.ts), diferente do antigo enum que precisava de tradução.
+  periodo: string | null;
   set: string | null;
   locacao: { id: string; nome: string } | null;
   sinopse: string | null;
@@ -115,7 +97,7 @@ export function ScenesTable({
               )}
             </TableCell>
             <TableCell>{scene.tipo ?? "—"}</TableCell>
-            <TableCell>{scene.periodo ? PERIODO_LABEL[scene.periodo] ?? scene.periodo : "—"}</TableCell>
+            <TableCell>{scene.periodo ?? "—"}</TableCell>
             <TableCell>{scene.set ?? "—"}</TableCell>
             <TableCell>{scene.locacao?.nome ?? "—"}</TableCell>
             <TableCell className="max-w-[220px] truncate" title={scene.sinopse ?? undefined}>

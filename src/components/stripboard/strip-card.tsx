@@ -16,24 +16,24 @@ import { cn } from "@/lib/utils";
 import type { ComputedSchedule } from "@/lib/schedule";
 import type { StripItem } from "./types";
 
-/** Cor de destaque (borda esquerda) por período — a tira é sólida (bg-surface) desde a redução de
- *  largura; o período deixou de tingir o card inteiro e virou só essa faixa de 3px. */
-const PERIODO_BORDER: Record<string, string> = {
+/** Cor de destaque (borda esquerda) por classeLuz — a tira é sólida (bg-surface) desde a redução
+ *  de largura; o período deixou de tingir o card inteiro e virou só essa faixa de 3px. classeLuz
+ *  (não o texto livre de `periodo`) é o que decide a cor: MADRUGADA/ENTARDECER/CREPÚSCULO etc.
+ *  são todos NOITE pra esse fim — é o gaffer que não distingue entre eles, só a AD (que consulta
+ *  o texto de `periodo` mesmo, exibido ao lado). INDEFINIDO não ganha cor (sem faixa). */
+const CLASSE_LUZ_BORDER: Record<"DIA" | "NOITE", string> = {
   DIA: "#2563EB",
   NOITE: "#B45309",
-  ENTARDECER: "#7C3AED",
-  AMANHECER: "#EA580C",
-  CONTINUO: "#64748B",
-  DEPOIS: "#64748B",
 };
 
-// Cenas que atravessam de um período pro outro (NOITE_PARA_DIA/DIA_PARA_NOITE) ganham uma
-// faixa em degradê entre as duas cores em vez de uma única — sinaliza visualmente que a
-// filmagem precisa de dois momentos de luz distintos, sem inventar uma terceira cor "neutra".
-const PERIODO_BORDER_GRADIENT: Record<string, string> = {
-  NOITE_PARA_DIA: `linear-gradient(to bottom, ${PERIODO_BORDER.NOITE}, ${PERIODO_BORDER.DIA})`,
-  DIA_PARA_NOITE: `linear-gradient(to bottom, ${PERIODO_BORDER.DIA}, ${PERIODO_BORDER.NOITE})`,
-};
+function gradientFor(classeLuzFim: "DIA" | "NOITE" | null): string {
+  // Sem classeLuzFim resolvido (periodoFim vazio ou também não classificável) — não dá pra saber
+  // a direção do degradê; cai pra NOITE→DIA, a direção mais comum (madrugada virando dia), em vez
+  // de inventar uma terceira cor neutra.
+  const fim = classeLuzFim ?? "DIA";
+  const inicio = fim === "DIA" ? "NOITE" : "DIA";
+  return `linear-gradient(to bottom, ${CLASSE_LUZ_BORDER[inicio]}, ${CLASSE_LUZ_BORDER[fim]})`;
+}
 
 const MAX_CAST_BADGES = 4;
 
@@ -97,9 +97,10 @@ export function StripCard({
   }
 
   const canExpand = Boolean(projectId);
-  const periodo = item.scene.periodo;
-  const borderGradient = !neutral && periodo ? PERIODO_BORDER_GRADIENT[periodo] : undefined;
-  const borderColor = !neutral && periodo && !borderGradient ? PERIODO_BORDER[periodo] : undefined;
+  const classeLuz = item.scene.classeLuz;
+  const borderGradient = !neutral && classeLuz === "TRANSICAO" ? gradientFor(item.scene.classeLuzFim) : undefined;
+  const borderColor =
+    !neutral && (classeLuz === "DIA" || classeLuz === "NOITE") ? CLASSE_LUZ_BORDER[classeLuz] : undefined;
 
   const visibleCast = characterLabels.slice(0, MAX_CAST_BADGES);
   const overflowCast = characterLabels.length - visibleCast.length;
@@ -285,12 +286,13 @@ export function StripCard({
               sceneId={item.sceneId}
               shootDayId={shootDayId}
               periodoColor={
-                item.scene.periodo
-                  ? PERIODO_BORDER[item.scene.periodo] ??
-                    // Painel de planos usa uma faixa sólida (sem degradê) — cenas em transição
-                    // mostram a cor do período de DESTINO (pra onde a cena vai).
-                    (item.scene.periodo === "NOITE_PARA_DIA" ? PERIODO_BORDER.DIA : PERIODO_BORDER.NOITE)
-                  : undefined
+                // Painel de planos usa uma faixa sólida (sem degradê) — cena em transição mostra a
+                // cor do período de DESTINO (pra onde a cena vai), não a de origem.
+                classeLuz === "DIA" || classeLuz === "NOITE"
+                  ? CLASSE_LUZ_BORDER[classeLuz]
+                  : classeLuz === "TRANSICAO"
+                    ? CLASSE_LUZ_BORDER[item.scene.classeLuzFim ?? "NOITE"]
+                    : undefined
               }
               initialObservacoes={item.observacoes}
               initialObservacoesAutoGeradas={item.observacoesAutoGeradas}

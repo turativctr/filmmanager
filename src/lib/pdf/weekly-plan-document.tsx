@@ -2,7 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import type { WeeklyPlanData } from "@/lib/ad-documents-data";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { colors, kit, StandardFooter, StandardHeader, Table, Td, Tr } from "@/lib/pdf/kit";
 
 const styles = StyleSheet.create({
@@ -52,7 +52,7 @@ export function WeeklyPlanDocument({ data }: { data: WeeklyPlanData }) {
                   <View style={styles.dayBody}>
                     <Text style={styles.dayTotais}>
                       {day.cenas.length} cena{day.cenas.length === 1 ? "" : "s"} · {formatPaginas(totalPaginas)} oitavas
-                      · {totalMin} min estimados
+                      · {formatTempoEstimado(totalMin)} de filmagem estimada
                     </Text>
                     <Table>
                       <Tr header dark>

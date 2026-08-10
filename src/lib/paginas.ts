@@ -56,3 +56,17 @@ export function isValidPaginasInput(input: string): boolean {
 export function suggestTempoEstimadoMin(paginas: number): number {
   return Math.round(paginas * 8 * 5);
 }
+
+/** Formata minutos de filmagem estimada em h/min — "210" -> "3h30", "45" -> "45min", "60" ->
+ *  "1h". "X min estimados" ao lado de contagem de cenas/páginas se lê como duração do FILME
+ *  (runtime), quando na verdade é tempo de câmera ligada em set pra cobrir aquelas cenas —
+ *  formatar como duração (h/min) em vez de só um número de minutos evita essa leitura errada. */
+export function formatTempoEstimado(min: number): string {
+  if (!Number.isFinite(min) || min <= 0) return "0min";
+  const totalMin = Math.round(min);
+  const hours = Math.floor(totalMin / 60);
+  const minutes = totalMin % 60;
+  if (hours === 0) return `${minutes}min`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h${String(minutes).padStart(2, "0")}`;
+}

@@ -41,6 +41,10 @@ export type FdxScene = {
   // esses como descartáveis antes de confirmar, já que a heurística pode errar.
   personagensSemFala?: string[];
   paginas: number;
+  // Linhas brutas contadas na importação — o dado de origem por trás de `paginas` (ver
+  // countLinhasSimulado aqui e o cálculo geométrico em pdf-script-parser.ts). Guardado em Scene
+  // pra permitir recalcular oitavos sem reimportar, se a regra de contagem mudar de novo.
+  linhas: number;
   tempoEstimadoMinSugerido: number;
 };
 
@@ -99,9 +103,27 @@ function isRealHeadingText(text: string): boolean {
   return TIPO_PREFIX_PATTERN.test(stripInsertPrefix(text));
 }
 
-const ACTION_CHARS_PER_LINE = 60;
-const DIALOGUE_CHARS_PER_LINE = 35;
-const LINES_PER_EIGHTH = 7;
+// Simula a quebra de linha do render em Courier 12 (a fonte monoespaçada padrão de roteiro) —
+// não há geometria real num .fdx/.wdz (texto puro, sem coordenadas), então medimos por
+// aproximação: largura útil em caracteres por tipo de parágrafo, mais a linha em branco que a
+// formatação de roteiro insere ANTES de determinados tipos (nunca depois — Parenthetical/Dialogue
+// colam direto no que vem antes). Calibrado contra um roteiro real exportado do Final Draft 12 —
+// ver scripts/verify-eighths-fixture.ts e o fixture em scripts/fixtures/.
+const CHARS_PER_LINE_BY_TYPE: Record<string, number> = {
+  "Scene Heading": 60,
+  Action: 60,
+  Character: 33,
+  Parenthetical: 25,
+  Dialogue: 35,
+};
+// Tipos de parágrafo do Final Draft fora dessa lista (ex.: "Shot", "General") não têm largura
+// calibrada — tratamos como Action (prosa comum), o fallback mais seguro.
+const DEFAULT_CHARS_PER_LINE = CHARS_PER_LINE_BY_TYPE.Action;
+const BLANK_LINE_BEFORE_TYPES = new Set(["Scene Heading", "Action", "Character", "Transition"]);
+// Página de roteiro em Courier 12, convenção .fdx (margens padrão do Final Draft) — diferente do
+// valor medido por página no PDF (ver PAGE_TOP/PAGE_BOTTOM em pdf-script-parser.ts), que reflete
+// a geometria real do arquivo específico em vez de uma convenção fixa.
+const FDX_LINES_PER_PAGE = 55;
 
 function asArray<T>(value: T | T[] | undefined | null): T[] {
   if (value == null) return [];
@@ -170,14 +192,48 @@ function characterArcBeatNames(paragraph: FdxNode): string[] {
     .filter((name) => name.length > 0);
 }
 
-function countLinhas(paragraphs: FdxNode[]): number {
+/** Quantas linhas físicas um texto ocupa quebrado por PALAVRA numa largura útil de N caracteres —
+ *  nunca divide uma palavra ao meio (diferente de `text.length / largura`, que erra a cada
+ *  palavra cortada no limite e acumula erro cena após cena). Uma palavra sozinha maior que a
+ *  largura ainda ocupa só 1 linha (ela transborda, mas não quebra). */
+function wrapLineCount(text: string, chars: number): number {
+  const words = text.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length === 0) return 0;
+  let lines = 1;
+  let currentLen = 0;
+  for (const word of words) {
+    const candidateLen = currentLen === 0 ? word.length : currentLen + 1 + word.length;
+    if (candidateLen > chars && currentLen > 0) {
+      lines += 1;
+      currentLen = word.length;
+    } else {
+      currentLen = candidateLen;
+    }
+  }
+  return lines;
+}
+
+/** Oitavo mede ESPAÇO DE PÁGINA, não volume de texto — conta TODO parágrafo da cena (cabeçalho,
+ *  ação, personagem, parêntese, diálogo, transição), não só ação/diálogo, e soma a linha em
+ *  branco que a formatação padrão insere antes de cabeçalho/ação/personagem/transição (parêntese
+ *  e diálogo colam direto no parágrafo anterior, sem branco). Sem isso, cenas com bastante diálogo
+ *  curto (muita troca de personagem, muitos parênteses, muita linha em branco) saem contadas bem
+ *  abaixo do que realmente ocupam na página impressa. */
+function countLinhasSimulado(paragraphs: FdxNode[]): number {
   let linhas = 0;
   for (const p of paragraphs) {
     const text = paragraphText(p);
     if (!text) continue;
     const type = paragraphType(p);
-    const charsPerLine = type === "Dialogue" ? DIALOGUE_CHARS_PER_LINE : ACTION_CHARS_PER_LINE;
-    linhas += Math.max(1, Math.ceil(text.length / charsPerLine));
+    if (BLANK_LINE_BEFORE_TYPES.has(type)) linhas += 1;
+    if (type === "Transition") {
+      // Sem regra de largura própria (linha curta por convenção, ex.: "CORTA PARA:") — não
+      // quebra, sempre 1 linha.
+      linhas += 1;
+    } else {
+      const chars = CHARS_PER_LINE_BY_TYPE[type] ?? DEFAULT_CHARS_PER_LINE;
+      linhas += wrapLineCount(text, chars);
+    }
   }
   return linhas;
 }
@@ -193,8 +249,9 @@ function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]
   const firstAction = actionParagraphs.length > 0 ? paragraphText(actionParagraphs[0]) : "";
   const sinopse = firstAction ? (firstAction.length > 200 ? `${firstAction.slice(0, 200).trimEnd()}…` : firstAction) : null;
 
-  const linhas = countLinhas([...actionParagraphs, ...dialogueParagraphs]);
-  const eighths = Math.max(1, Math.round(linhas / LINES_PER_EIGHTH));
+  const linhas = countLinhasSimulado(paragraphs);
+  const linhasPorOitavo = FDX_LINES_PER_PAGE / 8;
+  const eighths = Math.max(1, Math.round(linhas / linhasPorOitavo));
   const paginas = eighths / 8;
 
   const personagens = [
@@ -217,6 +274,7 @@ function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]
     sinopse,
     personagens,
     paginas,
+    linhas,
     tempoEstimadoMinSugerido: suggestTempoEstimadoMin(paginas),
   };
 }

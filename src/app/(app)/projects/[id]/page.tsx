@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WelcomeTourModal } from "@/components/tour/welcome-tour-modal";
 import { authOptions } from "@/lib/auth";
 import { formatHHhOrDash } from "@/lib/schedule";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { computeProjectSteps } from "@/lib/project-step";
 import { getProjectHomeState, type TaskRow } from "@/lib/project-home";
 import { prisma } from "@/lib/prisma";
@@ -83,7 +83,14 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
   const [project, currentUser, state] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
-      select: { titulo: true, diretor: true, producao: true, status: true, arquivado: true },
+      select: {
+        titulo: true,
+        diretor: true,
+        producao: true,
+        status: true,
+        arquivado: true,
+        oitavosDesatualizados: true,
+      },
     }),
     session ? prisma.user.findUnique({ where: { id: session.user.id }, select: { tourConcluido: true } }) : null,
     getProjectHomeState(params.id),
@@ -104,6 +111,13 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
           {[project.diretor && `Direção: ${project.diretor}`, project.producao].filter(Boolean).join(" · ")}
         </p>
       </div>
+
+      {project.oitavosDesatualizados && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Contagem de oitavos desatualizada — reimporte o roteiro para recalcular páginas e tempo
+          estimado das cenas com a regra de contagem corrigida.
+        </div>
+      )}
 
       {state.kind === "A" && steps && (
         <div className="space-y-4">
@@ -165,8 +179,8 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
             </Card>
             <Card>
               <CardContent className="p-4">
-                <p className="text-2xl font-semibold">{state.totalTempoMin}</p>
-                <p className="text-xs text-muted-foreground">min estimados</p>
+                <p className="text-2xl font-semibold">{formatTempoEstimado(state.totalTempoMin)}</p>
+                <p className="text-xs text-muted-foreground">de filmagem estimada</p>
               </CardContent>
             </Card>
             <Card>

@@ -13,6 +13,7 @@ export const fdxSceneSchema = z.object({
   personagens: z.array(z.string()),
   personagensSemFala: z.array(z.string()).optional(),
   paginas: z.number().nonnegative(),
+  linhas: z.number().int().nonnegative(),
   tempoEstimadoMinSugerido: z.number().int().nonnegative(),
 });
 

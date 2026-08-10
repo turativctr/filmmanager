@@ -9,7 +9,7 @@ import { ScenePlanosPanel } from "@/components/stripboard/scene-planos-panel";
 import { ShotListDrawer } from "@/components/stripboard/shot-list-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { formatHHh } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 
@@ -265,9 +265,9 @@ export function StripCard({
             ) : null}
             <span>
               {hasShots
-                ? `${item.shotsSummary!.totalMin} min estimados`
+                ? `${formatTempoEstimado(item.shotsSummary!.totalMin)} estimado`
                 : item.scene.tempoEstimadoMin != null
-                  ? `${item.scene.tempoEstimadoMin} min estimados`
+                  ? `${formatTempoEstimado(item.scene.tempoEstimadoMin)} estimado`
                   : "Tempo estimado não definido"}
             </span>
             {item.scene.diaNarrativo != null && <Badge variant="outline">Dia {item.scene.diaNarrativo}</Badge>}

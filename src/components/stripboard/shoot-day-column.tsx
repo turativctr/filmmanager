@@ -21,7 +21,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { getCharacterId } from "@/lib/character-id";
 import { detectSceneConflicts } from "@/lib/conflicts";
 import { gerarNomeArquivo } from "@/lib/filename";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import {
   computeBlockSchedule,
   formatHHh,
@@ -185,7 +185,7 @@ export function ShootDayColumn({
             </h3>
             <p className="text-sm text-muted-foreground">
               {day.chamadaGeral && `Chamada geral: ${formatHHh(day.chamadaGeral)} · `}
-              {formatPaginas(totalPaginas)} páginas · {totalMinutos} min estimados
+              {formatPaginas(totalPaginas)} páginas · {formatTempoEstimado(totalMinutos)} de filmagem estimada
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1">

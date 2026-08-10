@@ -60,11 +60,21 @@ export async function PATCH(
     }
   }
 
+  // Edição manual de paginas/tempoEstimadoMin — igual ao padrão de
+  // SceneShootDay.observacoesAutoGeradas: uma vez editado à mão, a reimportação de um novo draft
+  // (import/fdx/confirm, drafts) passa a preservar os três campos em vez de recalcular por cima.
+  // `linhas` (a contagem bruta por trás de `paginas`) vira null porque deixa de corresponder ao
+  // valor editado.
+  const newPaginas = parsePaginas(paginas)!;
+  const paginasChanged = newPaginas !== Number(scene.paginas);
+  const tempoChanged = data.tempoEstimadoMin !== undefined && data.tempoEstimadoMin !== scene.tempoEstimadoMin;
+
   const updated = await prisma.scene.update({
     where: { id: scene.id },
     data: {
       ...data,
-      paginas: parsePaginas(paginas)!.toString(),
+      paginas: newPaginas.toString(),
+      ...(paginasChanged || tempoChanged ? { paginasEditadoManualmente: true, linhas: null } : {}),
       ...(characterIds
         ? {
             cast: {

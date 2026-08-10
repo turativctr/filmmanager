@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { getCharacterId } from "@/lib/character-id";
 import { gerarNomeArquivo } from "@/lib/filename";
 import type { MakeEntry, QuickChangeAlert } from "@/lib/ordem-do-dia";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import type { SceneShootDayStatusValue } from "@/lib/scene-progress";
 import { minutesToTime } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
@@ -215,8 +215,8 @@ export function ShootDayDashboard({
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Tempo estimado</p>
-            <p className="text-2xl font-semibold">{totalMinutos} min</p>
+            <p className="text-xs text-muted-foreground">Filmagem estimada</p>
+            <p className="text-2xl font-semibold">{formatTempoEstimado(totalMinutos)}</p>
           </CardContent>
         </Card>
         <Card>

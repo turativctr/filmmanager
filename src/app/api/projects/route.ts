@@ -130,6 +130,7 @@ export async function POST(request: Request) {
             locacaoId: scene.set ? setToLocacaoId.get(scene.set) ?? null : null,
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
+            linhas: scene.linhas,
             tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
           };
         });

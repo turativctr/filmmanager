@@ -12,7 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "verify:themes": "node scripts/verify-theme-tokens.mjs"
+    "verify:themes": "node scripts/verify-theme-tokens.mjs",
+    "verify:eighths": "tsx scripts/verify-eighths-fixture.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

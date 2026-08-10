@@ -115,12 +115,22 @@ export async function POST(request: Request, { params }: { params: { id: string 
         (d): d is Extract<typeof d, { tipo: "ADICIONADA" | "MODIFICADA" }> => d.tipo !== "REMOVIDA"
       );
       const toCreate: FdxScene[] = [];
-      const toUpdate: { scene: FdxScene; existingId: string; existingLocacaoId: string | null }[] = [];
+      const toUpdate: {
+        scene: FdxScene;
+        existingId: string;
+        existingLocacaoId: string | null;
+        paginasEditadoManualmente: boolean;
+      }[] = [];
       for (const diff of writableDiffs) {
         const newScene = diff.tipo === "ADICIONADA" ? diff.scene : newSceneByNumero.get(diff.numero)!;
         const existing = existingByNumero.get(diff.numero);
         if (existing) {
-          toUpdate.push({ scene: newScene, existingId: existing.id, existingLocacaoId: existing.locacaoId });
+          toUpdate.push({
+            scene: newScene,
+            existingId: existing.id,
+            existingLocacaoId: existing.locacaoId,
+            paginasEditadoManualmente: existing.paginasEditadoManualmente,
+          });
         } else {
           toCreate.push(newScene);
         }
@@ -203,6 +213,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             locacaoId: resolveLocacaoId(scene, null),
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
+            linhas: scene.linhas,
             tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
             omitida: false,
           };
@@ -212,7 +223,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
       // Dado por linha demais pra agrupar num createMany — continua update por update, mas sem
       // mais o findUnique nem o deleteMany individuais que existiam dentro deste loop antes.
-      for (const { scene, existingId, existingLocacaoId } of toUpdate) {
+      for (const { scene, existingId, existingLocacaoId, paginasEditadoManualmente } of toUpdate) {
         sceneIdByNumero.set(scene.numero, existingId);
         await tx.scene.update({
           where: { id: existingId },
@@ -222,8 +233,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, existingLocacaoId),
             sinopse: scene.sinopse,
-            paginas: scene.paginas.toString(),
-            tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+            // Nunca sobrescreve oitavos/tempo/linhas de uma cena editada manualmente — a
+            // reimportação atualiza os outros campos normalmente, só esses três ficam intocados.
+            ...(paginasEditadoManualmente
+              ? {}
+              : {
+                  paginas: scene.paginas.toString(),
+                  linhas: scene.linhas,
+                  tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+                }),
             omitida: false,
           },
         });

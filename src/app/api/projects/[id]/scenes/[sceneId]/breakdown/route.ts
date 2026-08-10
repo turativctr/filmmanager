@@ -61,7 +61,13 @@ export async function PATCH(
 
   await prisma.$transaction(async (tx) => {
     if (tempoEstimadoMin !== undefined) {
-      await tx.scene.update({ where: { id: scene.id }, data: { tempoEstimadoMin } });
+      // Mesma marca de edição manual que a rota de edição de cena — reimportar um draft depois
+      // não pode sobrescrever um tempo estimado que o AD ajustou aqui à mão.
+      const manualEdit = tempoEstimadoMin !== scene.tempoEstimadoMin;
+      await tx.scene.update({
+        where: { id: scene.id },
+        data: { tempoEstimadoMin, ...(manualEdit ? { paginasEditadoManualmente: true, linhas: null } : {}) },
+      });
     }
 
     if (characterIds) {

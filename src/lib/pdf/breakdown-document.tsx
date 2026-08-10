@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
 import { detectSceneConflicts } from "@/lib/conflicts";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { colors, DocHeader, kit, KeyValue } from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
 import { timeToMinutes } from "@/lib/schedule";
@@ -195,7 +195,7 @@ export function BreakdownDocument({ data }: { data: ShootDayReportData }) {
                   </Text>
                   <Text style={[styles.fieldText, styles.metaItem]}>
                     <Text style={kit.bold}>Tempo estimado: </Text>
-                    {scene.tempoEstimadoMin != null ? `${scene.tempoEstimadoMin} min` : "—"}
+                    {scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}
                   </Text>
                 </View>
               </View>

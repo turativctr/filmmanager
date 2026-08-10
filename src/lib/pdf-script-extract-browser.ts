@@ -8,7 +8,8 @@
  * Só o resultado desta extração (texto + coordenadas por linha, já em JSON) é enviado ao
  * servidor — o binário do PDF nunca sai do dispositivo da pessoa.
  */
-import type { ExtractedPage, Line, RawItem } from "@/lib/pdf-script-types";
+import { groupItemsIntoLines } from "@/lib/pdf-line-grouping";
+import type { ExtractedPage } from "@/lib/pdf-script-types";
 
 export class PdfScriptStructureError extends Error {}
 
@@ -61,24 +62,18 @@ export async function extractPdfPagesInBrowser(file: File, signal?: AbortSignal)
       const viewport = page.getViewport({ scale: 1 });
       const content = await page.getTextContent();
 
-      const byY = new Map<number, RawItem[]>();
+      const positioned = [];
       for (const raw of content.items) {
         const item = raw as { str: string; transform: number[]; width?: number };
         if (!item.str) continue;
-        const y = Math.round(item.transform[5] * 2) / 2;
-        const entry: RawItem = { text: item.str, x0: item.transform[4], x1: item.transform[4] + (item.width ?? 0) };
-        const bucket = byY.get(y);
-        if (bucket) bucket.push(entry);
-        else byY.set(y, [entry]);
+        positioned.push({
+          text: item.str,
+          x0: item.transform[4],
+          x1: item.transform[4] + (item.width ?? 0),
+          y: item.transform[5],
+        });
       }
-
-      const lines: Line[] = [...byY.entries()]
-        .sort((a, b) => b[0] - a[0])
-        .map(([y, items]) => {
-          const sorted = [...items].sort((a, b) => a.x0 - b.x0);
-          return { page: pageNumber, y, items: sorted, text: sorted.map((i) => i.text).join("").trim() };
-        })
-        .filter((line) => line.text.length > 0);
+      const lines = groupItemsIntoLines(positioned, pageNumber);
 
       pages.push({ lines, pageWidth: viewport.width, pageHeight: viewport.height });
     }

@@ -47,7 +47,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // Neon e estourava o timeout padrão de 5s da transação.
       let skipped = 0;
       const toCreate: FdxScene[] = [];
-      const toUpdate: { scene: FdxScene; existingId: string; existingLocacaoId: string | null }[] = [];
+      const toUpdate: {
+        scene: FdxScene;
+        existingId: string;
+        existingLocacaoId: string | null;
+        paginasEditadoManualmente: boolean;
+      }[] = [];
       for (const scene of typedScenes) {
         const existing = sceneByNumero.get(scene.numero);
         if (existing && !substituirExistentes) {
@@ -55,7 +60,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
           continue;
         }
         if (existing) {
-          toUpdate.push({ scene, existingId: existing.id, existingLocacaoId: existing.locacaoId });
+          toUpdate.push({
+            scene,
+            existingId: existing.id,
+            existingLocacaoId: existing.locacaoId,
+            paginasEditadoManualmente: existing.paginasEditadoManualmente,
+          });
         } else {
           toCreate.push(scene);
         }
@@ -157,6 +167,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
             locacaoId: resolveLocacaoId(scene, null),
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
+            linhas: scene.linhas,
             tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
           };
         });
@@ -167,7 +178,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // isso continua update por update — mas o apaga+recria do elenco (antes um deleteMany por
       // cena, dentro deste mesmo loop) foi tirado daqui e batched abaixo, junto com o das cenas
       // novas.
-      for (const { scene, existingId, existingLocacaoId } of toUpdate) {
+      for (const { scene, existingId, existingLocacaoId, paginasEditadoManualmente } of toUpdate) {
         sceneIdByNumero.set(scene.numero, existingId);
         await tx.scene.update({
           where: { id: existingId },
@@ -177,8 +188,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, existingLocacaoId),
             sinopse: scene.sinopse,
-            paginas: scene.paginas.toString(),
-            tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+            // Nunca sobrescreve oitavos/tempo/linhas de uma cena editada manualmente — a
+            // reimportação atualiza os outros campos normalmente, só esses três ficam intocados.
+            ...(paginasEditadoManualmente
+              ? {}
+              : {
+                  paginas: scene.paginas.toString(),
+                  linhas: scene.linhas,
+                  tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+                }),
           },
         });
       }

@@ -275,6 +275,12 @@ model Project {
   resetPosicaoMin     Int @default(15)
   resetCompletoMin    Int @default(20)
 
+  // Setado por scripts/recount-eighths.ts quando ele não encontra o arquivo original do roteiro
+  // pra recalcular os oitavos de cenas importadas antes da correção do algoritmo de contagem —
+  // nunca adivinha um valor novo, só avisa o AD que a contagem pode estar errada e precisa
+  // reimportar. Nunca setado por código de produto, só pelo script.
+  oitavosDesatualizados Boolean @default(false)
+
   scenes         Scene[]
   characters     Character[]
   shootDays      ShootDay[]
@@ -327,8 +333,19 @@ model Scene {
   // roteiro. Se vazia, a UI/PDF caem pra sinopse truncada em 80 chars (ver resolveSinopseAD).
   sinopseAD         String?          @db.Text
   paginas           Decimal          @default(0) @db.Decimal(6, 3)
+  // Linhas brutas contadas na importação (ver lib/fdx-parser.ts e lib/pdf-script-parser.ts) — o
+  // dado de origem por trás de `paginas`. Guardado à parte pra permitir recalcular oitavos sem
+  // reimportar o roteiro, se a regra de contagem mudar de novo (ver scripts/recount-eighths.ts).
+  // Null pra cenas criadas antes desse campo existir, ou quando paginasEditadoManualmente = true
+  // (a contagem bruta deixa de corresponder ao valor editado à mão).
+  linhas            Int?
   diaNarrativo      Int?
   tempoEstimadoMin  Int?
+  // Vira true assim que o AD edita `paginas` ou `tempoEstimadoMin` diretamente (formulário de
+  // cena ou de breakdown) — a reimportação de um novo draft (import/fdx/confirm, drafts) passa a
+  // preservar os três campos (paginas/tempoEstimadoMin/linhas) em vez de recalcular por cima,
+  // igual ao padrão já usado em SceneShootDay.observacoesAutoGeradas.
+  paginasEditadoManualmente Boolean  @default(false)
   // Convenção WGA: uma cena removida numa revisão nunca é deletada nem tem seu número reciclado —
   // fica marcada OMITIDA no lugar, preservando a numeração/continuidade entre drafts.
   omitida           Boolean          @default(false)

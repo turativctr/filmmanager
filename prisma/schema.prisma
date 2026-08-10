@@ -261,6 +261,13 @@ model Project {
   status    ProjectStatus @default(ATIVO)
   arquivado Boolean       @default(false)
 
+  // Marca produção real (dado que importa de verdade, não teste/demo) — scripts de manutenção em
+  // massa (ex.: scripts/recount-locacoes.ts) exigem confirmação extra antes de tocar num projeto
+  // com protegido=true. Marcado À MÃO pelo admin; NUNCA por título — um nome bate por sorte hoje
+  // e para de bater no dia em que alguém renomeia o projeto, corrige um acento, ou o título muda
+  // de outro jeito qualquer, e a proteção cai em silêncio.
+  protegido Boolean @default(false)
+
   // Configuração da "Jornada" do dia de filmagem — usada por recalculateDayBlocks (src/lib/shootday-blocks.ts)
   // pra derivar blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de cada ShootDay. O almoço nunca é
   // definido diretamente pelo AD: ele é consequência de onde o marcador fica no Stripboard (ver ShootDay).

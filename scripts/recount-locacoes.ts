@@ -17,13 +17,16 @@
  *     cenas da suja são repontadas pra ela (e pontos de apoio, se houver) e a suja é removida —
  *     senão, a suja é simplesmente renomeada.
  *   - Roda SÓ no projeto passado como argumento — nunca em todos de uma vez.
- *   - "Antes do Meu Nome nos Créditos" e "Curta-Metragem Piloto" são produção real; exigem
- *     --confirm-named-project além do --project, pra não serem tocadas por engano ao testar o
- *     script contra um projeto qualquer.
+ *   - Projeto com Project.protegido=true (marcado à mão pelo admin nos projetos de produção
+ *     real) exige --confirm-protected além do --project. A proteção é por ID (o campo
+ *     `protegido` no banco), NUNCA por nome/título: um título bate por sorte hoje e para de
+ *     bater no dia em que alguém renomeia o projeto, corrige um acento, ou o título muda de
+ *     qualquer jeito — e a proteção cai em silêncio, sem avisar ninguém. (Foi exatamente esse
+ *     defeito, com uma lista de títulos hardcoded, que esta versão substitui.)
  *
  * Uso:
  *   tsx scripts/recount-locacoes.ts --project <id> [--dry-run]
- *   tsx scripts/recount-locacoes.ts --project <id> --confirm-named-project [--dry-run]
+ *   tsx scripts/recount-locacoes.ts --project <id> --confirm-protected [--dry-run]
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -34,8 +37,6 @@ const prisma = new PrismaClient();
 // Mesmo separador de src/lib/fdx-parser.ts (LOCAL_PERIODO_SEPARATOR) — duplicado aqui de
 // propósito: é um detalhe de UMA linha, não vale exportar só pra um script de limpeza único.
 const LOCAL_PERIODO_SEPARATOR = /\s+(?:[-–—]|\/)\s+/g;
-
-const NOMES_PROTEGIDOS = ["Antes do Meu Nome nos Créditos", "Curta-Metragem Piloto"];
 
 const CAMPOS_MANUAIS = [
   "endereco",
@@ -158,14 +159,14 @@ function printUsage() {
   console.error(
     "Uso:\n" +
       "  tsx scripts/recount-locacoes.ts --project <id> [--dry-run]\n" +
-      "  tsx scripts/recount-locacoes.ts --project <id> --confirm-named-project [--dry-run]"
+      "  tsx scripts/recount-locacoes.ts --project <id> --confirm-protected [--dry-run]"
   );
 }
 
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
-  const confirmNamed = args.includes("--confirm-named-project");
+  const confirmProtected = args.includes("--confirm-protected");
   const projectIdx = args.indexOf("--project");
   const projectId = projectIdx >= 0 ? args[projectIdx + 1] : null;
   if (!projectId) {
@@ -173,15 +174,17 @@ async function main() {
     process.exit(1);
   }
 
-  // Comparação case-insensitive de propósito — o título real no banco pode não bater
-  // caractere-a-caractere com a grafia usada aqui (ex.: guardado em CAIXA ALTA). Confiar num
-  // match exato deixaria a proteção silenciosamente inerte pro título real.
-  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { titulo: true } });
-  const protegido = project && NOMES_PROTEGIDOS.some((n) => n.toUpperCase() === project.titulo.toUpperCase());
-  if (protegido && !confirmNamed) {
+  const project = await prisma.project.findUnique({ where: { id: projectId }, select: { titulo: true, protegido: true } });
+  if (!project) {
+    console.error(`Projeto ${projectId} não encontrado.`);
+    process.exit(1);
+  }
+  // Proteção por ID (Project.protegido, marcado à mão) — nunca por nome. Título só entra no log
+  // pra facilitar leitura humana, nunca na decisão de bloquear ou não.
+  if (project.protegido && !confirmProtected) {
     console.error(
-      `"${project.titulo}" é produção real (protegida por padrão). Rode de novo com ` +
-        `--confirm-named-project se realmente quer processar este projeto.`
+      `"${project.titulo}" (${projectId}) está marcado como protegido. Rode de novo com ` +
+        `--confirm-protected se realmente quer processar este projeto.`
     );
     process.exit(1);
   }

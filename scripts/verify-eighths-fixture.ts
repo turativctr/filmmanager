@@ -1,7 +1,14 @@
 /**
  * Verifica a contagem de oitavos (PDF e FDX) contra o gabarito real "Familiar Insônia" —
  * scripts/fixtures/familiar-insonia.{pdf,fdx}. Tolerância: ±1/8 por cena, ±2/8 no total (ver
- * pedido original). Roda os dois parsers e falha (exit 1) se qualquer um sair da tolerância.
+ * pedido original). Roda os dois parsers, compara cada um contra o gabarito, E faz a
+ * verificação cruzada obrigatória (PDF vs FDX convergindo entre si) — falha (exit 1) se
+ * qualquer uma dessas checagens sair da tolerância.
+ *
+ * O .fdx e o .pdf do fixture precisam ser da MESMA revisão do roteiro (mesmo texto) — um
+ * roteiro editado depois de exportar o PDF diverge cena a cena e invalida a comparação, não por
+ * bug no parser. Usamos aqui o backup do Final Draft com timestamp mais próximo (e anterior) ao
+ * CreationDate do PDF.
  *
  *   npm run verify:eighths
  */
@@ -49,7 +56,7 @@ function toEighths(paginas: number): number {
   return Math.round(paginas * 8);
 }
 
-function verify(label: string, scenes: { numero: string; linhas: number; paginas: number }[]): boolean {
+function verify(label: string, scenes: { numero: string; linhas: number; paginas: number }[]): { ok: boolean; totalEighths: number } {
   console.log(`\n=== ${label} ===`);
   let ok = true;
 
@@ -87,21 +94,30 @@ function verify(label: string, scenes: { numero: string; linhas: number; paginas
   );
 
   console.log(ok ? `${label}: PASSOU` : `${label}: FALHOU`);
-  return ok;
+  return { ok, totalEighths };
 }
 
 async function main() {
   const fdxXml = await readFile(path.join(FIXTURES_DIR, "familiar-insonia.fdx"), "utf8");
   const fdxResult = parseFdx(fdxXml);
-  const fdxOk = verify("FDX", fdxResult.scenes);
+  const fdx = verify("FDX", fdxResult.scenes);
 
   const pdfBuffer = await readFile(path.join(FIXTURES_DIR, "familiar-insonia.pdf"));
   const pdfPages = await extractPdfPagesInNode(pdfBuffer);
   const pdfResult = buildScriptFromPdfPages(pdfPages);
-  const pdfOk = verify("PDF", pdfResult.scenes);
+  const pdf = verify("PDF", pdfResult.scenes);
 
-  console.log(`\n${fdxOk && pdfOk ? "TUDO OK" : "FALHOU"}`);
-  process.exit(fdxOk && pdfOk ? 0 : 1);
+  // Verificação cruzada obrigatória: os dois parsers lendo o MESMO roteiro é o melhor teste que
+  // existe — não depende de o gabarito estar certo, só de PDF e FDX concordarem entre si.
+  const crossDiff = Math.abs(pdf.totalEighths - fdx.totalEighths);
+  const crossOk = crossDiff <= EIGHTH_TOLERANCE_TOTAL;
+  console.log(
+    `\n${crossOk ? "OK  " : "FORA"} PDF vs FDX: ${pdf.totalEighths}/8 vs ${fdx.totalEighths}/8 (diff ${crossDiff}) — tolerância ±${EIGHTH_TOLERANCE_TOTAL}/8`
+  );
+
+  const allOk = fdx.ok && pdf.ok && crossOk;
+  console.log(`\n${allOk ? "TUDO OK" : "FALHOU"}`);
+  process.exit(allOk ? 0 : 1);
 }
 
 main().catch((err) => {

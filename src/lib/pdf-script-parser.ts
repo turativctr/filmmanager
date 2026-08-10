@@ -8,7 +8,7 @@
  * valores medidos foram ~108/180/208.8/252pt, não os "padrão" 108/180/223/266).
  */
 import { suggestTempoEstimadoMin } from "@/lib/paginas";
-import { normalizeCharacterName, PERIODO_MAP } from "@/lib/fdx-parser";
+import { LINHAS_POR_PAGINA_PADRAO, normalizeCharacterName, PERIODO_MAP } from "@/lib/fdx-parser";
 
 import type { FdxParseResult, FdxScene } from "@/lib/fdx-parser";
 import type { ExtractedPage, Line, RawItem } from "@/lib/pdf-script-types";
@@ -244,10 +244,17 @@ const REFLEXIVE_VERB_FOLLOWS_PATTERN = /^[,.]?\s*se\s+\w/i;
 // percepção de outro personagem, não como sujeito).
 const PERCEPTION_VERB_PRECEDES_PATTERN = /\b(?:v[êe]|avista|percebe|nota|encontra|descobre|surge|aparece)\s+(?:o|a)\s*$/i;
 
-// Uma linha só de dígitos (com ponto opcional, "2.") no topo de uma página é o número de página
-// automático do Final Draft — nunca conteúdo do roteiro. Precisa ser descartada ANTES de medir a
-// geometria da página (passo/linhasPorPagina/topoDoCorpo), senão ela distorce a medição pra cima.
-const PAGE_NUMBER_LINE_PATTERN = /^\d+\.?$/;
+// Número de página automático do Final Draft: uma linha isolada, só dígitos (+ ponto opcional).
+// Calibrado contra um roteiro real: o número às vezes renderiza DUPLICADO ("3.3." em vez de "3." —
+// artefato do exportador, o dígito desenhado duas vezes) — por isso aceita 1 OU 2 repetições, não
+// só uma. Precisa ser descartada ANTES de medir geometria (passo/topoDoCorpo), senão distorce a
+// medição pra cima: ela fica ACIMA da margem real do corpo, então contaminar a "primeira linha da
+// página" com ela infla linhasPorPagina e desalinha o índice de toda cena que atravessa página.
+const PAGE_NUMBER_LINE_PATTERN = /^(?:\d+\.?){1,2}$/;
+// Sinal solto (sem exigir "^", só um cabeçalho reconhecível em algum lugar da linha) pra decidir
+// se uma página é "de conteúdo" (tem roteiro de verdade) vs. capa/título — mais barato que rodar
+// stripSceneNumbers página por página só pra essa classificação.
+const CONTENT_PAGE_HEADING_HINT = /\b(?:INT|EXT|I\/E|E\/I)[.\s]/i;
 
 function mode(values: number[]): number {
   const counts = new Map<number, number>();
@@ -266,20 +273,48 @@ function mode(values: number[]): number {
 
 type PageGeometry = { passo: number; linhasPorPagina: number; topoDoCorpo: number; linesByPage: Map<number, Line[]> };
 
+/** topoDoCorpo = Y comum a TODAS as páginas de conteúdo (nunca "a menor linha do documento
+ *  inteiro" — a capa/título e a primeira página do roteiro não têm número de página, então o
+ *  mínimo global mentiria sobre a margem real do corpo). Interseção, não moda: um Y presente em
+ *  toda página de conteúdo só pode ser a margem física — não depende de nenhuma página específica
+ *  "vencer a votação". */
+function computeTopoDoCorpo(linesByPage: Map<number, Line[]>): number {
+  const contentPagesLines = [...linesByPage.values()].filter((lines) =>
+    lines.some((l) => CONTENT_PAGE_HEADING_HINT.test(l.text))
+  );
+  const pool = contentPagesLines.length > 0 ? contentPagesLines : [...linesByPage.values()];
+
+  let candidates: Set<number> | undefined;
+  for (const lines of pool) {
+    if (lines.length === 0) continue;
+    const ys = new Set(lines.map((l) => Math.round(l.y * 2) / 2));
+    const previous: Set<number> | undefined = candidates;
+    candidates = previous === undefined ? ys : new Set([...previous].filter((y) => ys.has(y)));
+  }
+  if (candidates !== undefined && candidates.size > 0) {
+    // Maior Y (convenção bottom-up) = mais perto do topo físico da página = "menor top".
+    return Math.max(...candidates);
+  }
+
+  // Nenhum Y comum a todas as páginas de conteúdo (documento muito irregular) — cai pra moda da
+  // primeira linha de cada uma, ainda melhor que usar a página inteira (capa/título inclusas).
+  const firstLineYs = pool.filter((lines) => lines.length > 0).map((lines) => Math.round(lines[0].y * 2) / 2);
+  return firstLineYs.length > 0 ? mode(firstLineYs) : 0;
+}
+
 /** Mede a geometria real do PDF em vez de assumir margens de manual (1" topo/rodapé) — cada
  *  exportador (Final Draft, WriterDuet, Celtx, roteiro brasileiro) usa uma margem levemente
- *  diferente, e só o passo entre linhas + o vão da página mais cheia revelam a capacidade real
- *  de uma página deste arquivo específico. */
+ *  diferente. `linhasPorPagina` aqui é só informativo/diagnóstico — o cálculo de linhas por cena
+ *  (countLinesInRange) soma por página e nunca usa esse valor (ver comentário lá: um
+ *  linhasPorPagina errado nunca deveria poder desalinhar uma cena que atravessa página). */
 function computePageGeometry(pages: ExtractedPage[]): PageGeometry {
   const linesByPage = new Map<number, Line[]>();
   pages.forEach((page, index) => {
     const pageNumber = index + 1;
-    // page.lines já vem ordenado do topo pra baixo (maior Y primeiro — ver extractLines no
-    // extrator do navegador), então o número de página automático, se existir, é sempre o
-    // primeiro item.
-    const [first, ...rest] = page.lines;
-    const withoutHeader = first && PAGE_NUMBER_LINE_PATTERN.test(first.text.trim()) ? rest : page.lines;
-    linesByPage.set(pageNumber, withoutHeader);
+    linesByPage.set(
+      pageNumber,
+      page.lines.filter((l) => !PAGE_NUMBER_LINE_PATTERN.test(l.text.trim()))
+    );
   });
 
   // Passo: NÃO é a moda bruta das diferenças entre tops consecutivos — a formatação de roteiro
@@ -305,59 +340,58 @@ function computePageGeometry(pages: ExtractedPage[]): PageGeometry {
         ? Math.min(...diffCounts.keys())
         : 12;
 
-  // topoDoCorpo: onde a primeira linha de conteúdo real normalmente cai — moda do Y da linha mais
-  // alta de cada página (com número de página já descartado acima).
-  const firstLineYs = [...linesByPage.values()]
-    .filter((lines) => lines.length > 0)
-    .map((lines) => Math.round(lines[0].y * 2) / 2);
-  const topoDoCorpo = firstLineYs.length > 0 ? mode(firstLineYs) : 0;
+  const topoDoCorpo = computeTopoDoCorpo(linesByPage);
 
-  // linhasPorPagina: NÃO é o vão da página com mais conteúdo — nenhuma página tem garantia de
-  // preencher até a margem física exata (um parágrafo raramente termina bem na última linha
-  // possível). O jeito confiável de medir capacidade real é pela TRANSIÇÃO entre duas páginas
-  // consecutivas em fluxo contínuo (sem quebra de cena bem na virada): se o texto só continua,
-  // a distância entre a última linha de uma página e a primeira da seguinte é sempre exatamente
-  // 1 passo — dessa igualdade dá pra isolar quantas linhas cabem por página. Transições que
-  // calham de coincidir com início de cena (que leva uma linha em branco antes) viram outliers
-  // isolados; a moda entre todas as transições consecutivas do documento ignora esse ruído.
-  const pageNumbers = [...linesByPage.keys()].sort((a, b) => a - b);
-  const linhasPorPaginaCandidates: number[] = [];
-  for (let i = 0; i < pageNumbers.length - 1; i++) {
-    const pn = pageNumbers[i];
-    if (pageNumbers[i + 1] !== pn + 1) continue; // só páginas fisicamente consecutivas
-    const linesHere = linesByPage.get(pn)!;
-    const linesNext = linesByPage.get(pn + 1)!;
-    if (linesHere.length === 0 || linesNext.length === 0) continue;
-    const idxLast = Math.round((topoDoCorpo - linesHere[linesHere.length - 1].y) / passo);
-    const idxFirstNext = Math.round((topoDoCorpo - linesNext[0].y) / passo);
-    const candidate = 1 + idxLast - idxFirstNext;
-    if (candidate > 0) linhasPorPaginaCandidates.push(candidate);
+  // Só informativo (ver doc da função) — vão da página mais cheia, mesma lógica de sempre.
+  let maxSpan = 0;
+  for (const lines of linesByPage.values()) {
+    if (lines.length === 0) continue;
+    const span = lines[0].y - lines[lines.length - 1].y;
+    if (span > maxSpan) maxSpan = span;
   }
-  let linhasPorPagina: number;
-  if (linhasPorPaginaCandidates.length > 0) {
-    linhasPorPagina = mode(linhasPorPaginaCandidates);
-  } else {
-    // Documento de 1 página (sem transição pra calibrar) — cai pro vão da própria página, único
-    // dado disponível.
-    let maxSpan = 0;
-    for (const lines of linesByPage.values()) {
-      if (lines.length === 0) continue;
-      const span = lines[0].y - lines[lines.length - 1].y;
-      if (span > maxSpan) maxSpan = span;
-    }
-    linhasPorPagina = Math.round(maxSpan / passo) + 1;
-  }
-  linhasPorPagina = Math.max(1, linhasPorPagina);
+  const linhasPorPagina = Math.max(1, Math.round(maxSpan / passo) + 1);
 
   return { passo, linhasPorPagina, topoDoCorpo, linesByPage };
 }
 
-/** Índice de linha global (0-based, cresce do início ao fim do documento inteiro) — permite medir
- *  "quantas linhas de distância" entre duas posições quaisquer do roteiro, mesmo em páginas
- *  diferentes, sem depender de margens assumidas. */
-function globalLineIndex(pageNumber: number, y: number, geometry: PageGeometry): number {
-  const withinPage = geometry.passo > 0 ? Math.round((geometry.topoDoCorpo - y) / geometry.passo) : 0;
-  return (pageNumber - 1) * geometry.linhasPorPagina + withinPage;
+/** Linhas ocupadas entre duas posições do roteiro (início de uma cena até o início da seguinte,
+ *  ou até o fim do documento) — soma página por página, NUNCA multiplica por um "linhasPorPagina"
+ *  global. Cada página contribui (topoDaContribuição - topoDaÚltimaLinhaRelevante)/passo + 1:
+ *  a primeira página da cena começa no próprio cabeçalho; páginas seguintes começam em
+ *  topoDoCorpo (margem física, igual em toda página); a última página da cena termina na última
+ *  linha ANTES do cabeçalho seguinte (ou na última linha real da cena, se ela for a última do
+ *  documento); páginas do meio (a cena atravessa 2+ quebras) terminam na própria última linha da
+ *  página. O espaço vazio no rodapé de uma página quebrada não pertence a cena nenhuma — por
+ *  construção, essa soma nunca inclui esse espaço. */
+function countLinesInRange(
+  startPage: number,
+  startY: number,
+  endPage: number,
+  endY: number,
+  geometry: PageGeometry
+): number {
+  const { linesByPage, topoDoCorpo, passo } = geometry;
+  let total = 0;
+  for (let page = startPage; page <= endPage; page++) {
+    const lines = linesByPage.get(page) ?? [];
+    const pageStartY = page === startPage ? startY : topoDoCorpo;
+
+    let pageEndY: number;
+    if (page === endPage) {
+      // Só as linhas estritamente acima do limite (o cabeçalho seguinte, ou a referência de fim
+      // de documento) contam pra esta cena.
+      const before = lines.filter((l) => l.y > endY);
+      if (before.length === 0) continue; // nada desta cena cai nesta página
+      pageEndY = before[before.length - 1].y;
+    } else {
+      if (lines.length === 0) continue;
+      pageEndY = lines[lines.length - 1].y;
+    }
+
+    if (pageStartY < pageEndY) continue; // defensivo — não deveria acontecer
+    total += Math.round((pageStartY - pageEndY) / passo) + 1;
+  }
+  return Math.max(1, total);
 }
 
 function extractCapsPhrasesWithContext(text: string): { phrase: string; before: string; after: string }[] {
@@ -499,23 +533,25 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
 
   // Oitavo mede ESPAÇO DE PÁGINA: uma cena vai do seu cabeçalho até a linha imediatamente
   // anterior ao cabeçalho seguinte, e TODA linha nesse intervalo conta — inclusive as vazias,
-  // nome de personagem, parêntese, transição. Índice de linha global (não distância em pontos
-  // direto) porque a geometria é medida DESTE arquivo (ver computePageGeometry), não assumida.
+  // nome de personagem, parêntese, transição. countLinesInRange soma por página (ver doc da
+  // função) — não depende de linhasPorPagina, só do passo e do topoDoCorpo medidos.
   const geometry = computePageGeometry(pages);
-  const linhasPorOitavo = geometry.linhasPorPagina / 8;
+  // Denominador do oitavo é convenção da indústria, não a capacidade medida desta página (ver
+  // LINHAS_POR_PAGINA_PADRAO em fdx-parser.ts) — igual pro .fdx, pra PDF e .fdx do MESMO roteiro
+  // convergirem no mesmo resultado.
+  const linhasPorOitavo = LINHAS_POR_PAGINA_PADRAO / 8;
 
   const lastPageLines = geometry.linesByPage.get(pages.length) ?? [];
   const lastLine = lastPageLines[lastPageLines.length - 1];
-  const docEndIndex = lastLine
-    ? globalLineIndex(pages.length, lastLine.y, geometry) + 1
-    : globalLineIndex(pages.length, geometry.topoDoCorpo, geometry);
+  const docEndPage = pages.length;
+  const docEndY = lastLine ? lastLine.y - geometry.passo / 2 : geometry.topoDoCorpo - geometry.passo / 2;
 
   for (let i = 0; i < accumulators.length; i++) {
     const acc = accumulators[i];
     const next = accumulators[i + 1];
-    const startIndex = globalLineIndex(acc.startPage, acc.startY, geometry);
-    const endIndex = next ? globalLineIndex(next.startPage, next.startY, geometry) : docEndIndex;
-    const linhas = Math.max(1, endIndex - startIndex);
+    const linhas = next
+      ? countLinesInRange(acc.startPage, acc.startY, next.startPage, next.startY, geometry)
+      : countLinesInRange(acc.startPage, acc.startY, docEndPage, docEndY, geometry);
     const eighths = Math.max(1, Math.round(linhas / linhasPorOitavo));
     acc.scene.linhas = linhas;
     acc.scene.paginas = eighths / 8;

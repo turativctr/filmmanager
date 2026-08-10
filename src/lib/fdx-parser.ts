@@ -120,10 +120,12 @@ const CHARS_PER_LINE_BY_TYPE: Record<string, number> = {
 // calibrada — tratamos como Action (prosa comum), o fallback mais seguro.
 const DEFAULT_CHARS_PER_LINE = CHARS_PER_LINE_BY_TYPE.Action;
 const BLANK_LINE_BEFORE_TYPES = new Set(["Scene Heading", "Action", "Character", "Transition"]);
-// Página de roteiro em Courier 12, convenção .fdx (margens padrão do Final Draft) — diferente do
-// valor medido por página no PDF (ver PAGE_TOP/PAGE_BOTTOM em pdf-script-parser.ts), que reflete
-// a geometria real do arquivo específico em vez de uma convenção fixa.
-const FDX_LINES_PER_PAGE = 55;
+// Denominador do oitavo: CONVENÇÃO da indústria (Movie Magic Scheduling e afins não medem a
+// página do arquivo — usam a página padrão), não uma medida do arquivo. Fixo e igual pra
+// PDF, .fdx e .wdz — "quantas linhas cabem nesta página" (o que pdf-script-parser.ts mede de
+// verdade, por arquivo) e "quantas linhas valem 1 oitavo" são perguntas diferentes; derivar a
+// segunda da primeira foi a causa de um desvio real entre o valor medido e o valor de referência.
+export const LINHAS_POR_PAGINA_PADRAO = 55;
 
 function asArray<T>(value: T | T[] | undefined | null): T[] {
   if (value == null) return [];
@@ -250,7 +252,7 @@ function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]
   const sinopse = firstAction ? (firstAction.length > 200 ? `${firstAction.slice(0, 200).trimEnd()}…` : firstAction) : null;
 
   const linhas = countLinhasSimulado(paragraphs);
-  const linhasPorOitavo = FDX_LINES_PER_PAGE / 8;
+  const linhasPorOitavo = LINHAS_POR_PAGINA_PADRAO / 8;
   const eighths = Math.max(1, Math.round(linhas / linhasPorOitavo));
   const paginas = eighths / 8;
 

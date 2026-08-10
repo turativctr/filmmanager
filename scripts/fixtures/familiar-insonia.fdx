@@ -32,13 +32,10 @@
     <Paragraph Type="Action">
       <Text>Helena corta as bordas de um SANDUÍCHE DE PÃO DE FORMA, coloca num </Text>
       <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">TUPPERWARE</Text>
-      <Text> e numa LANCHEIRA ROXA DE FADA. Ela pega uma LEITEIRA, preenche com LEITE e coloca na boca de um FOGÃO. </Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Todos os movimentos de Helena são feitos de forma precisa, mas cansada. </Text>
+      <Text> e numa LANCHEIRA ROXA DE FADA. Ela pega uma LEITEIRA, preenche com LEITE e coloca na boca de um FOGÃO. Todos os seus movimentos são feitos de forma precisa, mas cansada. </Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="1 5/8" Page="1" Title="">
+      <SceneProperties Length="1 4/8" Page="1" Title="">
         <SceneArcBeats>
           <CharacterArcBeat Name="HEITOR">
             <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="0.00" RightIndent="1.39" SpaceBefore="0" Spacing="1" StartsNewPage="No">
@@ -55,7 +52,7 @@
       <Text>INT. CASA; SALA DE ESTAr - MANHÃ</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena está sentada na frente da TELEVISÃO e caindo de sono. Heitor ENTRA, bem disposto. </Text>
+      <Text>Helena está sentada na frente da TELEVISÃO e caindo de sono. Heitor entra, bem disposto. </Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HEITOR</Text>
@@ -76,18 +73,13 @@
       <Text>Helena sorri para ele, sem muito amor, mas esforçando-se para demonstrar afeto.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Heitor ENTRA na cozinha e volta com uma XÍCARA DE CAFÉ e um SANDUÍCHE. </Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Assim que ele senta para comer, um DESPERTADOR TOCA no CELULAR de Helena e ela desliga.</Text>
+      <Text>Heitor entra na cozinha e volta com uma XÍCARA DE CAFÉ e um SANDUÍCHE. Assim que ele senta para comer, um ALARME TOCA. </Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HELENA</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>Eu sei que você acabou de sentar, mas... Você pode? Se </Text>
-      <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Italic">eu</Text>
-      <Text> for acordar ela, ela vai chiar.</Text>
+      <Text>Eu sei que você acabou de sentar, mas... Você pode? Se eu for acordar ela, ela vai chiar. Mas, com você... ela aceita melhor.</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HEITOR</Text>
@@ -97,9 +89,6 @@
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Heitor, sem hesitar, levanta e continua comendo. </Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Helena se levanta e começa a ir em direção à porta.</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HELENA</Text>
@@ -111,7 +100,7 @@
       <Text>HEITOR</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>Cê já comeu?</Text>
+      <Text>Você já comeu?</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Heitor diz com boca cheia.</Text>
@@ -125,24 +114,20 @@
     <Paragraph Type="Dialogue">
       <Text>Ainda não.</Text>
     </Paragraph>
-    <Paragraph Type="Action">
-      <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">Beat</Text>
-      <Text>.</Text>
-    </Paragraph>
     <Paragraph Type="Character">
       <Text>HEITOR</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
       <Text>Você não conseguiu dormir de novo. </Text>
     </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Heitor está sério, preocupado. Helena apenas concorda com a cabeça.</Text>
-    </Paragraph>
     <Paragraph Type="Character">
       <Text>HELENA</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
       <Text>É, mas eu já preciso ir. </Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>Helena apenas concorda com a cabeça.</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HEITOR</Text>
@@ -187,11 +172,8 @@
     <Paragraph Type="Dialogue">
       <Text>Dermatologista.</Text>
     </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Eles se dão um beijo e Helena SAI.</Text>
-    </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="1/8" Page="3" Title="">
+      <SceneProperties Length="1/8" Page="2" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. CARRO - Manhã</Text>
@@ -256,16 +238,13 @@
       <Text>Isso é uma coisa horrível de dizer sobre seu próprio corpo. E, você já teve uma filha, isso é um ótimo sinal.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Sem que Helena perceba, acontece a </Text>
-      <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Bold">primeira alucinação </Text>
-      <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Bold">insônica</Text>
-      <Text>: há uma MULHER, nua, virada para o canto da parede.</Text>
+      <Text>Sem que Helena perceba, acontece a primeira alucinação insônia: há uma MULHER, nu, virada para o canto da parede.</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>VERÔNICA</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>É muito comum, Helena. Especialmente no começo da gestão.</Text>
+      <Text>É muito comum acontecer, Helena. Especialmente no começo da gestão.</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HELENA</Text>
@@ -297,7 +276,7 @@
       <Text>HEITOR</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>E como foi?</Text>
+      <Text>E como foi sua na dermatologista?</Text>
     </Paragraph>
     <Paragraph Type="Character">
       <Text>HELENA</Text>
@@ -333,27 +312,22 @@
       <Text>INT. CASA; QUARTO DOS PAIS - MADRUGADA</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Heitor ronca. Ao fundo, Helena puxa um LIVRO da gaveta. </Text>
+      <Text>Heitor ronca. Ao fundo, Helena puxa um LIVRO da gaveta. Na porta do quarto, uma silhueta de uma CRIATURA PRETA entra rastejando para debaixo da cama sem que Helena perceba.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Na porta do quarto, uma silhueta de uma CRIATURA PRETA entra rastejando para debaixo da cama sem que Helena perceba. Os membros dela são longos e tortos. </Text>
+      <Text>Então, acontece a segunda alucinação: as letras do livro começam a escorregar para o final da página.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Então, acontece a </Text>
-      <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Bold">segunda alucinação:</Text>
-      <Text> as letras do livro começam a escorregar para o final da página.</Text>
+      <Text>Ela fecha os olhos bem forte, como se tivesse limpando a vista. A página volta ao normal. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ela fecha os olhos bem forte, como se a vista estivesse cansada. O livro volta ao normal.</Text>
+      <Text>Assim que ela passa para a próxima página, a Criatura sai debaixo da cama. Novamente, de forma quase imperceptível.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Assim que ela passa para a próxima página, a Criatura sai debaixo da cama,  ágil e imperceptível, e SAI.</Text>
+      <Text>Cecília, a filha, grita.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ouve-se Cecília, a filha, GRITAR.</Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Imediatamente, Heitor levanta da cama correndo até o quarto, em estado de alerta. Helena, ao contrário, deixa o livro na cabeceira e anda até:</Text>
+      <Text>Imediatamente, Heitor levanta da cama correndo até o quarto. Helena, ao contrário, deixa o livro na cabeceira e anda até:</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <SceneProperties Length="3/8" Page="4" Title="">
@@ -379,7 +353,7 @@
       <Text>HEITOR</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>Ela disse que viu uma Mulher-De-Três-Olhos ajoelhada ao lado cama, vendo ela dormir.</Text>
+      <Text>Ela disse que viu uma mulher de três olhos ajoelhada ao lado cama, encarando-a.</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Helena não se aproxima, continua ao lado da porta. Há algo esquisito no seu comportamento.</Text>
@@ -388,12 +362,10 @@
       <Text>HELENA</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>Foi só um pesadelo, </Text>
-      <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">Ceci</Text>
-      <Text>.</Text>
+      <Text>Foi só um pesadelo.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="2/8" Page="5" Title="">
+      <SceneProperties Length="2/8" Page="4" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. QUARTO DOS PAIS - MADRUGADA PARA DIA</Text>
@@ -405,7 +377,7 @@
       <Text>EFEITO DE MADRUGADA PARA DIA.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="4/8" Page="5" Title="">
+      <SceneProperties Length="3/8" Page="5" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. CASA; SUÍTE - MANHÃ</Text>
@@ -414,22 +386,19 @@
       <Text>Helena entra no banheiro. Ela se encara um bom tempo no espelho.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Em seguida, ela retira um COLAR do pescoço, que estava escondido dentro da blusa. Nele, há uma CHAVE VELHA, como pingente, que ela encaixa na fechadura de uma gaveta e a abre. </Text>
+      <Text>Em seguida, ela puxa, do COLAR, uma CHAVE pequena. Ela encaixa na fechadura de uma gaveta e a abre. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Há uma ARMA. </Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Vemos uma inscrição: Getúlio.</Text>
+      <Text>Há uma ARMA. Vemos uma inscrição: Getúlio.</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Ela fecha a gaveta e tranca.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ela se vira para sair do banheiro. Na hora de abrir a porta, a tranca da porta emperra. </Text>
+      <Text>Ela se vira para sair do banheiro. Na hora de abrir, a tranca da porta emperra. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena força um pouco mais e consegue SAIR. </Text>
+      <Text>Helena força um pouco mais e a porta abre. </Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <SceneProperties Length="4/8" Page="5" Title="">
@@ -441,32 +410,22 @@
       <Text>Helena corta as bordas um PÃO. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ela pega a LEITEIRA, abre uma CAIXA DE LEITE e começa a despejar. </Text>
+      <Text>Ela pega a LEITEIRA, abre uma CAIXA DE LEITE e começa a despejar. Terceira alucinação: Um DENTE sai de dentro da caixa e cai dentro da leiteira. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Bold">Terceira alucinação:</Text>
-      <Text> Um DENTE sai de dentro da caixa e cai dentro da leiteira. </Text>
+      <Text>Helena percebe. É um dente pequeno, há uma carne restante de uma gengiva. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena percebe.</Text>
+      <Text>Em seguida, vários dentes começam a emergir da leiteira e ela derruba no chão, não há dente algum no chão. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>É um dente pequeno, há uma carne restante de uma gengiva. </Text>
+      <Text>Ela puxa vários PAPÉIS TOALHAS e se agacha para limpar. Há dedos do pé da CRIATURA vazando para fora da porta, mas Helena não percebe.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Em seguida, vários dentes começam a emergir da leiteira. Helena derruba no chão.</Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Ela puxa vários PAPÉIS TOALHAS e se agacha para limpar, mas não há dente algum no chão. </Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Há dedos do pé da CRIATURA vazando para fora da porta, mas Helena não percebe.</Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Bold">A PARTIR DESSE MOMENTO, EM TODAS AS CENAS, HÁ ALGUMA SOMBRA, SILHUETA OU PARTES DO CORPO DA CRIATURA, ESCONDIDA.</Text>
+      <Text>A PARTIR DESSE MOMENTO, EM TODAS AS CENAS, HÁ ALGUMA SOMBRA, SILHUETA OU PARTES DO CORPO DA CRIATURA, ESCONDIDA.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="5/8" Page="6" Title="">
+      <SceneProperties Length="4/8" Page="5" Title="">
         <SceneArcBeats>
           <CharacterArcBeat Name="HEITOR">
             <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="0.00" RightIndent="1.39" SpaceBefore="0" Spacing="1" StartsNewPage="No">
@@ -492,7 +451,7 @@
     <Paragraph Type="Action">
       <Text>No canto do quarto, a Criatura, abaixada de forma </Text>
       <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">pertubadora</Text>
-      <Text> começa a rastejar para debaixo da cama, lentamente. Helena acompanha o movimento lento do bicho indo em direção a ela.</Text>
+      <Text> começa a rastejar para debaixo da cama, lentamente.</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Heitor acorda ela desse transe. Helena está sem ar. </Text>
@@ -504,16 +463,7 @@
       <Text>HEITOR</Text>
     </Paragraph>
     <Paragraph Type="Dialogue">
-      <Text>Amanhã, vou atrás de um especialista, um psiquiatra ou qualquer porra que pode te ajudar.</Text>
-    </Paragraph>
-    <Paragraph Type="Action">
-      <Text>Heitor retira uma mecha de cabelo suado da testa de Helena. </Text>
-    </Paragraph>
-    <Paragraph Type="Character">
-      <Text>HEITOR</Text>
-    </Paragraph>
-    <Paragraph Type="Dialogue">
-      <Text>Vai lavar o rosto, tomar um copo d’água... E depois vamos dormir.</Text>
+      <Text>Amanhã, vou atrás de um especialista, um psiquiatra ou qualquer porra que pode te ajudar. Vai lavar o rosto, tomar um copo d’água...</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <SceneProperties Length="3/8" Page="6" Title="">
@@ -525,19 +475,19 @@
       <Text>Helena joga água no rosto.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Cecília GRITA. É mais alto, viceral. É um grito misturado com uma voz grossa.</Text>
+      <Text>Cecília GRITA. É mais alto. Viceral. É um grito misturado com uma voz grossa.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena tenta abrir a porta, está emperrada. Ela bate com os ombros contra a porta. Nada.</Text>
+      <Text>Helena tenta abrir a porta, está emperrada. Ela tenta ao máximo abrir a porta.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ela corre para abrir a gaveta, retira a CHAVE do COLAR e tenta encaixar na fechadura, com muita dificuldade por conta da tremedeira.</Text>
+      <Text>Ela corre para abrir a gaveta, mas, pela tremedeira, não consegue encaixar direito.</Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text>Até que ela consegue abrir, puxa a ARMA e atira na tranca.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="1/8" Page="7" Title="">
+      <SceneProperties Length="1/8" Page="6" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. CASA; CORREDOr - CONTINUA</Text>
@@ -546,32 +496,40 @@
       <Text>Ela corre para o quarto da Cecília.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="3/8" Page="7" Title="">
+      <SceneProperties Length="3/8" Page="6" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. CASA; QUARTO DE CECÍLIA - CONTINUA </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena entra e vê Heitor convulsionando no chão e Cecília espremida na parte da cama, afastando-se ao máximo da MULHER-DE-TRÊS-OLHOS, etérea, como se tivesse flutuando.</Text>
+      <Text>Helena entra e vê Heitor convulsionando no chão e Cecília espremida na parte da cama, afastando-se ao máximo.</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>A mulher se vira para Helena, é ela mesma, mas com um buraco no meio da testa.</Text>
+      <Text>Há uma MULHER, etérea, como se estivesse </Text>
+      <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">flutando</Text>
+      <Text>.</Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>A mulher se vira para Helena. </Text>
+    </Paragraph>
+    <Paragraph Type="Action">
+      <Text>É ela mesma, mas com um buraco na testa. </Text>
     </Paragraph>
     <Paragraph Type="Action">
       <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">Beat</Text>
       <Text>. </Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena olha, com ternura, para a filha e SAI do quarto. </Text>
+      <Text>Helena olha, com ternura, para a filha e sai do quarto. </Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
-      <SceneProperties Length="1/8" Page="7" Title="">
+      <SceneProperties Length="1/8" Page="6" Title="">
         <SceneArcBeats/>
       </SceneProperties>
       <Text>INT. CASA; CORREDOR - CONTINUA</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Ela ENTRA no banheiro e fecha a porta.</Text>
+      <Text>Ela anda até o banheiro e fecha a porta.</Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <SceneProperties Length="1/8" Page="7" Title="">
@@ -580,7 +538,7 @@
       <Text>INT. CASa; BANHEIRO - CONTINUA</Text>
     </Paragraph>
     <Paragraph Type="Action">
-      <Text>Helena se encara no espelho e aponta a arma para a própria testa. </Text>
+      <Text>Ela está virada para o espelho. Aponta a arma para a própria testa. </Text>
     </Paragraph>
     <Paragraph Type="Scene Heading">
       <SceneProperties Length="2/8" Page="7" Title="">
@@ -645,9 +603,9 @@
     <AutoCastList AddParentheses="Yes" AutomaticallyGenerate="Yes" CastListElement="Cast List"/>
   </PageLayout>
 
-  <WindowState Height="855" Left="0" Mode="Normal" Top="67" Width="1470"/>
+  <WindowState Height="856" Left="-1" Mode="Normal" Top="66" Width="1470"/>
 
-  <TextState Scaling="100" Selection="7108,7108" ShowInvisibles="No"/>
+  <TextState Scaling="100" Selection="3669,3669" ShowInvisibles="No"/>
 
   <ElementSettings Type="General">
     <FontSpec AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""/>
@@ -776,165 +734,165 @@
       </Footer>
     </HeaderAndFooter>
     <Content>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="Underline+AllCaps">FAMILIAR INSÔNIA</Text>
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">Escrito por</Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">VICTOR TURATI</Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Center" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Left" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style=""></Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="-1" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">turativctr@gmail</Text>
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">.com</Text>
       </Paragraph>
-      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.97" SpaceBefore="0" Spacing="1" StartsNewPage="No">
+      <Paragraph Alignment="Full" FirstIndent="0.00" Leading="Regular" LeftIndent="1.00" RightIndent="7.74" SpaceBefore="0" Spacing="1" StartsNewPage="No">
         <Text AdornmentStyle="0" Background="#FFFFFFFFFFFF" Color="#000000000000" Font="Courier Final Draft" RevisionID="0" Size="12" Style="">+55 11 97417-1258</Text>
       </Paragraph>
     </Content>
@@ -1364,7 +1322,7 @@
 
   <DisplayBoards>
     <DisplayBoard Height="10000" Id="ea5ac6af-4926-415c-897c-51bfeff25831" ScrollOrigin="0,0" Type="Beat" Width="24000" ZoomLevel="100.000"/>
-    <DisplayBoard Height="75" Id="f54e428f-4469-484b-8c9d-7dba54866258" ScrollOrigin="0,0" Type="StoryMap" Width="9915" ZoomLevel="495.729"/>
+    <DisplayBoard Height="75" Id="f54e428f-4469-484b-8c9d-7dba54866258" ScrollOrigin="0,0" Type="StoryMap" Width="14600" ZoomLevel="730.000"/>
   </DisplayBoards>
 
   <Writers/>
@@ -1431,25 +1389,25 @@
     <ChartOptions Identifier="InclusivityAnalysis">
       <FilterSets>
         <FilterSet Default="Yes">
-          <Filter Index="0" Name="Count" Value="MIN">
-            <Match>1</Match>
+          <Filter Index="1" Name="Trait" Value="">
+            <Match></Match>
           </Filter>
           <Filter Index="0" Name="Trait" Value="Role">
             <Match></Match>
           </Filter>
-          <Filter Index="1" Name="Trait" Value="">
-            <Match></Match>
+          <Filter Index="0" Name="Count" Value="MIN">
+            <Match>1</Match>
           </Filter>
         </FilterSet>
         <FilterSet>
-          <Filter Index="0" Name="Count" Value="MIN">
-            <Match>1</Match>
+          <Filter Index="1" Name="Trait" Value="">
+            <Match></Match>
           </Filter>
           <Filter Index="0" Name="Trait" Value="">
             <Match></Match>
           </Filter>
-          <Filter Index="1" Name="Trait" Value="">
-            <Match></Match>
+          <Filter Index="0" Name="Count" Value="MIN">
+            <Match>1</Match>
           </Filter>
         </FilterSet>
       </FilterSets>

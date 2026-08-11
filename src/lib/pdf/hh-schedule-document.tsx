@@ -2,7 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { colors, DocHeader, kit, SectionTitle, SeparatorRow, Table, Td, TimeRangeCell, Tr } from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
 import { formatHHh } from "@/lib/schedule";
@@ -64,7 +64,7 @@ function SceneRow({
         {scene.diaNarrativo != null ? `Dia ${scene.diaNarrativo}` : "—"}
       </Td>
       <Td width="6%" align="center">
-        {scene.tempoEstimadoMin ?? "—"}
+        {scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}
       </Td>
     </Tr>
   );
@@ -192,7 +192,7 @@ export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
                 Dia Narr.
               </Td>
               <Td width="6%" bold align="center">
-                Est. min
+                Filmagem
               </Td>
             </Tr>
             {manhaScenes.map((scene) => (

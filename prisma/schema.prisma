@@ -554,6 +554,13 @@ model Character {
   personagem        String
   ator              String?
   idadePersonagem   Int?
+  // true = teve fala detectada em algum ponto do roteiro (cue de diálogo); false = detectado só
+  // por apresentação no texto de ação ("NOME, 35, descrição...") — nunca tem fala nenhuma cena.
+  // Default true: preserva o comportamento anterior a este campo (toda importação antes disso só
+  // criava personagem via cue de diálogo) e o de criação manual pela UI, onde não há como inferir
+  // isso automaticamente. Alimenta contrato diferente, ordem na Call Sheet, e distinção de teste
+  // de elenco vs. figuração especial na revisão do AD.
+  temFala           Boolean @default(true)
   // Prestação de contas do elenco (AD)
   cacheeDiario       Decimal? @db.Decimal(10, 2)
   percentualHold     Decimal? @db.Decimal(5, 2) // % do cachê diário pago em dias de "hold" (aguardando, sem filmar)

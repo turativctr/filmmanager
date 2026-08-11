@@ -42,6 +42,7 @@ type CharacterRow = {
   personagem: string;
   ator: string | null;
   idadePersonagem: number | null;
+  temFala: boolean;
   scenes: { sceneId: string; scene: { numero: string } }[];
 };
 
@@ -78,7 +79,16 @@ function SortableRow({
       <TableCell>
         <CharacterCategoriaBadge categoria={character.categoria} />
       </TableCell>
-      <TableCell className="font-medium">{character.personagem}</TableCell>
+      <TableCell className="font-medium">
+        {character.personagem}
+        {/* Sem fala em NENHUMA cena — contrato e ordem na Call Sheet mudam, e o AD precisa
+            distinguir teste de elenco de figuração especial. Ver Character.temFala. */}
+        {!character.temFala && (
+          <Badge variant="outline" className="ml-1.5 text-[10px] font-normal">
+            sem fala
+          </Badge>
+        )}
+      </TableCell>
       <TableCell>{character.ator ?? "—"}</TableCell>
       <TableCell>{character.idadePersonagem ?? "—"}</TableCell>
       <TableCell>

@@ -11,7 +11,8 @@ import {
   PdfScriptStructureError,
   SCRIPT_OPERATION_TIMEOUT_MS,
 } from "@/lib/build-script-form-data";
-import type { FdxScene, FdxTitlePage, FusionSuggestion } from "@/lib/fdx-parser";
+import { stripPersonagensDescartados } from "@/lib/fdx-parser";
+import type { FdxScene, FdxTitlePage, FusionSuggestion, PersonagemSemFalaDetectado } from "@/lib/fdx-parser";
 import { cn } from "@/lib/utils";
 
 import { Step1Dados } from "./step-1-dados";
@@ -51,6 +52,9 @@ export function OnboardingWizard() {
   const [scenes, setScenes] = useState<PreviewScene[] | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
   const [sugestoesFusao, setSugestoesFusao] = useState<FusionSuggestion[]>([]);
+  const [personagensSemFala, setPersonagensSemFala] = useState<PersonagemSemFalaDetectado[]>([]);
+  // Ver o mesmo comentário em fdx-import-dialog.tsx — guarda os DESCARTADOS, não os aceitos.
+  const [semFalaDescartados, setSemFalaDescartados] = useState<string[]>([]);
   const [parsing, setParsing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +64,12 @@ export function OnboardingWizard() {
     setScenes(null);
     setAvisos([]);
     setSugestoesFusao([]);
+    setPersonagensSemFala([]);
+    setSemFalaDescartados([]);
+  }
+
+  function togglePersonagemSemFala(nome: string) {
+    setSemFalaDescartados((prev) => (prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome]));
   }
 
   function toggleScene(numero: string) {
@@ -116,6 +126,8 @@ export function OnboardingWizard() {
       setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
       setAvisos((data.avisos as string[]) ?? []);
       setSugestoesFusao((data.sugestoesFusao as FusionSuggestion[]) ?? []);
+      setPersonagensSemFala((data.personagensSemFalaDetectados as PersonagemSemFalaDetectado[]) ?? []);
+      setSemFalaDescartados([]);
       setForm((prev) => mergeTitlePage(prev, data.titlePage as FdxTitlePage));
       setStep(2);
     } catch (err) {
@@ -161,7 +173,10 @@ export function OnboardingWizard() {
     const timeoutId = setTimeout(() => controller.abort(), SCRIPT_OPERATION_TIMEOUT_MS);
 
     try {
-      const selected = (scenes ?? []).filter((s) => s.selected).map(({ selected: _selected, ...scene }) => scene);
+      const selected = stripPersonagensDescartados(
+        (scenes ?? []).filter((s) => s.selected).map(({ selected: _selected, ...scene }) => scene),
+        semFalaDescartados
+      );
 
       const res = await fetch("/api/projects", {
         method: "POST",
@@ -253,8 +268,11 @@ export function OnboardingWizard() {
               scenes={scenes}
               avisos={avisos}
               sugestoesFusao={sugestoesFusao}
+              personagensSemFala={personagensSemFala}
+              personagensSemFalaDescartados={semFalaDescartados}
               onToggleScene={toggleScene}
               onAcceptFusion={acceptFusion}
+              onTogglePersonagemSemFala={togglePersonagemSemFala}
             />
           )}
           {step === 3 && <Step3Confirmacao form={form} scenes={scenes} />}

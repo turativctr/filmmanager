@@ -10,8 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { FdxScene, FusionSuggestion } from "@/lib/fdx-parser";
-import { formatPaginas } from "@/lib/paginas";
+import { TermTooltip } from "@/components/shared/term-tooltip";
+import type { FdxScene, FusionSuggestion, PersonagemSemFalaDetectado } from "@/lib/fdx-parser";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
 const NAO_DETECTADO_TITLE = "Não detectado — preencha após importar";
@@ -46,16 +47,26 @@ export function FdxScenePreview({
   scenes,
   avisos,
   sugestoesFusao,
+  personagensSemFala,
+  personagensSemFalaDescartados,
   onToggleScene,
   onAcceptFusion,
+  onTogglePersonagemSemFala,
 }: {
   scenes: (FdxScene & { selected: boolean })[];
   avisos: string[];
   sugestoesFusao?: FusionSuggestion[];
+  personagensSemFala?: PersonagemSemFalaDetectado[];
+  /** Nomes que o AD DESMARCOU — o inverso do padrão (todos entram marcados). */
+  personagensSemFalaDescartados?: string[];
   onToggleScene: (numero: string) => void;
   onAcceptFusion?: (setName: string, locacaoNome: string, cenasSolto: string[]) => void;
+  onTogglePersonagemSemFala?: (nome: string) => void;
 }) {
-  const totalPersonagens = new Set(scenes.flatMap((s) => s.personagens)).size;
+  const descartados = new Set(personagensSemFalaDescartados ?? []);
+  const totalPersonagens = new Set(
+    scenes.flatMap((s) => s.personagens).filter((nome) => !descartados.has(nome))
+  ).size;
   const totalPaginas = scenes.reduce((sum, s) => sum + s.paginas, 0);
 
   return (
@@ -111,6 +122,34 @@ export function FdxScenePreview({
         </div>
       )}
 
+      {personagensSemFala && personagensSemFala.length > 0 && (
+        <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">
+          <p className="font-medium">
+            Personagens sem fala detectados — entram no elenco a menos que você desmarque. O trecho ao lado é o
+            que gerou a detecção.
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {personagensSemFala.map((p) => (
+              <li key={p.nome} className="flex items-start gap-2">
+                <Checkbox
+                  className="mt-0.5 shrink-0"
+                  checked={!descartados.has(p.nome)}
+                  onCheckedChange={() => onTogglePersonagemSemFala?.(p.nome)}
+                  aria-label={`Incluir ${p.nome} no elenco`}
+                />
+                <span className="min-w-0">
+                  <strong>{p.nome}</strong>{" "}
+                  <span className="text-blue-800/80">
+                    &ldquo;{p.trecho}&rdquo;
+                  </span>{" "}
+                  {p.cenas.length > 0 && <span className="whitespace-nowrap">· cenas {p.cenas.join(", ")}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="max-h-[45vh] overflow-y-auto rounded-md border">
         <Table>
           <TableHeader>
@@ -122,7 +161,9 @@ export function FdxScenePreview({
               <TableHead>Período</TableHead>
               <TableHead>Personagens</TableHead>
               <TableHead>Oitavas</TableHead>
-              <TableHead>Tempo (min)</TableHead>
+              <TableHead>
+                Filmagem <TermTooltip content="Estimativa: 5 min por oitavo (convenção, não uma medição)." />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,15 +185,21 @@ export function FdxScenePreview({
                   uncertain={scene.classeLuz === "INDEFINIDO"}
                   title={PERIODO_INDEFINIDO_TITLE}
                 />
-                <TableCell className="max-w-[200px] truncate">
-                  {scene.personagens.length > 0
-                    ? scene.personagens
-                        .map((nome) => (scene.personagensSemFala?.includes(nome) ? `${nome} (sem fala)` : nome))
-                        .join(", ")
-                    : "—"}
-                </TableCell>
+                {(() => {
+                  // Espelha o que vai ser importado de verdade — quem o AD desmarcou na seção
+                  // acima some daqui na hora, sem precisar reanalisar o arquivo.
+                  const visiveis = scene.personagens.filter((nome) => !descartados.has(nome));
+                  const texto = visiveis
+                    .map((nome) => (scene.personagensSemFala?.includes(nome) ? `${nome} (sem fala)` : nome))
+                    .join(", ");
+                  return (
+                    <TableCell className="max-w-[200px] truncate" title={texto || undefined}>
+                      {texto || "—"}
+                    </TableCell>
+                  );
+                })()}
                 <TableCell>{formatPaginas(scene.paginas)}</TableCell>
-                <TableCell>{scene.tempoEstimadoMinSugerido}</TableCell>
+                <TableCell>{formatTempoEstimado(scene.tempoEstimadoMinSugerido)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

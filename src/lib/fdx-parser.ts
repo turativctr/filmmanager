@@ -40,10 +40,13 @@ export type FdxScene = {
   // resolveLocacaoId nas rotas de import); sem ";", locação e set são o mesmo valor.
   locacaoNome: string | null;
   sinopse: string | null;
+  // Elenco vinculado a esta cena — inclui quem tem fala AQUI e quem não tem, mas é citado no
+  // texto de ação (ver detectAndLinkPersonagens). Um personagem com fala em OUTRA cena mas só
+  // citado nesta ainda entra aqui — é assim que HELENA aparece em cenas onde ela não fala.
   personagens: string[];
-  // Subconjunto de `personagens` detectado só pela heurística de primeira menção em maiúscula
-  // na ação (não tem parágrafo Character/fala) — só populado pelo parser de PDF. A prévia marca
-  // esses como descartáveis antes de confirmar, já que a heurística pode errar.
+  // Subconjunto de `personagens` sem NENHUMA fala em todo o roteiro (Character.temFala=false) —
+  // detectado por padrão de apresentação na ação (ver detectPresentationMatches), nunca por fala.
+  // A prévia marca esses como descartáveis antes de confirmar, já que a heurística pode errar.
   personagensSemFala?: string[];
   paginas: number;
   // Linhas brutas contadas na importação — o dado de origem por trás de `paginas` (ver
@@ -70,6 +73,22 @@ export type FdxParseResult = {
   // apresentou nenhuma irregularidade de formatação.
   avisos: string[];
   sugestoesFusao: FusionSuggestion[];
+  // Roster GLOBAL dos personagens sem fala detectados (nome + trecho que motivou a detecção +
+  // cenas vinculadas) — o que a prévia usa pra montar a seção "Personagens sem fala detectados"
+  // com checkbox marcado por padrão (ver detectAndLinkPersonagens). Quem tem fala em algum ponto
+  // do roteiro nunca aparece aqui, mesmo que também bata no padrão de apresentação.
+  personagensSemFalaDetectados: PersonagemSemFalaDetectado[];
+};
+
+// Sugestão de personagem sem fala — NUNCA aplicada sozinha: a prévia mostra o trecho que gerou a
+// detecção lado a lado com um checkbox marcado por padrão, pro AD descartar em 1 clique se for
+// lixo (a heurística pode errar; ver detectPresentationMatches pro porquê de ela ser conservadora
+// mas ainda não-infalível). Precisão importa mais que cobertura aqui — melhor perder um figurante
+// mudo do que poluir o elenco com objeto de cena.
+export type PersonagemSemFalaDetectado = {
+  nome: string;
+  trecho: string;
+  cenas: string[];
 };
 
 // Palavras reconhecidas — mas NUNCA uma lista fechada pro campo `periodo` em si (ver o comentário
@@ -227,6 +246,249 @@ export function detectSetFusionSuggestions(
     });
   }
   return suggestions;
+}
+
+// ---------------------------------------------------------------------------
+// Personagens sem fala — detecção por padrão de APRESENTAÇÃO na ação, nunca por fala. Ver o
+// pedido original pro raciocínio completo; abaixo, só o essencial de cada regra.
+// ---------------------------------------------------------------------------
+
+// Nome composto aceita preposição interna colada ("ESPÍRITO DE URUBU"), mas NÃO encadeia com um
+// adjetivo maiúsculo solto ("CRIATURA PRETA" vira só "CRIATURA" — "PRETA" é descrição, não nome).
+// Encadear qualquer maiúscula adjacente (como uma extração ingênua faria) deixaria duas frases
+// maiúsculas vizinhas por acaso virarem um "nome" só.
+const PERSONAGEM_NOME_PATTERN = "[A-ZÀ-Ú]{2,}(?:[-'][A-ZÀ-Ú]{2,})?(?:\\s+(?:DE|DA|DO|DAS|DOS|E)\\s+[A-ZÀ-Ú]{2,})*";
+
+// REGRA 1 — apresentação biográfica: "NOME, idade|descrição, ..." (ex.: "HELENA, 35, mãe, sofre
+// de insônia", "CECÍLIA, 7 anos, está deitada no colo"). O SEGUNDO "," logo depois do primeiro
+// descritor curto é o que distingue isso de um objeto seguido de uma oração de ação qualquer
+// ("uma LEITEIRA, preenche com LEITE..." não tem um segundo "," logo em seguida — não é uma
+// lista de descritores curtos, é uma oração inteira). Validado empiricamente contra o fixture
+// real "Familiar Insônia": pega os 6 nomes certos (HELENA/HEITOR/VERÔNICA/CECÍLIA/MULHER×2), zero
+// vazamento pra objeto/marcação (TUPPERWARE, LEITEIRA, SANDUÍCHE, COLAR, EFEITO..., etc.).
+const APRESENTACAO_DESCRITOR_PATTERN = new RegExp(
+  `\\b(${PERSONAGEM_NOME_PATTERN})\\s*,\\s*(?:\\d+(?:\\s*anos)?|[a-zà-ú]{2,20})\\s*,`,
+  "g"
+);
+
+// REGRA 2 — apresentação por manifestação: "um/uma NOME [ADJETIVO] verbo-de-entrada", colado, sem
+// vírgula (ex.: "uma CRIATURA PRETA entra rastejando"). Cobre entidade/criatura sem apresentação
+// biográfica — mas ainda age como AGENTE gramatical de um verbo de aparecer/mover, o que objeto
+// de cena não faz (mesmo raciocínio já usado no app pra "SUJEITO se verbo", generalizado pra
+// verbos de entrada). Lista de verbos FECHADA de propósito, não "qualquer verbo" — testada contra
+// o mesmo fixture: só CRIATURA bate, nenhum objeto da lista negativa "entra"/"surge"/"foge"
+// sozinho na prosa deste roteiro.
+const APRESENTACAO_MANIFESTACAO_VERBOS = "entra|sai|surge|aparece|emerge|avança|foge|corre|desliza|salta|irrompe";
+const APRESENTACAO_MANIFESTACAO_PATTERN = new RegExp(
+  `\\b(?:um|uma)\\s+(${PERSONAGEM_NOME_PATTERN})(?:\\s+[A-ZÀ-Ú]{2,})*\\s+(?:${APRESENTACAO_MANIFESTACAO_VERBOS})\\b`,
+  "g"
+);
+
+// Primeira palavra de marcação/transição — cobre "CORTE PARA", "TELA PRETA", "EFEITO DE
+// MADRUGADA", "FIM DA MONTAGEM", "INÍCIO DE MONTAGEM" etc. só pela primeira palavra, sem precisar
+// listar cada combinação.
+const MARCACAO_PRIMEIRA_PALAVRA = new Set([
+  "CORTE",
+  "FADE",
+  "TELA",
+  "EFEITO",
+  "MONTAGEM",
+  "INSERT",
+  "CONTINUA",
+  "CONTINUO",
+  "CONTÍNUA",
+  "CONTÍNUO",
+  "INÍCIO",
+  "FIM",
+  "VOLTAMOS",
+]);
+
+function normalizeSemAcento(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isMarcacaoOuTransicao(nome: string): boolean {
+  const primeira = nome.trim().split(/\s+/)[0]?.toUpperCase();
+  return primeira ? MARCACAO_PRIMEIRA_PALAVRA.has(primeira) || isPeriodoTextoReconhecido(nome) : false;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Substantivos de LUGAR que, num genitivo ("o quarto DA CECÍLIA"), indicam posse de um espaço —
+// não presença de quem o possui. Deliberadamente só lugar: um genitivo com parte do corpo é o
+// oposto ("dedos do pé DA CRIATURA vazando para fora da porta" — a criatura ESTÁ ali, é o corpo
+// dela aparecendo), e um genitivo com objeto é ambíguo demais pra decidir sozinho. Ver
+// mencionaNaAcao.
+const LUGAR_POSSESSIVO_WORDS =
+  "QUARTO|CASA|SALA|COZINHA|BANHEIRO|CORREDOR|APARTAMENTO|ESCRITORIO|CONSULTORIO|VARANDA|GARAGEM|JARDIM|QUINTAL|LOJA|CARRO";
+
+/** Verifica se um nome (já normalizado sem acento) aparece no texto de ação — em QUALQUER caixa
+ *  (maiúscula, minúscula, título), normalizado sem acento pra comparar. É esse case-insensitive
+ *  de propósito que faz "a Criatura" (menção em caixa de título, não maiúscula, cenas depois da
+ *  apresentação) vincular ao mesmo personagem "CRIATURA" apresentado em CAIXA ALTA antes.
+ *
+ *  IGNORA menção que seja só posse de um LUGAR ("Ela corre para o quarto DA CECÍLIA"): ali o nome
+ *  diz de quem é o cômodo, não quem está em cena — sem essa exceção a Cecília seria convocada pra
+ *  uma cena em que não aparece, e elenco convocado à toa é exatamente o custo que essa detecção
+ *  precisa evitar. Vale só pra posse de lugar (ver LUGAR_POSSESSIVO_WORDS), nunca pra genitivo em
+ *  geral. E ignora só ESSA ocorrência: se a pessoa está mesmo na cena, o roteiro a cita também de
+ *  outra forma — é o caso das cenas 9 e 16 do fixture, onde o set já se chama "QUARTO DE CECÍLIA"
+ *  mas ela também aparece como sujeito da ação. */
+function mencionaNaAcao(acaoTexto: string, nomeChaveSemAcento: string): boolean {
+  const textoNormalizado = normalizeSemAcento(acaoTexto);
+  const nome = escapeRegExp(nomeChaveSemAcento);
+  const possePorLugar = new RegExp(`\\b(?:${LUGAR_POSSESSIVO_WORDS})\\s+(?:DE|DA|DO|DAS|DOS)\\s+$`);
+  const todas = [...textoNormalizado.matchAll(new RegExp(`\\b${nome}\\b`, "g"))];
+  return todas.some((m) => !possePorLugar.test(textoNormalizado.slice(0, m.index)));
+}
+
+type ApresentacaoMatch = { nome: string; trecho: string };
+
+/** Varre um bloco de texto de ação atrás de candidatos a "apresentação de personagem" (ver as
+ *  duas regras acima). Não filtra nada aqui (marcação, nome de set/locação, já-tem-fala) — isso é
+ *  responsabilidade de quem chama (detectAndLinkPersonagens), que tem o contexto da cena. */
+export function detectPresentationMatches(actionText: string): ApresentacaoMatch[] {
+  const matches: ApresentacaoMatch[] = [];
+  for (const pattern of [APRESENTACAO_DESCRITOR_PATTERN, APRESENTACAO_MANIFESTACAO_PATTERN]) {
+    const regex = new RegExp(pattern.source, pattern.flags);
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(actionText))) {
+      matches.push({
+        nome: m[1].trim(),
+        trecho: actionText.slice(Math.max(0, m.index - 15), m.index + m[0].length + 25).trim(),
+      });
+    }
+  }
+  return matches;
+}
+
+/** Conjunto (em CAIXA ALTA) dos personagens sem NENHUMA fala no roteiro inteiro — usado pelas
+ *  rotas de import pra gravar Character.temFala. "Ter fala" é propriedade do ROTEIRO, não da cena:
+ *  detectAndLinkPersonagens garante que um nome ou está em personagensSemFala de todas as cenas
+ *  em que aparece, ou de nenhuma — então basta a união pra decidir. */
+export function collectSemFalaNames(scenes: Pick<FdxScene, "personagensSemFala">[]): Set<string> {
+  const nomes = new Set<string>();
+  for (const scene of scenes) {
+    for (const nome of scene.personagensSemFala ?? []) nomes.add(nome.toUpperCase());
+  }
+  return nomes;
+}
+
+/** Remove das cenas os personagens sem fala que o AD desmarcou na prévia — aplicado no cliente,
+ *  ANTES do POST de confirmação, pra que a rota receba só o elenco de fato aceito (ela não tem
+ *  como saber o que foi desmarcado). Não mexe em quem tem fala: esses entram direto, sem
+ *  confirmação. */
+export function stripPersonagensDescartados<T extends { personagens: string[]; personagensSemFala?: string[] }>(
+  scenes: T[],
+  descartados: string[]
+): T[] {
+  if (descartados.length === 0) return scenes;
+  const remover = new Set(descartados);
+  return scenes.map((scene) => ({
+    ...scene,
+    personagens: scene.personagens.filter((n) => !remover.has(n)),
+    personagensSemFala: scene.personagensSemFala?.filter((n) => !remover.has(n)),
+  }));
+}
+
+export type SceneActionContext = {
+  numero: string;
+  acaoTexto: string;
+  set: string | null;
+  locacaoNome: string | null;
+  // Nomes já normalizados (normalizeCharacterName) detectados por cue de diálogo NESTA cena —
+  // igual ao `personagens` que os dois parsers já construíam antes desta rodada.
+  personagensComFala: string[];
+};
+
+/** Passo 2 (depois de já ter TODAS as cenas construídas): identifica o elenco sem fala (padrão de
+ *  apresentação, primeira menção só) e vincula TODO personagem — com ou sem fala — a toda cena
+ *  onde o nome aparece na ação, em qualquer caixa, normalizado sem acento — independente de ter
+ *  fala NAQUELA cena. É isso que faz um personagem com fala só numa cena (ex.: HELENA, cena 4)
+ *  aparecer também nas cenas onde só é citada na ação (1, 2, 3, 5). Compartilhado entre
+ *  fdx-parser.ts e pdf-script-parser.ts — cada um só monta o `acaoTexto` por cena do seu jeito
+ *  (Action paragraphs vs. cluster de ação) e chama isto uma vez, depois de montar todas as cenas. */
+export function detectAndLinkPersonagens(scenesCtx: SceneActionContext[]): {
+  personagensPorCena: string[][];
+  personagensSemFalaPorCena: string[][];
+  personagensSemFalaDetectados: PersonagemSemFalaDetectado[];
+} {
+  const comFalaKeys = new Set<string>();
+  for (const ctx of scenesCtx) {
+    for (const nome of ctx.personagensComFala) comFalaKeys.add(normalizeSemAcento(nome));
+  }
+
+  // Primeira apresentação de cada personagem sem fala, na ordem do roteiro — só a primeira conta
+  // como apresentação; menções seguintes (em qualquer caixa) vinculam por nome, não criam
+  // candidato novo nem sobrescrevem o trecho já registrado.
+  const semFalaRoster = new Map<string, { nome: string; trecho: string }>();
+  for (const ctx of scenesCtx) {
+    const setKey = ctx.set ? normalizeSemAcento(ctx.set) : null;
+    const locacaoKey = ctx.locacaoNome ? normalizeSemAcento(ctx.locacaoNome) : null;
+    for (const match of detectPresentationMatches(ctx.acaoTexto)) {
+      const key = normalizeSemAcento(match.nome);
+      if (key.length < 2) continue;
+      if (isMarcacaoOuTransicao(match.nome)) continue;
+      if (setKey && key === setKey) continue;
+      if (locacaoKey && key === locacaoKey) continue;
+      if (comFalaKeys.has(key)) continue; // tem fala em algum ponto — não é candidato a "sem fala"
+      if (semFalaRoster.has(key)) continue; // já apresentado antes — mantém o primeiro trecho
+      semFalaRoster.set(key, { nome: match.nome, trecho: match.trecho });
+    }
+  }
+
+  // Nomes conhecidos pra vincular por menção (com fala + sem fala aceitos) — mapa normalizado ->
+  // forma de exibição canônica, preferindo a forma vista via fala (mais confiável que a
+  // heurística de apresentação).
+  const nomesConhecidos = new Map<string, string>();
+  for (const ctx of scenesCtx) {
+    for (const nome of ctx.personagensComFala) {
+      const key = normalizeSemAcento(nome);
+      if (!nomesConhecidos.has(key)) nomesConhecidos.set(key, nome);
+    }
+  }
+  for (const [key, entry] of semFalaRoster) {
+    if (!nomesConhecidos.has(key)) nomesConhecidos.set(key, entry.nome);
+  }
+
+  const cenasPorNome = new Map<string, string[]>();
+  const personagensPorCena: string[][] = [];
+  const personagensSemFalaPorCena: string[][] = [];
+
+  for (const ctx of scenesCtx) {
+    const presentes = new Set(ctx.personagensComFala);
+    const semFalaAqui = new Set<string>();
+    for (const [key, display] of nomesConhecidos) {
+      const jaPresente = presentes.has(display);
+      if (!jaPresente && !mencionaNaAcao(ctx.acaoTexto, key)) continue;
+      presentes.add(display);
+      if (semFalaRoster.has(key)) {
+        semFalaAqui.add(display);
+        const cenas = cenasPorNome.get(key) ?? [];
+        cenas.push(ctx.numero);
+        cenasPorNome.set(key, cenas);
+      }
+    }
+    personagensPorCena.push([...presentes]);
+    personagensSemFalaPorCena.push([...semFalaAqui]);
+  }
+
+  const personagensSemFalaDetectados: PersonagemSemFalaDetectado[] = [...semFalaRoster.entries()].map(
+    ([key, entry]) => ({
+      nome: entry.nome,
+      trecho: entry.trecho,
+      cenas: cenasPorNome.get(key) ?? [],
+    })
+  );
+
+  return { personagensPorCena, personagensSemFalaPorCena, personagensSemFalaDetectados };
 }
 
 // Algumas exportações do Final Draft (ex.: roteiros escritos com um rótulo de cena separado
@@ -420,12 +682,18 @@ function countLinhasSimulado(paragraphs: FdxNode[]): number {
   return linhas;
 }
 
-function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]): FdxScene {
+/** Devolve a cena montada E o texto de ação bruto dela — o texto não cabe em FdxScene (não é
+ *  dado do domínio, é insumo da detecção de personagem), mas parseFdx precisa dele pra rodar
+ *  detectAndLinkPersonagens depois, com todas as cenas já montadas. */
+function buildScene(
+  numero: string,
+  numeroGerado: boolean,
+  paragraphs: FdxNode[]
+): { scene: FdxScene; acaoTexto: string } {
   const heading = paragraphs.find((p) => paragraphType(p) === "Scene Heading");
   const { tipo, locacaoNome, set, periodo, periodoFim, classeLuz } = parseHeading(heading ? paragraphText(heading) : "");
 
   const actionParagraphs = paragraphs.filter((p) => paragraphType(p) === "Action");
-  const dialogueParagraphs = paragraphs.filter((p) => paragraphType(p) === "Dialogue");
   const characterParagraphs = paragraphs.filter((p) => paragraphType(p) === "Character");
 
   const firstAction = actionParagraphs.length > 0 ? paragraphText(actionParagraphs[0]) : "";
@@ -448,19 +716,25 @@ function buildScene(numero: string, numeroGerado: boolean, paragraphs: FdxNode[]
   ];
 
   return {
-    numero,
-    numeroGerado,
-    tipo,
-    periodo,
-    periodoFim,
-    classeLuz,
-    set,
-    locacaoNome,
-    sinopse,
-    personagens,
-    paginas,
-    linhas,
-    tempoEstimadoMinSugerido: suggestTempoEstimadoMin(paginas),
+    scene: {
+      numero,
+      numeroGerado,
+      tipo,
+      periodo,
+      periodoFim,
+      classeLuz,
+      set,
+      locacaoNome,
+      sinopse,
+      // Preenchido de verdade em parseFdx, por detectAndLinkPersonagens — aqui entra só quem tem
+      // fala NESTA cena (o que dá pra saber sem olhar o roteiro inteiro).
+      personagens,
+      personagensSemFala: [],
+      paginas,
+      linhas,
+      tempoEstimadoMinSugerido: suggestTempoEstimadoMin(paginas),
+    },
+    acaoTexto: actionParagraphs.map((p) => paragraphText(p)).join(" "),
   };
 }
 
@@ -548,12 +822,30 @@ export function parseFdx(xml: string): FdxParseResult {
   const doc = parser.parse(xml) as FdxNode;
   const root = (doc.FinalDraft as FdxNode) ?? doc;
   const content = root?.Content as FdxNode | undefined;
-  if (!content) return { scenes: [], avisos: [], sugestoesFusao: [] };
+  if (!content) return { scenes: [], avisos: [], sugestoesFusao: [], personagensSemFalaDetectados: [] };
 
   const { groups, semHeadingDetectado } = extractSceneGroups(content);
-  const scenes = groups.map((group, index) => {
+  const built = groups.map((group, index) => {
     const numeroGerado = group.numero == null;
     return buildScene(group.numero ?? String(index + 1), numeroGerado, group.paragraphs);
+  });
+  const scenes = built.map((b) => b.scene);
+
+  // Elenco: precisa do roteiro INTEIRO montado antes (quem fala em qualquer cena não é candidato
+  // a "sem fala" em nenhuma; e o vínculo por menção percorre todas as cenas) — por isso roda aqui
+  // e não dentro de buildScene. Mesma função usada pelo parser de PDF.
+  const { personagensPorCena, personagensSemFalaPorCena, personagensSemFalaDetectados } = detectAndLinkPersonagens(
+    built.map((b) => ({
+      numero: b.scene.numero,
+      acaoTexto: b.acaoTexto,
+      set: b.scene.set,
+      locacaoNome: b.scene.locacaoNome,
+      personagensComFala: b.scene.personagens,
+    }))
+  );
+  scenes.forEach((scene, i) => {
+    scene.personagens = personagensPorCena[i];
+    scene.personagensSemFala = personagensSemFalaPorCena[i];
   });
 
   const avisos: string[] = [];
@@ -579,9 +871,15 @@ export function parseFdx(xml: string): FdxParseResult {
     if (numerosGerados > 0) avisos.push("Numeração de cenas gerada automaticamente");
   }
 
+  if (personagensSemFalaDetectados.length > 0) {
+    avisos.push(
+      `${personagensSemFalaDetectados.length} personagens sem fala detectados — confirme antes de importar`
+    );
+  }
+
   const sugestoesFusao = detectSetFusionSuggestions(scenes);
 
-  return { scenes, avisos, sugestoesFusao };
+  return { scenes, avisos, sugestoesFusao, personagensSemFalaDetectados };
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { idCurtoFrom } from "@/lib/character-import";
+import { collectSemFalaNames } from "@/lib/fdx-parser";
 import type { FdxScene } from "@/lib/fdx-parser";
 import { normalizeLocacaoNome } from "@/lib/locacao";
 import { prisma } from "@/lib/prisma";
@@ -76,6 +77,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // Personagens novos: um createMany pra quem ainda não existe (nem no banco, nem já decidido
       // neste mesmo lote) — os já existentes continuam vindo do characterIdByName montado acima.
       const newCharacterRows: Prisma.CharacterCreateManyInput[] = [];
+      const semFalaNames = collectSemFalaNames(scenesToProcess);
       if (criarPersonagens) {
         for (const scene of scenesToProcess) {
           for (const name of scene.personagens) {
@@ -90,7 +92,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
             takenIdCurtos.add(idCurto);
             const id = randomUUID();
             characterIdByName.set(key, id);
-            newCharacterRows.push({ id, projectId: params.id, idCurto, categoria: "PRINCIPAL", personagem: name });
+            // `temFala` vem da detecção do parser (ver collectSemFalaNames) — só pra personagem
+            // NOVO: um já existente pode ter sido corrigido à mão pelo AD, e reimportar um draft
+            // não pode desfazer essa correção.
+            newCharacterRows.push({
+              id,
+              projectId: params.id,
+              idCurto,
+              categoria: "PRINCIPAL",
+              personagem: name,
+              temFala: !semFalaNames.has(key),
+            });
           }
         }
         if (newCharacterRows.length > 0) {

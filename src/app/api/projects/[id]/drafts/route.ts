@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { idCurtoFrom } from "@/lib/character-import";
+import { collectSemFalaNames } from "@/lib/fdx-parser";
 import type { FdxScene } from "@/lib/fdx-parser";
 import { normalizeLocacaoNome } from "@/lib/locacao";
 import { prisma } from "@/lib/prisma";
@@ -142,6 +143,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const characterIdByName = new Map(existingCharacters.map((c) => [c.personagem.toUpperCase(), c.id]));
       const takenIdCurtos = new Set(existingCharacters.map((c) => c.idCurto));
       const newCharacterRows: Prisma.CharacterCreateManyInput[] = [];
+      const semFalaNames = collectSemFalaNames(scenesToProcess);
       for (const scene of scenesToProcess) {
         for (const name of scene.personagens) {
           const key = name.toUpperCase();
@@ -155,7 +157,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
           takenIdCurtos.add(idCurto);
           const id = randomUUID();
           characterIdByName.set(key, id);
-          newCharacterRows.push({ id, projectId: params.id, idCurto, categoria: "PRINCIPAL", personagem: name });
+          // Ver o mesmo comentário em import/fdx/confirm/route.ts — só pra personagem NOVO,
+          // pra não desfazer correção manual do AD numa reimportação.
+          newCharacterRows.push({
+            id,
+            projectId: params.id,
+            idCurto,
+            categoria: "PRINCIPAL",
+            personagem: name,
+            temFala: !semFalaNames.has(key),
+          });
         }
       }
       if (newCharacterRows.length > 0) {

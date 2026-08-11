@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
 import { idCurtoFrom } from "@/lib/character-import";
+import { collectSemFalaNames } from "@/lib/fdx-parser";
 import type { FdxScene } from "@/lib/fdx-parser";
 import { normalizeLocacaoNome } from "@/lib/locacao";
 import { prisma } from "@/lib/prisma";
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         const characterIdByName = new Map<string, string>();
         const takenIdCurtos = new Set<string>();
         const characterRows: Prisma.CharacterCreateManyInput[] = [];
+        const semFalaNames = collectSemFalaNames(typedScenes);
         for (const scene of typedScenes) {
           for (const name of scene.personagens) {
             const key = name.toUpperCase();
@@ -93,8 +95,16 @@ export async function POST(request: Request) {
             const id = randomUUID();
             characterIdByName.set(key, id);
             // Nunca infere a categoria a partir do roteiro — sempre entra como PRINCIPAL, o
-            // usuário ajusta depois na página de Elenco se necessário.
-            characterRows.push({ id, projectId: created.id, idCurto, categoria: "PRINCIPAL", personagem: name });
+            // usuário ajusta depois na página de Elenco se necessário. `temFala` SIM é inferido:
+            // vem direto da detecção do parser (ver collectSemFalaNames), não é um palpite.
+            characterRows.push({
+              id,
+              projectId: created.id,
+              idCurto,
+              categoria: "PRINCIPAL",
+              personagem: name,
+              temFala: !semFalaNames.has(key),
+            });
           }
         }
         if (characterRows.length > 0) {

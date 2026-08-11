@@ -11,6 +11,7 @@ import { suggestTempoEstimadoMin } from "@/lib/paginas";
 import {
   applyClasseLuzInheritance,
   deriveClasseLuz,
+  detectAndLinkPersonagens,
   detectSetFusionSuggestions,
   isPeriodoTextoReconhecido,
   LINHAS_POR_PAGINA_PADRAO,
@@ -233,23 +234,6 @@ function parseHeadingBody(raw: string): {
   return { tipo, set, locacaoNome: locacaoNome ?? set, periodo: periodoTexto, periodoFim, classeLuz };
 }
 
-// Pistas de descrição de pessoa (idade/nacionalidade/parentesco) — ver comentário na função que
-// usa este padrão. Não é uma lista fechada; é propositalmente ampla pra favorecer recall (melhor
-// marcar um objeto como personagem por engano — descartável na prévia — do que perder gente muda).
-// ANCORADO em "^," — a descrição precisa vir COLADA na frase ("YASMIN, 27 anos"), não em qualquer
-// lugar dos próximos 60 caracteres. Sem essa âncora, um objeto citado perto de uma palavra como
-// "mãe" por coincidência (ex.: "um PORTA-RETRATO da Mãe") seria classificado como personagem.
-const PERSON_DESCRIPTOR_PATTERN =
-  /^,\s*(?:um|uma)?\s*\d+\s*anos|^,\s*(?:um|uma)\s+\S*(?:brasileir|paulist|carioc|japon|americ|europe)\w*|^,\s*(?:um|uma)?\s*(?:m[ãa]e|pai|irm[ãa]o|irm[ãa]|filho|filha|av[oó])\b/i;
-// "SUJEITO se <verbo>" é o padrão mais comum de ação reflexiva em português ("se aproxima", "se
-// ajoelha", "se levanta") — um personagem sem descrição textual (ex.: um espírito, uma entidade)
-// ainda aparece como AGENTE de uma ação assim, o que objetos de cena não fazem.
-const REFLEXIVE_VERB_FOLLOWS_PATTERN = /^[,.]?\s*se\s+\w/i;
-// "Yasmin VÊ o ESPÍRITO..." — verbo de percepção/encontro logo antes introduz um novo agente na
-// cena mesmo sem descrição e sem verbo reflexivo próprio (ele aparece como OBJETO gramatical da
-// percepção de outro personagem, não como sujeito).
-const PERCEPTION_VERB_PRECEDES_PATTERN = /\b(?:v[êe]|avista|percebe|nota|encontra|descobre|surge|aparece)\s+(?:o|a)\s*$/i;
-
 // Número de página automático do Final Draft: uma linha isolada, só dígitos (+ ponto opcional).
 // Calibrado contra um roteiro real: o número às vezes renderiza DUPLICADO ("3.3." em vez de "3." —
 // artefato do exportador, o dígito desenhado duas vezes) — por isso aceita 1 OU 2 repetições, não
@@ -400,21 +384,6 @@ function countLinesInRange(
   return Math.max(1, total);
 }
 
-function extractCapsPhrasesWithContext(text: string): { phrase: string; before: string; after: string }[] {
-  const results: { phrase: string; before: string; after: string }[] = [];
-  // Sequência de 1+ palavras em maiúscula (permitindo acentos), não uma letra solta.
-  const regex = /\b(?:[A-ZÀ-Ú]{2,}(?:[-'][A-ZÀ-Ú]{2,})?)(?:\s+(?:DE|DA|DO|DAS|DOS|E)?\s*[A-ZÀ-Ú]{2,})*\b/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(text))) {
-    results.push({
-      phrase: match[0].trim(),
-      before: text.slice(Math.max(0, match.index - 20), match.index),
-      after: text.slice(match.index + match[0].length, match.index + match[0].length + 60),
-    });
-  }
-  return results;
-}
-
 /** Recebe as páginas já extraídas no navegador (ver pdf-script-extract-browser.ts) e faz toda a
  *  interpretação geométrica — clusters de margem, classificação de elementos, oitavos, heurística
  *  de personagem/objeto. Nenhuma dependência de pdfjs aqui: essa função é pura sobre a estrutura
@@ -468,7 +437,6 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
     personagensComFala: Set<string>;
   };
   const accumulators: SceneAccumulator[] = [];
-  const knownNamesUpper = new Set<string>();
   let sequencial = 0;
 
   for (const page of pages) {
@@ -515,10 +483,7 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
         const current = accumulators[accumulators.length - 1];
         if (!current) continue;
         const nome = normalizeCharacterName(line.text);
-        if (nome) {
-          current.personagensComFala.add(nome);
-          knownNamesUpper.add(nome);
-        }
+        if (nome) current.personagensComFala.add(nome);
         continue;
       }
 
@@ -567,35 +532,27 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
 
     const acaoFull = acc.acaoTexto.join(" ").replace(/\s+/g, " ").trim();
     acc.scene.sinopse = acaoFull ? (acaoFull.length > 200 ? `${acaoFull.slice(0, 200).trimEnd()}…` : acaoFull) : null;
-
-    // Heurística de personagem/objeto na ação — ver PERSON_DESCRIPTOR_PATTERN e
-    // REFLEXIVE_VERB_FOLLOWS_PATTERN acima. Só considera a PRIMEIRA menção de cada frase em
-    // maiúscula em todo o documento (convenção de roteiro); menções repetidas de um mesmo objeto
-    // não viram novo candidato.
-    const semFalaAqui = new Set<string>();
-    for (const trecho of acc.acaoTexto) {
-      for (const { phrase, before, after } of extractCapsPhrasesWithContext(trecho)) {
-        const nome = normalizeCharacterName(phrase);
-        if (!nome || nome.length < 2) continue;
-        if (knownNamesUpper.has(nome)) continue;
-        if (nome === acc.scene.set || nome === acc.scene.locacaoNome) continue;
-        if (isPeriodoTextoReconhecido(nome)) continue;
-        if (MONTAGEM_PATTERN.test(nome)) continue;
-        const isPerson =
-          PERSON_DESCRIPTOR_PATTERN.test(after) ||
-          REFLEXIVE_VERB_FOLLOWS_PATTERN.test(after) ||
-          PERCEPTION_VERB_PRECEDES_PATTERN.test(before);
-        if (!isPerson) continue;
-        knownNamesUpper.add(nome);
-        semFalaAqui.add(nome);
-      }
-    }
-
-    acc.scene.personagens = [...new Set([...acc.personagensComFala, ...semFalaAqui])];
-    acc.scene.personagensSemFala = [...semFalaAqui];
+    acc.scene.personagens = [...acc.personagensComFala];
   }
 
   const scenes = accumulators.map((a) => a.scene);
+
+  // Elenco: mesma função do parser de .fdx (ver detectAndLinkPersonagens em fdx-parser.ts) — roda
+  // com o documento inteiro já montado, porque "tem fala" é uma propriedade do ROTEIRO, não da
+  // cena, e o vínculo por menção percorre todas as cenas.
+  const { personagensPorCena, personagensSemFalaPorCena, personagensSemFalaDetectados } = detectAndLinkPersonagens(
+    accumulators.map((acc) => ({
+      numero: acc.scene.numero,
+      acaoTexto: acc.acaoTexto.join(" "),
+      set: acc.scene.set,
+      locacaoNome: acc.scene.locacaoNome,
+      personagensComFala: [...acc.personagensComFala],
+    }))
+  );
+  scenes.forEach((scene, i) => {
+    scene.personagens = personagensPorCena[i];
+    scene.personagensSemFala = personagensSemFalaPorCena[i];
+  });
 
   // Ordem do documento importa pra herança (cena N pode herdar de N-1) — roda antes de contar
   // os avisos, senão "sem herança" contaria cenas que a própria herança já resolveu.
@@ -605,16 +562,16 @@ export function buildScriptFromPdfPages(pages: ExtractedPage[]): FdxParseResult 
   const semPeriodo = scenes.filter((s) => s.periodo == null).length;
   const naoReconhecidas = scenes.filter((s) => s.periodo != null && !isPeriodoTextoReconhecido(s.periodo)).length;
   const semNumero = scenes.filter((s) => s.numeroGerado).length;
-  const semFalaTotal = scenes.reduce((sum, s) => sum + (s.personagensSemFala?.length ?? 0), 0);
   if (semPeriodo > 0) avisos.push(`${semPeriodo} cenas sem período reconhecido`);
   if (naoReconhecidas > 0)
     avisos.push(`${naoReconhecidas} cenas com período não reconhecido — confira classificação dia/noite`);
   if (semHeranca > 0)
     avisos.push(`${semHeranca} cenas sem período determinável (ex.: 1ª cena do roteiro é "contínuo") — revise manualmente`);
   if (semNumero > 0) avisos.push(`${semNumero} cenas sem número reconhecido no PDF`);
-  if (semFalaTotal > 0) avisos.push(`${semFalaTotal} personagens detectados sem fala — revise antes de confirmar`);
+  if (personagensSemFalaDetectados.length > 0)
+    avisos.push(`${personagensSemFalaDetectados.length} personagens sem fala detectados — confirme antes de importar`);
 
   const sugestoesFusao = detectSetFusionSuggestions(scenes);
 
-  return { scenes, avisos, sugestoesFusao };
+  return { scenes, avisos, sugestoesFusao, personagensSemFalaDetectados };
 }

@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatPaginas } from "@/lib/paginas";
+import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
 type CharacterOption = {
@@ -81,7 +81,9 @@ export function ScenesTable({
             </span>
           </TableHead>
           <TableHead>Dia narr.</TableHead>
-          <TableHead>Tempo (min)</TableHead>
+          <TableHead>
+            Filmagem <TermTooltip content="Estimativa: 5 min por oitavo (convenção, não uma medição)." />
+          </TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
@@ -105,7 +107,7 @@ export function ScenesTable({
             </TableCell>
             <TableCell>{formatPaginas(scene.paginas)}</TableCell>
             <TableCell>{scene.diaNarrativo ?? "—"}</TableCell>
-            <TableCell>{scene.tempoEstimadoMin ?? "—"}</TableCell>
+            <TableCell>{scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}</TableCell>
             <TableCell>
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" asChild title="Breakdown sheet">

@@ -3,7 +3,7 @@
 import { FdxScenePreview } from "@/components/shared/fdx-scene-preview";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { FusionSuggestion } from "@/lib/fdx-parser";
+import type { FusionSuggestion, PersonagemSemFalaDetectado } from "@/lib/fdx-parser";
 
 import type { PreviewScene, ProjectFormState } from "./types";
 
@@ -13,16 +13,22 @@ export function Step2Revisao({
   scenes,
   avisos,
   sugestoesFusao,
+  personagensSemFala,
+  personagensSemFalaDescartados,
   onToggleScene,
   onAcceptFusion,
+  onTogglePersonagemSemFala,
 }: {
   form: ProjectFormState;
   onChange: (patch: Partial<ProjectFormState>) => void;
   scenes: PreviewScene[] | null;
   avisos: string[];
   sugestoesFusao: FusionSuggestion[];
+  personagensSemFala: PersonagemSemFalaDetectado[];
+  personagensSemFalaDescartados: string[];
   onToggleScene: (numero: string) => void;
   onAcceptFusion: (setName: string, locacaoNome: string, cenasSolto: string[]) => void;
+  onTogglePersonagemSemFala: (nome: string) => void;
 }) {
   return (
     <div className="space-y-5">
@@ -84,8 +90,11 @@ export function Step2Revisao({
             scenes={scenes}
             avisos={avisos}
             sugestoesFusao={sugestoesFusao}
+            personagensSemFala={personagensSemFala}
+            personagensSemFalaDescartados={personagensSemFalaDescartados}
             onToggleScene={onToggleScene}
             onAcceptFusion={onAcceptFusion}
+            onTogglePersonagemSemFala={onTogglePersonagemSemFala}
           />
         )}
       </div>

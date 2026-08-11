@@ -24,7 +24,8 @@ import {
   PdfScriptStructureError,
   SCRIPT_OPERATION_TIMEOUT_MS,
 } from "@/lib/build-script-form-data";
-import type { FdxScene, FusionSuggestion } from "@/lib/fdx-parser";
+import { stripPersonagensDescartados } from "@/lib/fdx-parser";
+import type { FdxScene, FusionSuggestion, PersonagemSemFalaDetectado } from "@/lib/fdx-parser";
 import { isAcceptedScriptFile, UNSUPPORTED_SCRIPT_FORMAT_MESSAGE } from "@/lib/script-file-validation";
 
 type PreviewScene = FdxScene & { selected: boolean };
@@ -52,6 +53,10 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
   const [scenes, setScenes] = useState<PreviewScene[] | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
   const [sugestoesFusao, setSugestoesFusao] = useState<FusionSuggestion[]>([]);
+  const [personagensSemFala, setPersonagensSemFala] = useState<PersonagemSemFalaDetectado[]>([]);
+  // Guarda os DESCARTADOS (não os aceitos) — todo sem-fala detectado entra marcado por padrão,
+  // então a lista vazia é o estado inicial correto.
+  const [semFalaDescartados, setSemFalaDescartados] = useState<string[]>([]);
   const [substituirExistentes, setSubstituirExistentes] = useState(false);
   const [criarPersonagens, setCriarPersonagens] = useState(true);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -64,6 +69,8 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
     setScenes(null);
     setAvisos([]);
     setSugestoesFusao([]);
+    setPersonagensSemFala([]);
+    setSemFalaDescartados([]);
     setError(null);
     setResult(null);
     setSubstituirExistentes(false);
@@ -138,6 +145,8 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
       setScenes((data.scenes as FdxScene[]).map((scene) => ({ ...scene, selected: true })));
       setAvisos((data.avisos as string[]) ?? []);
       setSugestoesFusao((data.sugestoesFusao as FusionSuggestion[]) ?? []);
+      setPersonagensSemFala((data.personagensSemFalaDetectados as PersonagemSemFalaDetectado[]) ?? []);
+      setSemFalaDescartados([]);
     } catch (err) {
       if (operationIdRef.current !== operationId) return; // já cancelado, ignora erro tardio
       if (err instanceof PdfScriptStructureError) {
@@ -165,6 +174,10 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
         ? prev.map((s) => (s.numero === numero ? { ...s, selected: !s.selected } : s))
         : prev
     );
+  }
+
+  function togglePersonagemSemFala(nome: string) {
+    setSemFalaDescartados((prev) => (prev.includes(nome) ? prev.filter((n) => n !== nome) : [...prev, nome]));
   }
 
   // Nunca decide sozinho — só aplica a fusão que o AD confirmou explicitamente clicando
@@ -202,7 +215,10 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          scenes: selected.map(({ selected: _selected, ...scene }) => scene),
+          scenes: stripPersonagensDescartados(
+            selected.map(({ selected: _selected, ...scene }) => scene),
+            semFalaDescartados
+          ),
           substituirExistentes,
           criarPersonagens,
         }),
@@ -328,8 +344,11 @@ export function FdxImportDialog({ projectId }: { projectId: string }) {
               scenes={scenes}
               avisos={avisos}
               sugestoesFusao={sugestoesFusao}
+              personagensSemFala={personagensSemFala}
+              personagensSemFalaDescartados={semFalaDescartados}
               onToggleScene={toggleScene}
               onAcceptFusion={acceptFusion}
+              onTogglePersonagemSemFala={togglePersonagemSemFala}
             />
 
             <div className="space-y-2">

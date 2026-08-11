@@ -63,7 +63,7 @@ export function WeeklyPlanDocument({ data }: { data: WeeklyPlanData }) {
                           PÁGS
                         </Td>
                         <Td width="15%" align="right">
-                          MIN
+                          FILMAGEM
                         </Td>
                       </Tr>
                       {day.cenas.map((cena, idx) => (
@@ -77,7 +77,7 @@ export function WeeklyPlanDocument({ data }: { data: WeeklyPlanData }) {
                             {formatPaginas(cena.paginas)}
                           </Td>
                           <Td width="15%" align="right">
-                            {cena.tempoEstimadoMin ?? "—"}
+                            {cena.tempoEstimadoMin != null ? formatTempoEstimado(cena.tempoEstimadoMin) : "—"}
                           </Td>
                         </Tr>
                       ))}

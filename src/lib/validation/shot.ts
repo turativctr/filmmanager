@@ -22,6 +22,7 @@ export const shotSchema = z.object({
   notasDirecao: z.string().optional().nullable(),
   notasContinuidade: z.string().optional().nullable(),
   status: z.enum(["PENDENTE", "FILMADO", "DESCARTADO"]).optional(),
+  prioridade: z.enum(["ESSENCIAL", "DESEJAVEL", "SE_DER_TEMPO"]).optional(),
 });
 
 // Edição: os campos de cima (todos opcionais) + hierarquia master/coverage, que só existe depois do

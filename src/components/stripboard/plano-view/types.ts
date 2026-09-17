@@ -1,4 +1,4 @@
-import type { ShotStatus, ShotTipoReset } from "@prisma/client";
+import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 export type PlanoShot = {
   id: string;
@@ -17,6 +17,7 @@ export type PlanoShot = {
   tempoResetMin: number | null;
   tipoReset: ShotTipoReset;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
   scene: { id: string; numero: string };
 };
 

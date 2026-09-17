@@ -95,12 +95,14 @@ function lensChangeDetail(previous: ShotData, current: ShotData): string | undef
 export function ShotListPanel({
   projectId,
   sceneId,
+  sceneNumero,
   initialShots,
   initialDuracaoAlvoMin,
   tempoEstimadoMin,
 }: {
   projectId: string;
   sceneId: string;
+  sceneNumero: string;
   initialShots: ShotData[];
   initialDuracaoAlvoMin: number | null;
   tempoEstimadoMin: number | null;
@@ -262,6 +264,7 @@ export function ShotListPanel({
         <SceneTempoAlvo
           projectId={projectId}
           sceneId={sceneId}
+          sceneNumero={sceneNumero}
           shots={shots}
           initialDuracaoAlvoMin={initialDuracaoAlvoMin}
           tempoEstimadoMin={tempoEstimadoMin}

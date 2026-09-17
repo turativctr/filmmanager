@@ -9,9 +9,9 @@ export * from "@/lib/shots-shared";
 
 import {
   buildResetMinutesConfig,
-  computeSceneShotTotals,
   normalizeShotOrder,
   recomputeResetsForOrderedShots,
+  resolveRodDaCena,
   type ResetMinutesConfig,
 } from "@/lib/shots-shared";
 import { recalculateDayBlocks } from "@/lib/shootday-blocks";
@@ -79,13 +79,13 @@ export async function writeShotOrder(orderedIds: string[]): Promise<void> {
   ]);
 }
 
-/** Rod da cena em toda diária onde ela está agendada (SceneShootDay.rodMin). Quem manda:
- *  1. Scene.duracaoAlvoMin, se a AD definiu — a soma dos planos vira só a base do aviso de estouro;
- *  2. senão, a soma dos planos (planos + resets, sem descartados) — o comportamento de sempre;
- *  3. sem alvo e sem planos: `semNadaVolta` decide. Normalmente não mexe (o Rod pode ter sido
- *     digitado no stripboard); ao APAGAR o alvo de uma cena sem planos, volta pra null, que cai no
- *     tempo estimado por oitavos (resolveEffectiveRodMin) — senão o alvo apagado continuaria
- *     valendo em silêncio. */
+/** Rod da cena em toda diária onde ela está agendada (SceneShootDay.rodMin), pela regra de
+ *  resolveRodDaCena (alvo → soma dos planos → estimado pelos oitavos).
+ *
+ *  O terceiro caso (sem alvo e sem planos) só é aplicado com `semNadaVolta`, nas TRANSIÇÕES que
+ *  levam a ele: apagar a duração alvo, apagar o último plano. Fora delas não mexe — esta função
+ *  também roda via recalculateScene pra toda cena do projeto quando a config de resets muda, e aí
+ *  zeraria o Rod que a AD digitou à mão no stripboard em toda cena sem planos. */
 export async function syncSceneRodMin(
   sceneId: string,
   shots?: Shot[],
@@ -94,11 +94,8 @@ export async function syncSceneRodMin(
   const scene = await prisma.scene.findUniqueOrThrow({ where: { id: sceneId }, select: { duracaoAlvoMin: true } });
   const planos = shots ?? (await prisma.shot.findMany({ where: { sceneId } }));
 
-  let rodMin: number | null;
-  if (scene.duracaoAlvoMin != null) rodMin = scene.duracaoAlvoMin;
-  else if (planos.length > 0) rodMin = computeSceneShotTotals(planos).totalMin;
-  else if (semNadaVolta) rodMin = null;
-  else return;
+  const { rodMin, fonte } = resolveRodDaCena({ duracaoAlvoMin: scene.duracaoAlvoMin, planos });
+  if (fonte === "ESTIMADO" && !semNadaVolta) return;
 
   await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin } });
 

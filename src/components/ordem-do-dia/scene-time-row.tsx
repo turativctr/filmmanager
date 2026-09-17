@@ -4,6 +4,7 @@ import { Camera, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,6 +77,7 @@ function ShotLine({
   return (
     <div className="flex items-center gap-1.5 py-1 text-xs">
       <span className="shrink-0 font-medium">→ P{shot.numero}:</span>
+      <PrioridadeTag prioridade={shot.prioridade} />
       <span className="w-28 shrink-0 truncate text-muted-foreground">{shot.tamanho ?? "—"}</span>
       <span className="shrink-0 text-muted-foreground">·</span>
       <div className="flex shrink-0 items-center gap-1">

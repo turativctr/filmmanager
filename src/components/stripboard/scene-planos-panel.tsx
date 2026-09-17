@@ -39,6 +39,7 @@ function lensChangeDetail(previous: ShotData, current: ShotData): string | undef
 export function ScenePlanosPanel({
   projectId,
   sceneId,
+  sceneNumero,
   shootDayId,
   periodoColor,
   initialObservacoes,
@@ -49,6 +50,7 @@ export function ScenePlanosPanel({
 }: {
   projectId: string;
   sceneId: string;
+  sceneNumero: string;
   /** Ausente quando a cena está no Boneyard — não há SceneShootDay pra guardar observações. */
   shootDayId?: string;
   periodoColor?: string;
@@ -188,6 +190,7 @@ export function ScenePlanosPanel({
           <SceneTempoAlvo
             projectId={projectId}
             sceneId={sceneId}
+            sceneNumero={sceneNumero}
             shots={shots}
             initialDuracaoAlvoMin={initialDuracaoAlvoMin}
             tempoEstimadoMin={tempoEstimadoMin}

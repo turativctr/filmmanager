@@ -1,4 +1,4 @@
-import type { ShotStatus, ShotTipoReset } from "@prisma/client";
+import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
@@ -35,6 +35,7 @@ export type ShotRow = {
   notasDirecao: string | null;
   notasContinuidade: string | null;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
 };
 
 /** Uma entrada da ordem de filmagem do dia (ShotSchedule) — planos de cenas diferentes podem se
@@ -63,6 +64,7 @@ export type ShotScheduleRow = {
   tempoSetupMin: number;
   tempoTotalMin: number;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
 };
 
 export type ReportSceneRow = {
@@ -165,6 +167,7 @@ export type HoraAHoraPlanoRow = {
   tempoResetMin: number | null;
   tipoReset: ShotTipoReset;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
   /** HH acumulado a partir da âncora do bloco — null quando não há âncora de horário calculável. */
   horaInicio: string | null;
 };
@@ -234,6 +237,7 @@ function buildHoraAHoraPlanos(
         tempoResetMin: entry.tempoResetMin,
         tipoReset: entry.tipoReset,
         status: entry.status,
+        prioridade: entry.prioridade,
         horaInicio: hh,
       };
 
@@ -271,6 +275,7 @@ function buildHoraAHoraPlanos(
           tempoResetMin: shot.tempoResetMin,
           tipoReset: shot.tipoReset,
           status: shot.status,
+          prioridade: shot.prioridade,
           horaInicio: hh,
         };
       });
@@ -443,6 +448,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
         notasDirecao: shot.notasDirecao,
         notasContinuidade: shot.notasContinuidade,
         status: shot.status,
+        prioridade: shot.prioridade,
       })),
       shotsTotal,
       breakdownSheet: scene.breakdownSheet
@@ -575,6 +581,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     tempoSetupMin: entry.shot.tempoSetupMin,
     tempoTotalMin: entry.shot.tempoTotalMin,
     status: entry.shot.status,
+    prioridade: entry.shot.prioridade,
   }));
 
   const horaAHoraPlanos = buildHoraAHoraPlanos(scenes, shotSchedule, shootDay.blocoManhaInicio ?? shootDay.chamadaGeral);

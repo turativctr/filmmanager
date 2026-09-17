@@ -1,9 +1,19 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
-import { colors, kit, SeparatorRow, StandardFooter, StandardHeader, Table, Td, Tr } from "@/lib/pdf/kit";
+import {
+  colors,
+  kit,
+  PRIORIDADE_COL_PT,
+  SeparatorRow,
+  StandardFooter,
+  StandardHeader,
+  Table,
+  Td,
+  Tr,
+} from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
-import { HEAVY_RESETS, isDetalheOuInsert, RESET_LABEL } from "@/lib/shots-shared";
+import { HEAVY_RESETS, isDetalheOuInsert, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-shared";
 import type { ShotTipoReset } from "@prisma/client";
 
 /** Correção 1: NENHUM/AJUSTE não têm divisória; TROCA_LENTE/TROCA_CAMERA usam cinza neutro;
@@ -61,7 +71,10 @@ function ShotScheduleRows({ schedule }: { schedule: ShootDayReportData["shotSche
                   Cena {entry.sceneNumero} · Plano {entry.numero}
                 </Text>
               </Td>
-              <Td width="22%">
+              <Td width={PRIORIDADE_COL_PT} align="center">
+                {PRIORIDADE_INICIAL[entry.prioridade]}
+              </Td>
+              <Td flex={1}>
                 <Text style={descartado ? styles.statusDescartado : undefined}>{entry.descricao}</Text>
               </Td>
               <Td width="8%">{entry.tamanho || "—"}</Td>
@@ -119,7 +132,10 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
               <Table>
                 <Tr header dark>
                   <Td width="9%">CENA · PLANO</Td>
-                  <Td width="22%">DESCRIÇÃO</Td>
+                  <Td width={PRIORIDADE_COL_PT} align="center">
+                    PRI
+                  </Td>
+                  <Td flex={1}>DESCRIÇÃO</Td>
                   <Td width="8%">TAMANHO</Td>
                   <Td width="7%">LENTE</Td>
                   <Td width="7%">ÂNGULO</Td>
@@ -169,7 +185,10 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                       <Table>
                         <Tr header dark>
                           <Td width="4%">Nº</Td>
-                          <Td width="19%">DESCRIÇÃO</Td>
+                          <Td width={PRIORIDADE_COL_PT} align="center">
+                            PRI
+                          </Td>
+                          <Td flex={1}>DESCRIÇÃO</Td>
                           <Td width="7%">TAMANHO</Td>
                           <Td width="6%">LENTE</Td>
                           <Td width="6%">ÂNGULO</Td>
@@ -218,7 +237,10 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                                     {shot.ordem}
                                   </Text>
                                 </Td>
-                                <Td width="19%">
+                                <Td width={PRIORIDADE_COL_PT} align="center">
+                                  {PRIORIDADE_INICIAL[shot.prioridade]}
+                                </Td>
+                                <Td flex={1}>
                                   <Text style={descartado ? styles.statusDescartado : undefined}>
                                     {shot.descricao}
                                   </Text>

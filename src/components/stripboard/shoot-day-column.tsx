@@ -148,6 +148,7 @@ export function ShootDayColumn({
 
   const totalPaginas = allItems.reduce((sum, item) => sum + Number(item.scene.paginas), 0);
   const totalMinutos = allItems.reduce((sum, item) => sum + (item.scene.tempoEstimadoMin ?? 0), 0);
+  const cortaveisMin = allItems.reduce((sum, item) => sum + (item.shotsSummary?.cortaveisMin ?? 0), 0);
   const elencoPresente = [...new Set(allItems.flatMap((item) => item.scene.characterIds))].map(resolveId);
 
   const entryIds =
@@ -186,6 +187,7 @@ export function ShootDayColumn({
             <p className="text-sm text-muted-foreground">
               {day.chamadaGeral && `Chamada geral: ${formatHHh(day.chamadaGeral)} · `}
               {formatPaginas(totalPaginas)} páginas · {formatTempoEstimado(totalMinutos)} de filmagem estimada
+              {cortaveisMin > 0 && ` · ${formatTempoEstimado(cortaveisMin)} cortáveis`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1">

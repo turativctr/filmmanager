@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Button } from "@/components/ui/button";
 import { timeToMinutes } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
+
+import type { ShotPrioridade } from "@prisma/client";
 
 type ShotStatus = "PENDENTE" | "FILMADO" | "DESCARTADO";
 type SceneStatus = "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA" | "ADIADA";
@@ -21,6 +24,7 @@ export type SetModeShot = {
   takesPrevistos: number;
   duracaoTakeMin: number;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
   notasDirecao: string | null;
 };
 
@@ -348,6 +352,7 @@ export function SetModeView({
                             <span className={cn("text-base font-semibold", isCortado && "line-through")}>
                               P{shot.numero}
                             </span>
+                            <PrioridadeTag prioridade={shot.prioridade} className="self-center" />
                             {shot.tamanho && (
                               <span className={cn("text-sm text-muted-foreground", isCortado && "line-through")}>
                                 {shot.tamanho}

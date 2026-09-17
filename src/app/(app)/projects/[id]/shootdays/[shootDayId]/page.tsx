@@ -12,6 +12,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getShootDayReportData } from "@/lib/report-data";
 import { timeToMinutes } from "@/lib/schedule";
+import { computeCortaveisMin } from "@/lib/shots-shared";
 
 export default async function ShootDayPage({
   params,
@@ -120,6 +121,7 @@ export default async function ShootDayPage({
       totalCenas={data.scenes.length}
       totalPaginas={data.totalPaginas}
       totalMinutos={data.scenes.reduce((sum, s) => sum + (s.tempoEstimadoMin ?? 0), 0)}
+      cortaveisMin={data.scenes.reduce((sum, s) => sum + computeCortaveisMin(s.shots), 0)}
       totalPessoas={totalPessoas}
       timelineBlocks={timelineBlocks}
       alerts={{

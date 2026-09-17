@@ -6,13 +6,17 @@ import { Check, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
+import { PRIORIDADE_DESCRICAO, PRIORIDADE_LABEL, PRIORIDADES } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
+
+import type { ShotPrioridade } from "@prisma/client";
 
 import type { ShotInput } from "@/lib/validation/shot";
 import type { ShotData } from "./shot-types";
@@ -202,6 +206,7 @@ export function SortableShotRow({
                 MASTER
               </Badge>
             )}
+            <PrioridadeTag prioridade={shot.prioridade} />
             <span className="w-28 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>
               {shot.tamanho ?? "—"}
             </span>
@@ -277,6 +282,27 @@ export function SortableShotRow({
       {isExpanded && (
         <div className="space-y-3 border-t px-3 py-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <div className="space-y-1">
+              <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                Prioridade
+                <TermTooltip content="O que pode cair quando a diária estoura. Os não-essenciais somam o tempo cortável da cena e da diária. Coverage não herda do pai." />
+              </label>
+              <Select
+                value={shot.prioridade}
+                onValueChange={(value) => void onUpdate(shot.id, { prioridade: value as ShotPrioridade })}
+              >
+                <SelectTrigger className="h-8 w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRIORIDADES.map((p) => (
+                    <SelectItem key={p} value={p} title={PRIORIDADE_DESCRICAO[p]}>
+                      {PRIORIDADE_LABEL[p]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <label
               className={cn(
                 "flex items-center gap-2 text-sm",

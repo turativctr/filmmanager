@@ -1,4 +1,4 @@
-import type { ShotStatus, ShotTipoReset } from "@prisma/client";
+import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 // Módulo sem dependência de prisma/Node — pode ser importado tanto no servidor (src/lib/shots.ts
 // re-exporta tudo daqui) quanto direto em componentes cliente (ex.: shot-list-panel.tsx), já que
@@ -195,6 +195,66 @@ export function computeSceneShotTotals(
   const resetsMin = active.reduce((sum, s) => sum + (s.tempoResetMinManual ?? s.tempoResetMin ?? 0), 0);
   const takesTotal = active.reduce((sum, s) => sum + (s.takesPrevistos ?? 0), 0);
   return { planosMin, resetsMin, totalMin: planosMin + resetsMin, count: active.length, takesTotal };
+}
+
+// ---------------------------------------------------------------------------
+// Prioridade do plano — o que pode cair quando a diária estoura
+// ---------------------------------------------------------------------------
+
+export const PRIORIDADE_LABEL: Record<ShotPrioridade, string> = {
+  ESSENCIAL: "Essencial",
+  DESEJAVEL: "Desejável",
+  SE_DER_TEMPO: "Se der tempo",
+};
+
+/** Inicial pra coluna estreita de PDF: E / D / T. */
+export const PRIORIDADE_INICIAL: Record<ShotPrioridade, string> = {
+  ESSENCIAL: "E",
+  DESEJAVEL: "D",
+  SE_DER_TEMPO: "T",
+};
+
+export const PRIORIDADE_DESCRICAO: Record<ShotPrioridade, string> = {
+  ESSENCIAL: "Sem ele a cena não monta",
+  DESEJAVEL: "Melhora, mas a cena fecha sem ele",
+  SE_DER_TEMPO: "Primeiro a cair",
+};
+
+export const PRIORIDADES: ShotPrioridade[] = ["ESSENCIAL", "DESEJAVEL", "SE_DER_TEMPO"];
+
+/** Minutos em planos que podem cair (DESEJAVEL + SE_DER_TEMPO) — responde "quanto economizo se
+ *  cortar isso", consultado quando a diária estoura. Mesma regra de soma do Rod (planos + resets, sem
+ *  descartados), filtrando os não-essenciais e os já FILMADOS: cortar o que já foi filmado não
+ *  economiza nada, e contá-lo faria o número mentir pra maior justo na hora de decidir. Coverage tem
+ *  prioridade própria: não herda a do pai. */
+export function computeCortaveisMin(
+  shots: (Parameters<typeof computeSceneShotTotals>[0][number] & { prioridade: ShotPrioridade })[]
+): number {
+  return computeSceneShotTotals(shots.filter((s) => s.prioridade !== "ESSENCIAL" && s.status !== "FILMADO")).totalMin;
+}
+
+// ---------------------------------------------------------------------------
+// Rod da cena — de onde vem o número (uma regra só, usada pra gravar e pra rotular na tela)
+// ---------------------------------------------------------------------------
+
+export type FonteRod = "DEFINIDO" | "PLANOS" | "ESTIMADO";
+
+/** O que gravar em SceneShootDay.rodMin, e por quê:
+ *  - duração alvo definida → ela, com ou sem planos (a soma vira só base do aviso de estouro);
+ *  - sem alvo, com planos → soma dos planos (planos + resets, sem descartados);
+ *  - sem alvo e sem planos → null, que resolveEffectiveRodMin resolve pro tempo estimado pelos
+ *    oitavos. Grava null (e não o estimado em si) pra que editar os oitavos depois continue
+ *    refletindo no cronograma. */
+export function resolveRodDaCena({
+  duracaoAlvoMin,
+  planos,
+}: {
+  duracaoAlvoMin: number | null;
+  planos: Parameters<typeof computeSceneShotTotals>[0];
+}): { rodMin: number | null; fonte: FonteRod } {
+  if (duracaoAlvoMin != null) return { rodMin: duracaoAlvoMin, fonte: "DEFINIDO" };
+  if (planos.length > 0) return { rodMin: computeSceneShotTotals(planos).totalMin, fonte: "PLANOS" };
+  return { rodMin: null, fonte: "ESTIMADO" };
 }
 
 // ---------------------------------------------------------------------------

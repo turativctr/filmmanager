@@ -1,4 +1,4 @@
-import type { ShotStatus, ShotTipoReset } from "@prisma/client";
+import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 // Shape do Shot conforme retornado pelas rotas /shots (GET/POST/PATCH/DELETE/reorder) — todas
 // devolvem a lista completa recalculada da cena. Campos extras do model (sceneId, projectId,
@@ -25,6 +25,8 @@ export type ShotData = {
   status: ShotStatus;
   /** Plano principal da cena (no máximo um). */
   ehMaster: boolean;
+  /** O que pode cair quando a diária estoura. Coverage não herda do pai. */
+  prioridade: ShotPrioridade;
   /** Plano do qual este é coverage — null = plano solto. Um nível só. */
   planoPaiId: string | null;
 };

@@ -9,6 +9,7 @@ import {
   colors,
   kit,
   periodoAbrev,
+  PRIORIDADE_COL_PT,
   resetDividerColor,
   resolveLogoBuffer,
   SectionTitle,
@@ -24,7 +25,7 @@ import { FIXED_SAFETY_RULES } from "@/lib/report-constants";
 import type { ShootDayReportData } from "@/lib/report-data";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
 import { formatHHh, formatHHhOrDash, minutesToTime, timeToMinutes } from "@/lib/schedule";
-import { HEAVY_RESETS, RESET_LABEL } from "@/lib/shots-shared";
+import { HEAVY_RESETS, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-shared";
 
 // Colunas das tabelas de cena (Folha 1 "Cenas do Dia" e Folha 2 "Escaleta do AD"), em PONTOS.
 // Toda coluna de conteúdo curto mas variável tem largura fixa, medida pelo PIOR valor possível em
@@ -136,6 +137,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderV2,
   },
   hhPlanoHora: { width: "10%", fontSize: 7.5, fontWeight: 700 },
+  // E/D/T em coluna própria, alinhada entre as linhas — dentro do texto corrido ela se perde.
+  hhPlanoPrioridade: { width: 12, flexShrink: 0, fontSize: 7.5, fontWeight: 700, textAlign: "center" },
   hhPlanoDescricao: { flex: 1, fontSize: 7.5 },
   hhEmptyText: { fontSize: 9, color: colors.medGray, padding: 8 },
 });
@@ -309,7 +312,10 @@ function ShotScheduleRows({
               <Td width="15%">
                 C{entry.sceneNumero} · P{entry.numero}
               </Td>
-              <Td width="45%">
+              <Td width={PRIORIDADE_COL_PT} align="center">
+                {PRIORIDADE_INICIAL[entry.prioridade]}
+              </Td>
+              <Td flex={1}>
                 <Text
                   style={{
                     color: descartado ? colors.medGray : filmado ? colors.success : colors.darkGray,
@@ -365,6 +371,7 @@ function PlanoRowAD({
         wrap={false}
       >
         <Text style={styles.hhPlanoHora}>{plano.horaInicio ? formatHHh(plano.horaInicio) : "—"}</Text>
+        <Text style={styles.hhPlanoPrioridade}>{PRIORIDADE_INICIAL[plano.prioridade]}</Text>
         <Text
           style={{
             ...styles.hhPlanoDescricao,
@@ -698,7 +705,10 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
                   HH
                 </Td>
                 <Td width="15%">CENA · PLANO</Td>
-                <Td width="45%">DESCRIÇÃO</Td>
+                <Td width={PRIORIDADE_COL_PT} align="center">
+                  PRI
+                </Td>
+                <Td flex={1}>DESCRIÇÃO</Td>
                 <Td width="15%">LENTE</Td>
                 <Td width="15%" align="center">
                   TEMPO

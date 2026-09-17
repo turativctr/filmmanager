@@ -6,7 +6,7 @@ import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { colors, DocHeader, kit, SectionTitle, SeparatorRow, Table, Td, TimeRangeCell, Tr } from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
 import { formatHHh } from "@/lib/schedule";
-import { HEAVY_RESETS, RESET_LABEL } from "@/lib/shots-shared";
+import { HEAVY_RESETS, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-shared";
 import type { ShotTipoReset } from "@prisma/client";
 
 const styles = StyleSheet.create({
@@ -129,7 +129,7 @@ function ShotSubRows({ scene }: { scene: ShootDayReportData["scenes"][number] })
                     textDecoration: descartado ? "line-through" : undefined,
                   }}
                 >
-                  » {shot.ordem}. {shot.tamanho || "—"} · {shot.lente || "—"} · {shot.movimento || "—"} ·{" "}
+                  » {shot.ordem}. [{PRIORIDADE_INICIAL[shot.prioridade]}] {shot.tamanho || "—"} · {shot.lente || "—"} · {shot.movimento || "—"} ·{" "}
                   {shot.tempoTotalMin}min ({shot.takesPrevistos}T)
                 </Text>
               </Td>

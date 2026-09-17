@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+
+import type { ShotPrioridade } from "@prisma/client";
 
 type ShotStatus = "PENDENTE" | "FILMADO" | "DESCARTADO";
 
@@ -31,6 +34,7 @@ type Shot = {
   notasDirecao: string | null;
   notasContinuidade: string | null;
   status: ShotStatus;
+  prioridade: ShotPrioridade;
 };
 
 const STATUS_LABEL: Record<ShotStatus, string> = {
@@ -174,7 +178,8 @@ export function ShotListDrawer({
             <div key={shot.id} className="rounded-md border p-2 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <span className="font-semibold">{shot.numero}</span>
+                  <span className="font-semibold">{shot.numero}</span>{" "}
+                  <PrioridadeTag prioridade={shot.prioridade} />
                   {shot.tamanho && <span className="text-muted-foreground"> · {shot.tamanho}</span>}
                   {shot.lente && <span className="text-muted-foreground"> · {shot.lente}</span>}
                 </div>

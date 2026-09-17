@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { ShotTipoReset } from "@prisma/client";
 import { useState } from "react";
 
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HEAVY_RESETS, RESET_LABEL, resolveEffectiveResetMin } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
@@ -158,6 +159,7 @@ export function PlanoStrip({
       <span className="w-16 shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
         C{shot.scene.numero}·P{shot.numero}
       </span>
+      <PrioridadeTag prioridade={shot.prioridade} className="w-[72px] justify-center" />
       <span className="w-24 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>
         {shot.tamanho ?? "—"}
       </span>

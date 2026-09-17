@@ -6,7 +6,14 @@
  *
  *   npm run verify:planos
  */
-import { coverageShotNumero, nextFreeShotNumero, normalizeShotOrder } from "../src/lib/shots-shared";
+import { resolveEffectiveRodMin } from "../src/lib/schedule";
+import {
+  computeCortaveisMin,
+  coverageShotNumero,
+  nextFreeShotNumero,
+  normalizeShotOrder,
+  resolveRodDaCena,
+} from "../src/lib/shots-shared";
 import {
   avaliarTempoAlvo,
   formatDuracaoCurta,
@@ -94,6 +101,51 @@ check("sem planos não divide por zero", avaliarTempoAlvo({ alvoMin: 10, somaMin
 check("mensagem sem planos", mensagemMedia(avaliarTempoAlvo({ alvoMin: 10, somaMin: 0, partes: [] }), "plano", "planos"), "10min · nenhum plano ainda");
 check("singular", mensagemMedia(avaliarTempoAlvo({ alvoMin: 10, somaMin: 0, partes: [planos[0]] }), "plano", "planos"), "10min para 1 plano · ~10min por plano");
 check("mais de uma hora", mensagemMedia(avaliarTempoAlvo({ alvoMin: 125, somaMin: 0, partes: [planos[0]] }), "plano", "planos"), "2h05 para 1 plano · ~2h05 por plano");
+
+console.log("\n=== Rod da cena: os três estados ===");
+// Rod EFETIVO = o que o cronograma usa: o valor gravado, ou o estimado pelos oitavos quando null.
+const TEMPO_ESTIMADO = 90;
+const rodEfetivo = (r: { rodMin: number | null }) => resolveEffectiveRodMin(r.rodMin, TEMPO_ESTIMADO);
+const plano = (tempoTotalMin: number, tempoResetMin: number, status: "PENDENTE" | "FILMADO" | "DESCARTADO" = "PENDENTE") => ({
+  tempoTotalMin,
+  tempoResetMin,
+  tempoResetMinManual: null,
+  takesPrevistos: 3,
+  status,
+});
+const doisPlanos = [plano(6, 0), plano(20, 8), plano(99, 0, "DESCARTADO")];
+
+let rod = resolveRodDaCena({ duracaoAlvoMin: null, planos: doisPlanos });
+check("com planos, sem alvo → soma dos planos (6 + 20 + reset 8, sem o descartado)", [rod.fonte, rodEfetivo(rod)], ["PLANOS", 34]);
+rod = resolveRodDaCena({ duracaoAlvoMin: null, planos: [] });
+check("sem planos, sem alvo → estimado pelos oitavos (o bug: ficava a soma antiga)", [rod.fonte, rod.rodMin, rodEfetivo(rod)], ["ESTIMADO", null, 90]);
+rod = resolveRodDaCena({ duracaoAlvoMin: 10, planos: doisPlanos });
+check("com alvo e com planos → alvo", [rod.fonte, rodEfetivo(rod)], ["DEFINIDO", 10]);
+rod = resolveRodDaCena({ duracaoAlvoMin: 10, planos: [] });
+check("com alvo e sem planos → alvo", [rod.fonte, rodEfetivo(rod)], ["DEFINIDO", 10]);
+
+console.log("\n=== Cortáveis (Desejável + Se der tempo) ===");
+const comPrioridade = (
+  p: "ESSENCIAL" | "DESEJAVEL" | "SE_DER_TEMPO",
+  tempoTotalMin: number,
+  tempoResetMin = 0,
+  status: "PENDENTE" | "FILMADO" | "DESCARTADO" = "PENDENTE"
+) => ({ ...plano(tempoTotalMin, tempoResetMin, status), prioridade: p });
+const cena19 = [
+  comPrioridade("ESSENCIAL", 30, 0),
+  comPrioridade("DESEJAVEL", 20, 5), // reset entra na conta
+  comPrioridade("SE_DER_TEMPO", 15, 0),
+  comPrioridade("SE_DER_TEMPO", 40, 0, "DESCARTADO"), // descartado não conta
+  comPrioridade("DESEJAVEL", 25, 3, "FILMADO"), // já filmado: cortar não economiza nada
+];
+check("desejável + se der tempo, com reset, sem descartado nem filmado", computeCortaveisMin(cena19), 40);
+check("tudo essencial → 0", computeCortaveisMin([comPrioridade("ESSENCIAL", 30), comPrioridade("ESSENCIAL", 10, 4)]), 0);
+check("sem planos → 0", computeCortaveisMin([]), 0);
+check(
+  "cortáveis nunca passam do Rod pela soma",
+  computeCortaveisMin(cena19) <= resolveRodDaCena({ duracaoAlvoMin: null, planos: cena19 }).rodMin!,
+  true
+);
 
 console.log(`\n${falhas === 0 ? "TUDO OK" : `FALHOU (${falhas})`}`);
 process.exit(falhas === 0 ? 0 : 1);

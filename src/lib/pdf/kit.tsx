@@ -291,6 +291,10 @@ function cellWidthStyle(width: string | number | undefined, flex: number | undef
   return { flex: flex ?? 1 };
 }
 
+/** Coluna da prioridade do plano (E/D/T). Pior caso é o cabeçalho "PRI" em negrito (~14pt) + 8pt de
+ *  padding; a letra cabe folgada. Largura fixa: a descrição, com `flex`, fica com o resto. */
+export const PRIORIDADE_COL_PT = 26;
+
 export function Td({
   children,
   width,

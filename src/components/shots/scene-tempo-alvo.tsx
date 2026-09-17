@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Input } from "@/components/ui/input";
 import { formatTempoEstimado } from "@/lib/paginas";
-import { computeSceneShotTotals } from "@/lib/shots-shared";
+import { resolveEffectiveRodMin } from "@/lib/schedule";
+import { computeCortaveisMin, computeSceneShotTotals, resolveRodDaCena } from "@/lib/shots-shared";
 import { avaliarTempoAlvo, mensagemMedia, mensagemSaldo, mensagemSetupAcimaDaMedia } from "@/lib/tempo-alvo";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ import type { ShotData } from "@/components/breakdown/shot-types";
 export function SceneTempoAlvo({
   projectId,
   sceneId,
+  sceneNumero,
   shots,
   initialDuracaoAlvoMin,
   tempoEstimadoMin,
@@ -27,6 +29,7 @@ export function SceneTempoAlvo({
 }: {
   projectId: string;
   sceneId: string;
+  sceneNumero: string;
   shots: ShotData[];
   initialDuracaoAlvoMin: number | null;
   /** Pra dizer de onde vem o Rod quando não há alvo nem planos. */
@@ -95,8 +98,21 @@ export function SceneTempoAlvo({
         ? `Rod: ${formatTempoEstimado(tempoEstimadoMin)} (estimado pelos oitavos — defina a duração alvo pra fixar)`
         : "Rod: sem estimativa — defina a duração alvo ou cadastre planos";
 
+  // "Cena 19 · 90min · 40min em planos cortáveis" — o que a AD procura quando a diária estoura.
+  const rodCena = resolveEffectiveRodMin(
+    resolveRodDaCena({ duracaoAlvoMin: alvo, planos: shots }).rodMin,
+    tempoEstimadoMin
+  );
+  const cortaveisMin = computeCortaveisMin(shots);
+
   return (
     <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+      {ativos.length > 0 && (
+        <p className="font-medium text-foreground">
+          Cena {sceneNumero} · {formatTempoEstimado(rodCena)} ·{" "}
+          {cortaveisMin > 0 ? `${formatTempoEstimado(cortaveisMin)} em planos cortáveis` : "nenhum plano cortável"}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={`duracao-alvo-${sceneId}`} className="flex items-center gap-1 font-medium text-foreground">
           Duração alvo

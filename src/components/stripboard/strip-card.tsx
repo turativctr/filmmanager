@@ -305,6 +305,7 @@ export function StripCard({
             <ScenePlanosPanel
               projectId={projectId}
               sceneId={item.sceneId}
+              sceneNumero={item.scene.numero}
               shootDayId={shootDayId}
               periodoColor={
                 // Painel de planos usa uma faixa sólida (sem degradê) — cena em transição mostra a

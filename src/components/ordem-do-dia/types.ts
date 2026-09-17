@@ -43,6 +43,7 @@ export type ShotSummary = Pick<
   | "tipoReset"
   | "tempoResetMin"
   | "status"
+  | "prioridade"
 >;
 
 export type SceneTimeRow = Pick<

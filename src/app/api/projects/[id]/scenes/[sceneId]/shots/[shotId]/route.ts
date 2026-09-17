@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
-import { recalculateScene, writeShotOrder } from "@/lib/shots";
+import { recalculateScene, syncSceneRodMin, writeShotOrder } from "@/lib/shots";
 import { computeTempoTotal, coverageShotNumero, nextFreeShotNumero, normalizeShotOrder } from "@/lib/shots-shared";
 import { shotPatchSchema } from "@/lib/validation/shot";
 
@@ -166,6 +166,10 @@ export async function DELETE(
   await prisma.$transaction([...renumerar, prisma.shot.delete({ where: { id: shot.id } })]);
 
   const shots = await recalculateScene(shot.sceneId);
+  // Apagou o último plano: recalculateScene não tem o que somar e não mexe no Rod — que ficaria
+  // com a soma antiga (a cena 14A do demo ficou com 6min em vez dos 90 estimados). Sem planos, o
+  // Rod volta à duração alvo, se houver, senão ao tempo estimado pelos oitavos.
+  if (shots.length === 0) await syncSceneRodMin(shot.sceneId, [], { semNadaVolta: true });
 
   return NextResponse.json(shots);
 }

@@ -60,6 +60,7 @@ export function ShootDayDashboard({
   totalCenas,
   totalPaginas,
   totalMinutos,
+  cortaveisMin,
   totalPessoas,
   timelineBlocks,
   alerts,
@@ -82,6 +83,8 @@ export function ShootDayDashboard({
   totalCenas: number;
   totalPaginas: number;
   totalMinutos: number;
+  /** Minutos em planos Desejável/Se der tempo — o que dá pra cortar se o dia estourar. */
+  cortaveisMin: number;
   totalPessoas: number;
   timelineBlocks: TimelineBlock[];
   alerts: {
@@ -217,6 +220,9 @@ export function ShootDayDashboard({
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Filmagem estimada</p>
             <p className="text-2xl font-semibold">{formatTempoEstimado(totalMinutos)}</p>
+            {cortaveisMin > 0 && (
+              <p className="text-xs text-muted-foreground">{formatTempoEstimado(cortaveisMin)} cortáveis</p>
+            )}
           </CardContent>
         </Card>
         <Card>

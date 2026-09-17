@@ -189,6 +189,15 @@ enum ShotStatus {
   DESCARTADO
 }
 
+// O que pode cair quando a diária estoura — decisão da AD, nunca inferida. Padrão DESEJAVEL, não
+// ESSENCIAL: se tudo nascesse essencial a classificação viraria ruído; assim a AD precisa marcar o
+// que de fato não pode cair. Cada plano tem a sua (coverage não herda do pai).
+enum ShotPrioridade {
+  ESSENCIAL // sem ele a cena não monta
+  DESEJAVEL // melhora, mas a cena fecha sem ele
+  SE_DER_TEMPO // primeiro a cair
+}
+
 enum HoraAHoraEventTipo {
   CHAMADA_EQUIPE
   CHAMADA_ELENCO
@@ -479,6 +488,7 @@ model Shot {
   // PATCH do plano). Marcar sobe o plano pro topo UMA vez; depois a AD reordena à vontade, não é
   // trava. Independente de coverage: dá pra ter master sem coverage e coverage de plano não-master.
   ehMaster          Boolean       @default(false)
+  prioridade        ShotPrioridade @default(DESEJAVEL)
   // Coverage: plano pendurado em outro plano da MESMA cena, numerado com a letra do pai (6A, 6B).
   // Um nível só — coverage não tem coverage (barrado na API). A lista plana continua sendo o
   // padrão: null = plano solto. SetNull só como rede de segurança; a rota de DELETE desvincula os

@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
+import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Button } from "@/components/ui/button";
 import { getSceneColor } from "@/lib/scene-color";
 
@@ -414,6 +415,7 @@ export function DayPlanoView({
                 <span className="w-16 shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
                   C{sceneNumeroById.get(shot.sceneId) ?? "?"}·P{shot.numero}
                 </span>
+                <PrioridadeTag prioridade={shot.prioridade} className="w-[72px] justify-center" />
                 <span className="w-24 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>
                   {shot.tamanho ?? "—"}
                 </span>

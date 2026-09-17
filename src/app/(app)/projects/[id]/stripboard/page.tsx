@@ -1,4 +1,4 @@
-import type { ShotStatus } from "@prisma/client";
+import type { ShotPrioridade, ShotStatus } from "@prisma/client";
 import { LayoutList } from "lucide-react";
 import Link from "next/link";
 
@@ -13,6 +13,7 @@ import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
 import { computeSceneShotTotals } from "@/lib/shots";
+import { computeCortaveisMin } from "@/lib/shots-shared";
 
 const shotsSelect = {
   orderBy: { ordem: "asc" as const },
@@ -22,6 +23,7 @@ const shotsSelect = {
     tempoResetMinManual: true,
     takesPrevistos: true,
     status: true,
+    prioridade: true,
   },
 };
 
@@ -32,11 +34,17 @@ function toShotsSummary(
     tempoResetMinManual: number | null;
     takesPrevistos: number | null;
     status: ShotStatus;
+    prioridade: ShotPrioridade;
   }[]
 ): ShotsSummary | null {
   if (shots.length === 0) return null;
   const totals = computeSceneShotTotals(shots);
-  return { count: totals.count, totalMin: totals.totalMin, takesTotal: totals.takesTotal };
+  return {
+    count: totals.count,
+    totalMin: totals.totalMin,
+    takesTotal: totals.takesTotal,
+    cortaveisMin: computeCortaveisMin(shots),
+  };
 }
 
 export default async function StripboardPage({ params }: { params: { id: string } }) {

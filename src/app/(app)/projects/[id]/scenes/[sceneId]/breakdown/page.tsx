@@ -129,6 +129,7 @@ export default async function BreakdownPage({
       <ShotListPanel
         projectId={params.id}
         sceneId={scene.id}
+        sceneNumero={scene.numero}
         initialShots={shots}
         initialDuracaoAlvoMin={scene.duracaoAlvoMin}
         tempoEstimadoMin={scene.tempoEstimadoMin}

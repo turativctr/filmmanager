@@ -27,6 +27,7 @@ export default async function SetModePage({
       takesPrevistos: shot.takesPrevistos,
       duracaoTakeMin: shot.duracaoTakeMin,
       status: shot.status,
+      prioridade: shot.prioridade,
       notasDirecao: shot.notasDirecao,
     })),
   }));

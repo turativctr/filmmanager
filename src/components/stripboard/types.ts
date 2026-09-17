@@ -22,7 +22,8 @@ export type SceneSummary = {
   characterIds: string[];
 };
 
-export type ShotsSummary = { count: number; totalMin: number; takesTotal: number };
+/** cortaveisMin: quanto dos planos é DESEJAVEL/SE_DER_TEMPO — o que dá pra cortar se a diária estourar. */
+export type ShotsSummary = { count: number; totalMin: number; takesTotal: number; cortaveisMin: number };
 
 export type StripItem = {
   sceneId: string;

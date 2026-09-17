@@ -62,7 +62,7 @@ export function NewShootDayDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full">
+        <Button className="w-full sm:w-auto lg:w-full">
           <Plus className="mr-2 h-4 w-4" />
           Adicionar dia
         </Button>

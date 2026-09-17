@@ -280,22 +280,36 @@ export function Tr({
   );
 }
 
+/** Largura de célula: número = pontos FIXOS, que nunca encolhem (coluna dimensionada pelo pior
+ *  valor possível — ex.: D/N por "ENTARDECER"); string = porcentagem, comportamento de sempre;
+ *  sem largura = divide o espaço que sobra, em proporção a `flex`. Texto maior que a célula não é
+ *  cortado nem empurra a vizinha — ele DESENHA POR CIMA dela. Por isso coluna estreita com
+ *  conteúdo variável precisa de largura em pontos medida pelo pior caso, não de porcentagem. */
+function cellWidthStyle(width: string | number | undefined, flex: number | undefined) {
+  if (typeof width === "number") return { width, flexShrink: 0 };
+  if (width) return { width };
+  return { flex: flex ?? 1 };
+}
+
 export function Td({
   children,
   width,
+  flex,
   align,
   bold,
   headerDark,
 }: {
   children?: React.ReactNode;
   width?: string | number;
+  /** Só sem `width`: fatia proporcional do espaço que sobra depois das colunas de largura fixa. */
+  flex?: number;
   align?: "left" | "center" | "right";
   bold?: boolean;
   /** Injetado automaticamente por <Tr header dark> — não usar diretamente. */
   headerDark?: boolean;
 }) {
   return (
-    <View style={{ ...kit.td, ...(width ? { width } : { flex: 1 }) }}>
+    <View style={{ ...kit.td, ...cellWidthStyle(width, flex) }}>
       <Text
         style={{
           ...(bold ? kit.bold : {}),
@@ -319,7 +333,7 @@ export function TimeRangeCell({
   end: string | null;
 }) {
   return (
-    <View style={{ ...kit.td, width, alignItems: "center" }}>
+    <View style={{ ...kit.td, ...cellWidthStyle(width, undefined), alignItems: "center" }}>
       {start && end ? (
         <>
           <Text style={{ fontSize: 7 }}>{start}</Text>

@@ -13,9 +13,12 @@ export function DaySidebar({ projectId, days }: { projectId: string; days: DaySt
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col gap-3 border-r pr-4">
+    // Abaixo de lg (iPad retrato) a lista vai pra CIMA das diárias, em linha, em vez de ficar ao
+    // lado: em 768px, 240px de lateral deixavam ~230px pra tira de cena, que precisa de ~430 — e
+    // tudo que sobrava virava rolagem horizontal na tela de arrastar.
+    <aside className="flex w-full flex-col gap-3 border-b pb-3 lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-4">
       <NewShootDayDialog projectId={projectId} nextNumeroDia={nextNumeroDia} />
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap">
         {days.map((day) => (
           <button
             key={day.id}

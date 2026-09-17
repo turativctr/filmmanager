@@ -255,9 +255,9 @@ export function StripboardBoard({
 
   if (!mounted) {
     return (
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
         <DaySidebar projectId={projectId} days={board.days} />
-        <div className="flex-1 space-y-4">
+        <div className="min-w-0 flex-1 space-y-4">
           <p className="text-sm text-muted-foreground">Carregando stripboard...</p>
         </div>
       </div>
@@ -273,9 +273,15 @@ export function StripboardBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-6">
+        {/* min-w-0 é o que impede rolagem horizontal nesta tela: item de flex tem min-width:auto por
+            padrão, então esta coluna crescia até caber a linha mais larga lá dentro (a descrição de
+            um plano) em vez de respeitar a largura da página — e nenhum truncate/quebra de linha
+            dentro dela chegava a ser acionado. Rolagem aninhada aqui é pior que em qualquer outra
+            tela: a operação principal é arrastar cena e plano, e barra própria perde a posição no
+            meio do arraste. */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
           <DaySidebar projectId={projectId} days={board.days} />
-          <div className="flex-1 space-y-4">
+          <div className="min-w-0 flex-1 space-y-4">
             {board.days.map((day) => (
               <ShootDayColumn
                 key={day.id}

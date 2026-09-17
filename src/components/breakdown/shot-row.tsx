@@ -9,7 +9,7 @@ import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
 import { cn } from "@/lib/utils";
 
 import type { ShotInput } from "@/lib/validation/shot";
@@ -67,23 +67,27 @@ export function SortableShotRow({
   const [takesDraft, setTakesDraft] = useState(shot.takesPrevistos.toString());
   const [duracaoDraft, setDuracaoDraft] = useState(shot.duracaoTakeMin.toString());
   const [setupDraft, setSetupDraft] = useState(shot.tempoSetupMin.toString());
+  const [descricaoDraft, setDescricaoDraft] = useState(shot.descricao);
+  const [lenteDraft, setLenteDraft] = useState(shot.lente ?? "");
   const [anguloDraft, setAnguloDraft] = useState(shot.angulo ?? "");
   const [movimentoDraft, setMovimentoDraft] = useState(shot.movimento ?? "");
   const [notasDirecaoDraft, setNotasDirecaoDraft] = useState(shot.notasDirecao ?? "");
   const [notasContinuidadeDraft, setNotasContinuidadeDraft] = useState(shot.notasContinuidade ?? "");
 
-  // Ressincroniza os drafts sempre que o shot muda por fora (resposta do servidor após qualquer
-  // mutação na cena) — sem isso um input local fica preso no valor digitado mesmo depois da lista
-  // real ser atualizada (mesmo padrão de src/components/stripboard/strip-card.tsx).
-  useEffect(() => {
-    setTakesDraft(shot.takesPrevistos.toString());
-    setDuracaoDraft(shot.duracaoTakeMin.toString());
-    setSetupDraft(shot.tempoSetupMin.toString());
-    setAnguloDraft(shot.angulo ?? "");
-    setMovimentoDraft(shot.movimento ?? "");
-    setNotasDirecaoDraft(shot.notasDirecao ?? "");
-    setNotasContinuidadeDraft(shot.notasContinuidade ?? "");
-  }, [shot]);
+  // Ressincroniza cada draft quando o valor DAQUELE campo muda no servidor — nunca pelo objeto
+  // `shot` inteiro. Qualquer PATCH devolve a lista de planos toda com objetos novos, então depender
+  // de `shot` resetava TODOS os campos a cada salvamento: a AD corrigia a descrição, clicava na
+  // lente, começava a digitar, e a resposta do servidor apagava o que ela tinha digitado. Com
+  // dependência por valor, só o campo que de fato mudou por fora é sobrescrito.
+  useEffect(() => setTakesDraft(shot.takesPrevistos.toString()), [shot.takesPrevistos]);
+  useEffect(() => setDuracaoDraft(shot.duracaoTakeMin.toString()), [shot.duracaoTakeMin]);
+  useEffect(() => setSetupDraft(shot.tempoSetupMin.toString()), [shot.tempoSetupMin]);
+  useEffect(() => setDescricaoDraft(shot.descricao), [shot.descricao]);
+  useEffect(() => setLenteDraft(shot.lente ?? ""), [shot.lente]);
+  useEffect(() => setAnguloDraft(shot.angulo ?? ""), [shot.angulo]);
+  useEffect(() => setMovimentoDraft(shot.movimento ?? ""), [shot.movimento]);
+  useEffect(() => setNotasDirecaoDraft(shot.notasDirecao ?? ""), [shot.notasDirecao]);
+  useEffect(() => setNotasContinuidadeDraft(shot.notasContinuidade ?? ""), [shot.notasContinuidade]);
 
   function commitTakes() {
     const value = Number(takesDraft);
@@ -113,6 +117,24 @@ export function SortableShotRow({
     }
     if (value === shot.tempoSetupMin) return;
     void onUpdate(shot.id, { tempoSetupMin: value });
+  }
+
+  function commitDescricao() {
+    // Descrição é obrigatória (shotSchema: min 1) — apagar tudo desfaz a edição em vez de mandar
+    // um PATCH que o servidor vai recusar.
+    const value = descricaoDraft.trim();
+    if (value === "") {
+      setDescricaoDraft(shot.descricao);
+      return;
+    }
+    if (value === shot.descricao) return;
+    void onUpdate(shot.id, { descricao: value });
+  }
+
+  function commitLente() {
+    const value = lenteDraft.trim() === "" ? null : lenteDraft.trim();
+    if (value === shot.lente) return;
+    void onUpdate(shot.id, { lente: value });
   }
 
   function commitAngulo() {
@@ -165,16 +187,20 @@ export function SortableShotRow({
             <span className="w-20 shrink-0 truncate text-xs text-muted-foreground" title={shot.lente ?? undefined}>
               {shot.lente ?? "—"}
             </span>
-            <span
-              className={cn(
-                "min-w-0 flex-1 truncate",
-                shot.status === "DESCARTADO" && "text-muted-foreground line-through"
-              )}
-              title={shot.descricao}
-            >
-              {shot.descricao}
-            </span>
           </div>
+
+          {/* Linha própria, com a largura inteira do card: é a única coluna sem teto de tamanho.
+              Dividindo linha com número/tamanho/lente (larguras fixas) ela ficava espremida em
+              poucas dezenas de pixels — e com truncate, a descrição inteira só aparecia rolando
+              pro lado (ver o min-w-0 em stripboard-board.tsx). */}
+          <p
+            className={cn(
+              "min-w-0 whitespace-normal break-words pl-8",
+              shot.status === "DESCARTADO" && "text-muted-foreground line-through"
+            )}
+          >
+            {shot.descricao}
+          </p>
 
           <div
             className="flex flex-wrap items-center gap-1 pl-8 text-xs text-muted-foreground"
@@ -229,7 +255,20 @@ export function SortableShotRow({
 
       {isExpanded && (
         <div className="space-y-3 border-t px-3 py-3" onClick={(e) => e.stopPropagation()}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Descrição</label>
+            <AutoGrowTextarea
+              rows={2}
+              value={descricaoDraft}
+              onChange={(e) => setDescricaoDraft(e.target.value)}
+              onBlur={commitDescricao}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Lente</label>
+              <Input value={lenteDraft} onChange={(e) => setLenteDraft(e.target.value)} onBlur={commitLente} />
+            </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Ângulo</label>
               <Input value={anguloDraft} onChange={(e) => setAnguloDraft(e.target.value)} onBlur={commitAngulo} />
@@ -245,7 +284,7 @@ export function SortableShotRow({
           </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Notas de direção</label>
-            <Textarea
+            <AutoGrowTextarea
               rows={2}
               value={notasDirecaoDraft}
               onChange={(e) => setNotasDirecaoDraft(e.target.value)}
@@ -261,7 +300,7 @@ export function SortableShotRow({
                 </span>
               )}
             </label>
-            <Textarea
+            <AutoGrowTextarea
               rows={2}
               value={notasContinuidadeDraft}
               onChange={(e) => setNotasContinuidadeDraft(e.target.value)}

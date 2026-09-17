@@ -51,7 +51,7 @@ export function WeeklyPlanDocument({ data }: { data: WeeklyPlanData }) {
                   </View>
                   <View style={styles.dayBody}>
                     <Text style={styles.dayTotais}>
-                      {day.cenas.length} cena{day.cenas.length === 1 ? "" : "s"} · {formatPaginas(totalPaginas)} oitavas
+                      {day.cenas.length} cena{day.cenas.length === 1 ? "" : "s"} · {formatPaginas(totalPaginas)} pág.
                       · {formatTempoEstimado(totalMin)} de filmagem estimada
                     </Text>
                     <Table>

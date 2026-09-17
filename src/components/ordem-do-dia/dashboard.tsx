@@ -207,8 +207,8 @@ export function ShootDayDashboard({
         <Card>
           <CardContent className="p-4">
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              Total de oitavas
-              <TermTooltip content="Unidade de medida de roteiro. 1 página = 8 oitavas. Usado para estimar o tempo de filmagem de cada cena." />
+              Total de páginas
+              <TermTooltip content="Soma das cenas do dia, em páginas de roteiro. Frações em oitavos: 1 página = 8/8." />
             </p>
             <p className="text-2xl font-semibold">{formatPaginas(totalPaginas)}</p>
           </CardContent>

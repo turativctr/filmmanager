@@ -26,6 +26,25 @@ import { resolveSinopseAD } from "@/lib/scene-sinopse";
 import { formatHHh, formatHHhOrDash, minutesToTime, timeToMinutes } from "@/lib/schedule";
 import { HEAVY_RESETS, RESET_LABEL } from "@/lib/shots-shared";
 
+// Colunas das tabelas de cena (Folha 1 "Cenas do Dia" e Folha 2 "Escaleta do AD"), em PONTOS.
+// Toda coluna de conteúdo curto mas variável tem largura fixa, medida pelo PIOR valor possível em
+// Helvetica 8.5 + os 8pt de padding da célula (que são o espaço entre colunas) + folga — nunca
+// porcentagem: texto que não cabe na célula não quebra pra baixo nem empurra a vizinha, desenha
+// POR CIMA dela ("NOITETEL · AIRBNB RYOKAN"), e isso só aparece com dado longo. Só SET e SINOPSE
+// dividem o espaço que sobra. Página A4 com pageV2 = 531pt úteis.
+const COL = {
+  cena: 40, // "102APL" = 30pt
+  tipo: 42, // "INT/EXT" = 33pt
+  // Período é texto livre; a palavra mais longa das reconhecidas é ENTARDECER (59pt), não
+  // MADRUGADA (55pt). "NOITE PARA MADRUGADA" quebra entre palavras, cada uma cabe.
+  periodo: 68,
+  // Largura própria, sem dividir com sinopse: 3 IDs por linha ("AKE, MEI, HIR," = 59pt), então 6
+  // personagens cabem em 2 linhas.
+  elenco: 68,
+  paginas: 34, // "12 7/8" = 24pt
+  horario: 36, // "10h15" em 7pt = 20pt; cabeçalho "PREP" = 22pt
+} as const;
+
 const styles = StyleSheet.create({
   logisticsRow: { flexDirection: "row", marginBottom: 8 },
   logisticsCol: {
@@ -146,7 +165,7 @@ function MealsFooterRow({ total, cafe, almoco }: { total: number; cafe: number; 
 
 /** Linha de "CENAS DO DIA" da Folha 1 — versão resumida (sem SINOPSE, sem sub-linhas de plano) desde
  *  que o detalhe de sinopse foi pra Folha 2 (Escaleta do AD) e o detalhe de plano foi pra Folha 3
- *  (Hora a Hora com Planos). Larguras redistribuem os ~23% liberados pela coluna SINOPSE removida. */
+ *  (Hora a Hora com Planos). Larguras em COL — SET fica com todo o espaço que sobra. */
 function SceneRow({
   scene,
   alt,
@@ -158,21 +177,21 @@ function SceneRow({
 }) {
   return (
     <Tr alt={alt}>
-      <Td width="6.7%">{scene.numero}</Td>
-      <Td width="10.7%">{scene.tipo ?? "—"}</Td>
-      <Td width="6.7%">{scene.periodo ?? "—"}</Td>
-      <Td width="20%">{scene.setLocacaoDisplay}</Td>
-      <Td width="16%">{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
-      <Td width="6.7%" align="right">
+      <Td width={COL.cena}>{scene.numero}</Td>
+      <Td width={COL.tipo}>{scene.tipo ?? "—"}</Td>
+      <Td width={COL.periodo}>{scene.periodo ?? "—"}</Td>
+      <Td>{scene.setLocacaoDisplay}</Td>
+      <Td width={COL.elenco}>{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
+      <Td width={COL.paginas} align="right">
         {formatPaginas(scene.paginas)}
       </Td>
       <TimeRangeCell
-        width="16.7%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.prepStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.prepEnd) : null}
       />
       <TimeRangeCell
-        width="16.5%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.rodStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.rodEnd) : null}
       />
@@ -193,22 +212,22 @@ function SceneRowAD({
 }) {
   return (
     <Tr alt={alt}>
-      <Td width="5%">{scene.numero}</Td>
-      <Td width="8%">{scene.tipo ?? "—"}</Td>
-      <Td width="5%">{scene.periodo ?? "—"}</Td>
-      <Td width="15%">{scene.setLocacaoDisplay}</Td>
-      <Td width="25%">{resolveSinopseAD(scene) || "—"}</Td>
-      <Td width="12%">{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
-      <Td width="5%" align="right">
+      <Td width={COL.cena}>{scene.numero}</Td>
+      <Td width={COL.tipo}>{scene.tipo ?? "—"}</Td>
+      <Td width={COL.periodo}>{scene.periodo ?? "—"}</Td>
+      <Td flex={2}>{scene.setLocacaoDisplay}</Td>
+      <Td flex={3}>{resolveSinopseAD(scene) || "—"}</Td>
+      <Td width={COL.elenco}>{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
+      <Td width={COL.paginas} align="right">
         {formatPaginas(scene.paginas)}
       </Td>
       <TimeRangeCell
-        width="12.5%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.prepStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.prepEnd) : null}
       />
       <TimeRangeCell
-        width="12.5%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.rodStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.rodEnd) : null}
       />
@@ -629,18 +648,18 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
           {castLegend && <CastLegend entries={castLegend} />}
           <Table>
             <Tr header dark>
-              <Td width="6.7%">CENA</Td>
-              <Td width="10.7%">INT/EXT</Td>
-              <Td width="6.7%">D/N</Td>
-              <Td width="20%">SET / LOCAÇÃO</Td>
-              <Td width="16%">ELENCO</Td>
-              <Td width="6.7%" align="right">
+              <Td width={COL.cena}>CENA</Td>
+              <Td width={COL.tipo}>INT/EXT</Td>
+              <Td width={COL.periodo}>D/N</Td>
+              <Td>SET / LOCAÇÃO</Td>
+              <Td width={COL.elenco}>ELENCO</Td>
+              <Td width={COL.paginas} align="right">
                 PÁGS
               </Td>
-              <Td width="16.7%" align="center">
+              <Td width={COL.horario} align="center">
                 PREP
               </Td>
-              <Td width="16.5%" align="center">
+              <Td width={COL.horario} align="center">
                 ROD
               </Td>
             </Tr>
@@ -720,19 +739,19 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
 
         <Table>
           <Tr header dark>
-            <Td width="5%">CENA</Td>
-            <Td width="8%">INT/EXT</Td>
-            <Td width="5%">D/N</Td>
-            <Td width="15%">SET / LOCAÇÃO</Td>
-            <Td width="25%">SINOPSE CURTA</Td>
-            <Td width="12%">ELENCO</Td>
-            <Td width="5%" align="right">
+            <Td width={COL.cena}>CENA</Td>
+            <Td width={COL.tipo}>INT/EXT</Td>
+            <Td width={COL.periodo}>D/N</Td>
+            <Td flex={2}>SET / LOCAÇÃO</Td>
+            <Td flex={3}>SINOPSE CURTA</Td>
+            <Td width={COL.elenco}>ELENCO</Td>
+            <Td width={COL.paginas} align="right">
               PÁGS
             </Td>
-            <Td width="12.5%" align="center">
+            <Td width={COL.horario} align="center">
               PREP
             </Td>
-            <Td width="12.5%" align="center">
+            <Td width={COL.horario} align="center">
               ROD
             </Td>
           </Tr>

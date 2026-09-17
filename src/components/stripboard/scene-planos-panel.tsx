@@ -17,7 +17,7 @@ import { NewShotDialog } from "@/components/breakdown/new-shot-dialog";
 import { SortableShotRow } from "@/components/breakdown/shot-row";
 import { ResetDivider } from "@/components/shots/reset-divider";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
 import { HEAVY_RESETS } from "@/lib/shots-shared";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
@@ -297,7 +297,7 @@ function ObservacoesField({
           </Badge>
         )}
       </label>
-      <Textarea
+      <AutoGrowTextarea
         rows={2}
         value={draft}
         onChange={(e) => handleChange(e.target.value)}

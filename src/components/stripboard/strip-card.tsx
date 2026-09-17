@@ -10,7 +10,7 @@ import { ShotListDrawer } from "@/components/stripboard/shot-list-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
-import { formatHHh } from "@/lib/schedule";
+import { DEFAULT_PREP_MIN, formatHHh, MIN_ROD_MIN } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 
 import type { ComputedSchedule } from "@/lib/schedule";
@@ -85,10 +85,13 @@ export function StripCard({
   const hasShots = Boolean(item.shotsSummary && item.shotsSummary.count > 0);
   // Card fantasma do DragOverlay não recebe onUpdateTimes — evita mostrar avisos nele.
   const showTempoBadge = !neutral && Boolean(onUpdateTimes) && (item.prepMin ?? 0) === 0 && (item.rodMin ?? 0) === 0;
-  // Sinaliza quando o Rod desta diária diverge da soma dos planos — normalmente ficam sincronizados
-  // automaticamente (recalculateScene), então isso só acontece se alguém editou o Rod manualmente.
+  // De onde o Rod desta cena deveria vir: a duração alvo da AD, se ela definiu; senão a soma dos
+  // planos. Os dois sincronizam sozinhos (syncSceneRodMin) — o selo só aparece se alguém digitou o
+  // Rod à mão nesta diária e ele ficou diferente da fonte.
+  const duracaoAlvo = item.scene.duracaoAlvoMin;
+  const rodEsperado = duracaoAlvo ?? (hasShots ? item.shotsSummary!.totalMin : null);
   const showTempoManualBadge =
-    !neutral && Boolean(onUpdateTimes) && hasShots && item.rodMin !== item.shotsSummary!.totalMin;
+    !neutral && Boolean(onUpdateTimes) && rodEsperado !== null && item.rodMin !== rodEsperado;
 
   function commitTimes() {
     const prep = prepDraft === "" ? null : Number(prepDraft);
@@ -195,7 +198,9 @@ export function StripCard({
           <span onClick={(e) => e.stopPropagation()}>
             <Tooltip>
               <TooltipTrigger className="block h-2 w-2 shrink-0 rounded-full bg-alerta-accent" />
-              <TooltipContent>Tempo manual difere dos planos</TooltipContent>
+              <TooltipContent>
+                {duracaoAlvo != null ? "Tempo manual difere da duração alvo" : "Tempo manual difere dos planos"}
+              </TooltipContent>
             </Tooltip>
           </span>
         )}
@@ -234,22 +239,38 @@ export function StripCard({
             )}
           </div>
 
+          {/* Diz DE ONDE veio cada número em vez de "valores padrão": o Rod sem valor gravado vem do
+              tempo estimado pelos oitavos (resolveEffectiveRodMin), que não é padrão nenhum — e pode
+              mudar "sozinho", ex. ao apagar a duração alvo de uma cena sem planos. */}
           {showTempoBadge && (
             <p className="font-semibold text-alerta-fg">
-              ! Tempo não definido — Prep e Rod não foram definidos para esta cena; o horário exibido usa
-              valores padrão.
+              ! Tempo não definido nesta diária —{" "}
+              {item.scene.tempoEstimadoMin
+                ? `o Rod usa o tempo estimado pelos oitavos (${formatTempoEstimado(item.scene.tempoEstimadoMin)})`
+                : `o Rod usa o mínimo de ${MIN_ROD_MIN}min`}
+              {item.prepMin === null && `; o Prep usa o padrão de ${DEFAULT_PREP_MIN}min`}.
             </p>
           )}
 
-          {showTempoManualBadge && (
+          {/* Quando a AD definiu a duração, deixa explícito que o Rod vem dela e não dos planos. */}
+          {duracaoAlvo != null && (
+            <p className="text-muted-foreground">
+              Rod: {formatTempoEstimado(duracaoAlvo)} (definido)
+              {hasShots && ` · planos somam ${formatTempoEstimado(item.shotsSummary!.totalMin)}`}
+            </p>
+          )}
+
+          {showTempoManualBadge && rodEsperado !== null && (
             <p className="flex flex-wrap items-center gap-2 font-semibold text-alerta-fg">
-              Tempo manual — planos somam {item.shotsSummary!.totalMin}min
+              {duracaoAlvo != null
+                ? `Tempo manual — duração alvo é ${formatTempoEstimado(duracaoAlvo)}`
+                : `Tempo manual — planos somam ${item.shotsSummary!.totalMin}min`}
               <button
                 type="button"
                 className="rounded border border-alerta-accent/60 bg-alerta-bg px-1.5 py-0.5 font-semibold hover:bg-alerta-bg/70"
-                onClick={() => onUpdateTimes?.(item.prepMin, item.shotsSummary!.totalMin)}
+                onClick={() => onUpdateTimes?.(item.prepMin, rodEsperado)}
               >
-                Usar tempo dos planos
+                {duracaoAlvo != null ? "Usar duração alvo" : "Usar tempo dos planos"}
               </button>
             </p>
           )}
@@ -264,7 +285,7 @@ export function StripCard({
                 {item.shotsSummary!.count} planos · {item.shotsSummary!.takesTotal} takes
               </button>
             ) : null}
-            <span>
+            <span hidden={duracaoAlvo != null}>
               {hasShots
                 ? `${formatTempoEstimado(item.shotsSummary!.totalMin)} estimado`
                 : item.scene.tempoEstimadoMin != null
@@ -297,6 +318,8 @@ export function StripCard({
               initialObservacoes={item.observacoes}
               initialObservacoesAutoGeradas={item.observacoesAutoGeradas}
               fatorResetPercent={fatorResetPercent}
+              initialDuracaoAlvoMin={duracaoAlvo}
+              tempoEstimadoMin={item.scene.tempoEstimadoMin}
             />
           )}
         </div>

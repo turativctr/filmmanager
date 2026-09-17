@@ -200,7 +200,8 @@ export function StripboardBoard({
           ? {
               ...movingItem,
               prepMin: computeAutoFillPrepMin(destItems[insertIndex - 1]?.scene, movingItem.scene, DEFAULT_PREP_MIN),
-              rodMin: computeAutoFillRodMin(movingItem.scene.tempoEstimadoMin),
+              // Duração alvo da AD manda no cronograma; sem ela, o tempo estimado por oitavos.
+              rodMin: computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
             }
           : movingItem;
 

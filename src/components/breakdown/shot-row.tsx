@@ -8,7 +8,9 @@ import { useEffect, useState } from "react";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +40,8 @@ function StatusBadge({ status }: { status: ShotData["status"] }) {
   );
 }
 
+const PLANO_SOLTO = "__solto__";
+
 export function SortableShotRow({
   shot,
   index,
@@ -46,6 +50,7 @@ export function SortableShotRow({
   onUpdate,
   onDelete,
   highlightContinuidade,
+  sceneShots,
 }: {
   shot: ShotData;
   index: number;
@@ -54,7 +59,14 @@ export function SortableShotRow({
   onUpdate: (id: string, data: Partial<ShotInput>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   highlightContinuidade: boolean;
+  /** Todos os planos da cena — pra montar a lista "Coverage de" e saber se este tem coverages. */
+  sceneShots: ShotData[];
 }) {
+  // Um nível só: só planos soltos podem ser pai, e um plano que já tem coverages não pode virar
+  // coverage de outro (a API barra os dois; aqui a tela nem oferece).
+  const hasCoverages = sceneShots.some((s) => s.planoPaiId === shot.id);
+  const parentOptions = sceneShots.filter((s) => s.id !== shot.id && !s.planoPaiId);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: shot.id,
   });
@@ -162,7 +174,11 @@ export function SortableShotRow({
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="rounded-md border bg-background">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("rounded-md border bg-background", shot.planoPaiId && "ml-6 border-dashed")}
+    >
       <div
         className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm"
         onClick={() => onToggleExpand(shot.id)}
@@ -181,6 +197,11 @@ export function SortableShotRow({
           <div className="flex items-center gap-2">
             <span className="w-6 shrink-0 text-xs text-muted-foreground">{index + 1}</span>
             <span className="w-16 shrink-0 truncate font-medium">{shot.numero}</span>
+            {shot.ehMaster && (
+              <Badge className="shrink-0 px-1.5 py-0 text-[10px]" title="Plano master da cena">
+                MASTER
+              </Badge>
+            )}
             <span className="w-28 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>
               {shot.tamanho ?? "—"}
             </span>
@@ -255,6 +276,55 @@ export function SortableShotRow({
 
       {isExpanded && (
         <div className="space-y-3 border-t px-3 py-3" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <label
+              className={cn(
+                "flex items-center gap-2 text-sm",
+                shot.planoPaiId && "cursor-not-allowed text-muted-foreground"
+              )}
+              title={shot.planoPaiId ? "Coverage não pode ser master — desvincule antes" : undefined}
+            >
+              <Checkbox
+                checked={shot.ehMaster}
+                disabled={Boolean(shot.planoPaiId)}
+                onCheckedChange={(checked) => void onUpdate(shot.id, { ehMaster: checked === true })}
+              />
+              Master da cena
+              <TermTooltip content="Um master por cena: marcar este desmarca o anterior. Ao marcar, o plano sobe pro topo uma vez; depois dá pra arrastar à vontade." />
+            </label>
+            <div className="min-w-[12rem] flex-1 space-y-1">
+              <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                Coverage de
+                <TermTooltip content="Pendura este plano em outro da cena: recebe a letra do pai (6A, 6B) e anda junto com ele no arraste. Desvincular devolve à lista com o próximo número livre." />
+              </label>
+              <Select
+                value={shot.planoPaiId ?? PLANO_SOLTO}
+                disabled={hasCoverages || shot.ehMaster}
+                onValueChange={(value) =>
+                  void onUpdate(shot.id, { planoPaiId: value === PLANO_SOLTO ? null : value })
+                }
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PLANO_SOLTO}>Nenhum (plano solto)</SelectItem>
+                  {parentOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.numero} — {p.descricao.length > 40 ? `${p.descricao.slice(0, 40)}…` : p.descricao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(hasCoverages || shot.ehMaster) && (
+                <p className="text-xs text-muted-foreground">
+                  {hasCoverages
+                    ? "Este plano tem coverages — coverage não pode ter coverage."
+                    : "Master não pode ser coverage — desmarque master antes."}
+                </p>
+              )}
+            </div>
+          </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Descrição</label>
             <AutoGrowTextarea

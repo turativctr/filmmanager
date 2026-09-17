@@ -39,7 +39,6 @@ export function NewShotDialog({
     const form = e.currentTarget;
     const data = new FormData(form);
     const payload = {
-      numero: data.get("numero"),
       descricao: data.get("descricao"),
       tamanho: data.get("tamanho") || undefined,
       lente: data.get("lente") || undefined,
@@ -86,19 +85,15 @@ export function NewShotDialog({
         <DialogHeader>
           <DialogTitle>Novo plano</DialogTitle>
           <DialogDescription>
-            Preencha os dados do plano — reset e tempo de reset são calculados automaticamente.
+            Preencha os dados do plano — número, reset e tempo de reset são calculados automaticamente.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="numero">Número</Label>
-              <Input id="numero" name="numero" required />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tamanho">Tamanho</Label>
-              <Input id="tamanho" name="tamanho" placeholder="ex.: Close, Plano geral" />
-            </div>
+          {/* Sem campo de número: o plano novo recebe o próximo número livre da cena (nunca a
+              posição — o número é o da claquete; ver nextFreeShotNumero). */}
+          <div className="space-y-1.5">
+            <Label htmlFor="tamanho">Tamanho</Label>
+            <Input id="tamanho" name="tamanho" placeholder="ex.: Close, Plano geral" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="descricao">Descrição</Label>

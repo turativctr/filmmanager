@@ -15,7 +15,8 @@
     "verify:themes": "node scripts/verify-theme-tokens.mjs",
     "verify:eighths": "tsx scripts/verify-eighths-fixture.ts",
     "verify:periodo": "tsx scripts/verify-periodo-locacao-fixture.ts",
-    "verify:elenco": "tsx scripts/verify-elenco-fixture.ts"
+    "verify:elenco": "tsx scripts/verify-elenco-fixture.ts",
+    "verify:planos": "tsx scripts/verify-planos-tempo.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

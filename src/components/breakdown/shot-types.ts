@@ -23,4 +23,8 @@ export type ShotData = {
   notasDirecao: string | null;
   notasContinuidade: string | null;
   status: ShotStatus;
+  /** Plano principal da cena (no máximo um). */
+  ehMaster: boolean;
+  /** Plano do qual este é coverage — null = plano solto. Um nível só. */
+  planoPaiId: string | null;
 };

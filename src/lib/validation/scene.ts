@@ -31,6 +31,12 @@ export const sceneSchema = z.object({
 
 export type SceneInput = z.infer<typeof sceneSchema>;
 
+// Tempo reverso (Scene.duracaoAlvoMin). null apaga e volta ao Rod pela soma dos planos. 0 não é
+// aceito: cena nunca roda em zero minutos, e "0" num campo desses quase sempre é digitação.
+export const sceneDuracaoAlvoSchema = z.object({
+  duracaoAlvoMin: z.number().int().min(1).max(24 * 60).nullable(),
+});
+
 export const sceneSinopseADSchema = z.object({
   sinopseAD: z.string().optional().nullable(),
 });

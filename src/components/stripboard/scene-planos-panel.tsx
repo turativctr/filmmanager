@@ -10,15 +10,17 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { NewShotDialog } from "@/components/breakdown/new-shot-dialog";
 import { SortableShotRow } from "@/components/breakdown/shot-row";
 import { ResetDivider } from "@/components/shots/reset-divider";
+import { SceneTempoAlvo } from "@/components/shots/scene-tempo-alvo";
 import { Badge } from "@/components/ui/badge";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
-import { HEAVY_RESETS } from "@/lib/shots-shared";
+import { HEAVY_RESETS, normalizeShotOrder } from "@/lib/shots-shared";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
 import type { ShotInput } from "@/lib/validation/shot";
@@ -42,6 +44,8 @@ export function ScenePlanosPanel({
   initialObservacoes,
   initialObservacoesAutoGeradas,
   fatorResetPercent = 100,
+  initialDuracaoAlvoMin = null,
+  tempoEstimadoMin = null,
 }: {
   projectId: string;
   sceneId: string;
@@ -52,7 +56,10 @@ export function ScenePlanosPanel({
   initialObservacoesAutoGeradas?: boolean;
   /** Ritmo dos resets da diária (nível 3) — ausente no Boneyard, onde não há dia em escopo. */
   fatorResetPercent?: number;
+  initialDuracaoAlvoMin?: number | null;
+  tempoEstimadoMin?: number | null;
 }) {
+  const router = useRouter();
   const [shots, setShots] = useState<ShotData[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -106,11 +113,15 @@ export function ScenePlanosPanel({
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        toast.error("Erro ao salvar — tente novamente");
+        // Regras de master/coverage voltam como 400 com o motivo — mostrar o motivo, não um genérico.
+        const data = await res.json().catch(() => ({}));
+        toast.error(typeof data.error === "string" ? data.error : "Erro ao salvar — tente novamente");
         return;
       }
       const updated: ShotData[] = await res.json();
       setShots(updated);
+      // Mudar tempo, status ou hierarquia de plano mexe no Rod da cena — recarrega o cronograma.
+      router.refresh();
     } catch (err) {
       console.error("Erro de rede ao salvar plano:", err);
       toast.error("Erro ao salvar — tente novamente");
@@ -126,6 +137,7 @@ export function ScenePlanosPanel({
       }
       const updated: ShotData[] = await res.json();
       setShots(updated);
+      router.refresh();
     } catch (err) {
       console.error("Erro de rede ao excluir plano:", err);
       toast.error("Erro ao salvar — tente novamente");
@@ -146,6 +158,7 @@ export function ScenePlanosPanel({
       }
       const updated: ShotData[] = await res.json();
       setShots(updated);
+      router.refresh();
     } catch (err) {
       console.error("Erro de rede ao reordenar planos:", err);
       toast.error("Erro ao salvar — tente novamente");
@@ -162,13 +175,27 @@ export function ScenePlanosPanel({
     if (oldIndex === -1 || newIndex === -1) return;
 
     const previous = shots;
-    const next = arrayMove(shots, oldIndex, newIndex);
+    // Mesmo reagrupamento do servidor: arrastar o pai leva os coverages; coverage não sai do grupo.
+    const next = normalizeShotOrder(arrayMove(shots, oldIndex, newIndex));
     setShots(next);
     void persistOrder(next, previous);
   }
 
   return (
     <div className="space-y-3 border-t pt-2">
+      {shots !== null && !loading && (
+        <div className="pl-2">
+          <SceneTempoAlvo
+            projectId={projectId}
+            sceneId={sceneId}
+            shots={shots}
+            initialDuracaoAlvoMin={initialDuracaoAlvoMin}
+            tempoEstimadoMin={tempoEstimadoMin}
+            onSaved={() => router.refresh()}
+            mostrarRod={false}
+          />
+        </div>
+      )}
       {shots === null || loading ? (
         <p className="pl-2 text-xs text-muted-foreground">Carregando planos...</p>
       ) : shots.length === 0 ? (
@@ -205,6 +232,7 @@ export function ScenePlanosPanel({
                       highlightContinuidade={
                         HEAVY_RESETS.includes(shot.tipoReset) && Boolean(shot.notasContinuidade?.trim())
                       }
+                      sceneShots={shots}
                     />
                   </div>
                 </div>
@@ -215,7 +243,14 @@ export function ScenePlanosPanel({
       )}
 
       <div className="pl-2">
-        <NewShotDialog projectId={projectId} sceneId={sceneId} onCreated={setShots} />
+        <NewShotDialog
+          projectId={projectId}
+          sceneId={sceneId}
+          onCreated={(created) => {
+            setShots(created);
+            router.refresh();
+          }}
+        />
       </div>
 
       {shootDayId && (

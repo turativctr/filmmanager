@@ -10,6 +10,7 @@ export * from "@/lib/shots-shared";
 import {
   buildResetMinutesConfig,
   computeSceneShotTotals,
+  normalizeShotOrder,
   recomputeResetsForOrderedShots,
   type ResetMinutesConfig,
 } from "@/lib/shots-shared";
@@ -39,8 +40,15 @@ async function getResetMinutesConfig(projectId: string): Promise<ResetMinutesCon
  *  influencia qual tipo "ganha". tempoResetMinManual (nível 2, ajuste por plano) nunca é tocado
  *  aqui — só a rota de PATCH do Shot escreve nele. */
 export async function recalculateScene(sceneId: string): Promise<Shot[]> {
-  const shots = await prisma.shot.findMany({ where: { sceneId }, orderBy: { ordem: "asc" } });
-  if (shots.length === 0) return [];
+  const found = await prisma.shot.findMany({ where: { sceneId }, orderBy: { ordem: "asc" } });
+  if (found.length === 0) return [];
+
+  // Coverage sempre logo abaixo do pai, em qualquer caminho que chegue aqui (criar, apagar,
+  // vincular, reordenar) — ver normalizeShotOrder. Idempotente: se já está agrupado, não escreve.
+  const shots = normalizeShotOrder(found);
+  if (shots.some((shot, index) => shot.id !== found[index].id)) {
+    await writeShotOrder(shots.map((s) => s.id));
+  }
 
   const resetMinutes = await getResetMinutesConfig(shots[0].projectId);
   const resets = recomputeResetsForOrderedShots(shots);
@@ -56,18 +64,50 @@ export async function recalculateScene(sceneId: string): Promise<Shot[]> {
   );
 
   if (updated.length > 0) {
-    const { totalMin } = computeSceneShotTotals(updated);
-    await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin: totalMin } });
-
-    // Rod mudou, então o cronograma daquela(s) diária(s) mudou — recalcula blocoManha/almoço de cada
-    // uma delas (normalmente uma só, mas nada impede a mesma cena de estar agendada em mais de um dia).
-    const days = await prisma.sceneShootDay.findMany({ where: { sceneId }, select: { shootDayId: true } });
-    for (const day of days) {
-      await recalculateDayBlocks(day.shootDayId);
-    }
+    await syncSceneRodMin(sceneId, updated);
   }
 
   return updated;
+}
+
+/** Grava `ordem` 1..N na sequência dada. Duas fases (offset negativo, depois posição final) pra não
+ *  colidir com a constraint única (sceneId, ordem) ao trocar planos de posição. */
+export async function writeShotOrder(orderedIds: string[]): Promise<void> {
+  await prisma.$transaction([
+    ...orderedIds.map((id, index) => prisma.shot.update({ where: { id }, data: { ordem: -(index + 1) } })),
+    ...orderedIds.map((id, index) => prisma.shot.update({ where: { id }, data: { ordem: index + 1 } })),
+  ]);
+}
+
+/** Rod da cena em toda diária onde ela está agendada (SceneShootDay.rodMin). Quem manda:
+ *  1. Scene.duracaoAlvoMin, se a AD definiu — a soma dos planos vira só a base do aviso de estouro;
+ *  2. senão, a soma dos planos (planos + resets, sem descartados) — o comportamento de sempre;
+ *  3. sem alvo e sem planos: `semNadaVolta` decide. Normalmente não mexe (o Rod pode ter sido
+ *     digitado no stripboard); ao APAGAR o alvo de uma cena sem planos, volta pra null, que cai no
+ *     tempo estimado por oitavos (resolveEffectiveRodMin) — senão o alvo apagado continuaria
+ *     valendo em silêncio. */
+export async function syncSceneRodMin(
+  sceneId: string,
+  shots?: Shot[],
+  { semNadaVolta = false }: { semNadaVolta?: boolean } = {}
+): Promise<void> {
+  const scene = await prisma.scene.findUniqueOrThrow({ where: { id: sceneId }, select: { duracaoAlvoMin: true } });
+  const planos = shots ?? (await prisma.shot.findMany({ where: { sceneId } }));
+
+  let rodMin: number | null;
+  if (scene.duracaoAlvoMin != null) rodMin = scene.duracaoAlvoMin;
+  else if (planos.length > 0) rodMin = computeSceneShotTotals(planos).totalMin;
+  else if (semNadaVolta) rodMin = null;
+  else return;
+
+  await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin } });
+
+  // Rod mudou, então o cronograma daquela(s) diária(s) mudou — recalcula blocoManha/almoço de cada
+  // uma delas (normalmente uma só, mas nada impede a mesma cena de estar agendada em mais de um dia).
+  const days = await prisma.sceneShootDay.findMany({ where: { sceneId }, select: { shootDayId: true } });
+  for (const day of days) {
+    await recalculateDayBlocks(day.shootDayId);
+  }
 }
 
 /** Recalcula tipoReset/tempoResetMin de todo ShotSchedule do dia (a ordem é global, cruza cenas) —

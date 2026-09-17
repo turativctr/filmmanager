@@ -198,6 +198,77 @@ export function computeSceneShotTotals(
 }
 
 // ---------------------------------------------------------------------------
+// Master / coverage — hierarquia OPCIONAL de um nível por cima da lista plana de planos.
+// ---------------------------------------------------------------------------
+
+export type ShotHierarchyInput = { id: string; planoPaiId: string | null };
+
+/** Reagrupa uma ordem plana de planos pra manter cada coverage logo abaixo do seu pai, na ordem
+ *  relativa em que os coverages já estavam. Planos soltos (e pais) ficam na ordem em que aparecem.
+ *  É isto que faz "arrastar o pai leva os filhos": basta mover o pai na lista plana e reagrupar.
+ *  Um coverage arrastado pra fora do grupo volta pra baixo do pai (continua coverage — desvincular
+ *  é uma ação explícita). Roda igual no cliente (resultado otimista do arraste) e no servidor
+ *  (fonte da verdade), pra tela e banco nunca discordarem.
+ *
+ *  Defensivo com dado inconsistente: coverage cujo pai não existe mais na lista, ou cujo pai também
+ *  é coverage (a API barra os dois, mas a ordem nunca pode perder plano por causa disso), é tratado
+ *  como plano solto. */
+export function normalizeShotOrder<T extends ShotHierarchyInput>(ordered: T[]): T[] {
+  const ids = new Set(ordered.map((s) => s.id));
+  const topLevelIds = new Set(
+    ordered.filter((s) => !s.planoPaiId || !ids.has(s.planoPaiId)).map((s) => s.id)
+  );
+
+  const topLevel: T[] = [];
+  const childrenByParent = new Map<string, T[]>();
+  for (const shot of ordered) {
+    if (shot.planoPaiId && topLevelIds.has(shot.planoPaiId)) {
+      const list = childrenByParent.get(shot.planoPaiId) ?? [];
+      list.push(shot);
+      childrenByParent.set(shot.planoPaiId, list);
+    } else {
+      topLevel.push(shot);
+    }
+  }
+
+  return topLevel.flatMap((parent) => [parent, ...(childrenByParent.get(parent.id) ?? [])]);
+}
+
+/** Próximo número livre da cena: maior número inteiro já usado + 1 (o "6" de "6A" também conta).
+ *  Nunca reaproveita um buraco — se o plano 3 foi apagado, "3" pode já estar em claquete ou na
+ *  folha da câmera; reaproveitar faria dois planos diferentes responderem pelo mesmo número. */
+export function nextFreeShotNumero(numeros: string[]): string {
+  let max = 0;
+  for (const numero of numeros) {
+    const match = /^(\d+)/.exec(numero.trim());
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return String(max + 1);
+}
+
+function letterSuffix(index: number): string {
+  // 0 -> A, 25 -> Z, 26 -> AA, 27 -> AB...
+  let n = index;
+  let out = "";
+  do {
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
+
+/** Número de um plano ao virar coverage: número do pai + a primeira letra ainda não usada por
+ *  NENHUM plano da cena (não só pelos irmãos — se alguém tiver digitado "6A" num plano solto, o
+ *  coverage de 6 vira 6B, nunca um segundo 6A). */
+export function coverageShotNumero(parentNumero: string, numerosDaCena: string[]): string {
+  const taken = new Set(numerosDaCena.map((n) => n.trim().toUpperCase()));
+  for (let i = 0; ; i++) {
+    const candidate = `${parentNumero}${letterSuffix(i)}`;
+    if (!taken.has(candidate.toUpperCase())) return candidate;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Controle por plano na OD (ShotSchedule) — planos de cenas diferentes intercalados na ordem do
 // dia. As duas funções abaixo detectam pontos de atenção pra continuidade quando isso acontece.
 // ---------------------------------------------------------------------------

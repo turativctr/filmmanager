@@ -126,7 +126,13 @@ export default async function BreakdownPage({
         initialNotes={continuityNotes}
       />
 
-      <ShotListPanel projectId={params.id} sceneId={scene.id} initialShots={shots} />
+      <ShotListPanel
+        projectId={params.id}
+        sceneId={scene.id}
+        initialShots={shots}
+        initialDuracaoAlvoMin={scene.duracaoAlvoMin}
+        tempoEstimadoMin={scene.tempoEstimadoMin}
+      />
 
       {proximaSemBreakdown && (
         <NextStepFooter>

@@ -1,0 +1,152 @@
+"use client";
+
+import { AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+
+import { TermTooltip } from "@/components/shared/term-tooltip";
+import { Input } from "@/components/ui/input";
+import { formatTempoEstimado } from "@/lib/paginas";
+import { computeSceneShotTotals } from "@/lib/shots-shared";
+import { avaliarTempoAlvo, mensagemMedia, mensagemSaldo, mensagemSetupAcimaDaMedia } from "@/lib/tempo-alvo";
+import { cn } from "@/lib/utils";
+
+import type { ShotData } from "@/components/breakdown/shot-types";
+
+/** Cabeçalho de tempo da cena, acima da lista de planos: a AD define quanto tempo a cena tem e vê a
+ *  média por plano e o saldo contra o que os planos somam. Tudo aqui é aviso — nada bloqueia salvar
+ *  e nada é escrito nos tempos dos planos. Usado no stripboard e no Breakdown. */
+export function SceneTempoAlvo({
+  projectId,
+  sceneId,
+  shots,
+  initialDuracaoAlvoMin,
+  tempoEstimadoMin,
+  onSaved,
+  mostrarRod = true,
+}: {
+  projectId: string;
+  sceneId: string;
+  shots: ShotData[];
+  initialDuracaoAlvoMin: number | null;
+  /** Pra dizer de onde vem o Rod quando não há alvo nem planos. */
+  tempoEstimadoMin: number | null;
+  /** O Rod da cena na diária muda junto — o stripboard usa isto pra recarregar o cronograma. */
+  onSaved?: () => void;
+  /** false no stripboard: a tira da cena, logo acima, já diz de onde o Rod vem — repetir no mesmo
+   *  card só polui. No Breakdown não há tira, então a linha fica. */
+  mostrarRod?: boolean;
+}) {
+  const [alvo, setAlvo] = useState<number | null>(initialDuracaoAlvoMin);
+  const [draft, setDraft] = useState(initialDuracaoAlvoMin?.toString() ?? "");
+
+  useEffect(() => {
+    setAlvo(initialDuracaoAlvoMin);
+    setDraft(initialDuracaoAlvoMin?.toString() ?? "");
+  }, [initialDuracaoAlvoMin]);
+
+  async function commit() {
+    const trimmed = draft.trim();
+    const value = trimmed === "" ? null : Number(trimmed);
+    if (value !== null && (!Number.isInteger(value) || value < 1)) {
+      setDraft(alvo?.toString() ?? "");
+      return;
+    }
+    if (value === alvo) return;
+
+    const previous = alvo;
+    setAlvo(value);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/scenes/${sceneId}/duracao-alvo`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duracaoAlvoMin: value }),
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      onSaved?.();
+    } catch (err) {
+      console.error("Erro ao salvar duração alvo:", err);
+      toast.error("Erro ao salvar — tente novamente");
+      setAlvo(previous);
+      setDraft(previous?.toString() ?? "");
+    }
+  }
+
+  // Descartado não roda — não conta na soma nem divide a média. Coverage conta como plano: é setup
+  // separado.
+  const ativos = shots.filter((s) => s.status !== "DESCARTADO");
+  const { totalMin: somaMin } = computeSceneShotTotals(shots);
+
+  const avaliacao =
+    alvo === null
+      ? null
+      : avaliarTempoAlvo({
+          alvoMin: alvo,
+          somaMin,
+          partes: ativos.map((s) => ({ id: s.id, rotulo: `Plano ${s.numero}`, setupMin: s.tempoSetupMin })),
+        });
+
+  // Sem alvo, sempre diz de onde o Rod vem — inclusive quando o número mudou "sozinho": apagar o
+  // alvo de uma cena sem planos devolve o Rod ao tempo estimado pelos oitavos.
+  const origemRodSemAlvo =
+    ativos.length > 0
+      ? `Rod: ${formatTempoEstimado(somaMin)} (soma dos planos)`
+      : tempoEstimadoMin
+        ? `Rod: ${formatTempoEstimado(tempoEstimadoMin)} (estimado pelos oitavos — defina a duração alvo pra fixar)`
+        : "Rod: sem estimativa — defina a duração alvo ou cadastre planos";
+
+  return (
+    <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={`duracao-alvo-${sceneId}`} className="flex items-center gap-1 font-medium text-foreground">
+          Duração alvo
+          <TermTooltip content="Quanto tempo a cena tem. Preenchido, vira o Rod da cena no cronograma e mostra quanto cabe por plano. Vazio, o Rod vem da soma dos planos, como sempre, ou do tempo estimado pelos oitavos se a cena não tem planos. Nunca altera os tempos dos planos." />
+        </label>
+        <Input
+          id={`duracao-alvo-${sceneId}`}
+          type="number"
+          min={1}
+          inputMode="numeric"
+          placeholder="—"
+          className="h-7 w-20 text-xs"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => void commit()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+        />
+        <span className="text-muted-foreground">min</span>
+        {avaliacao && <span className="text-muted-foreground">· {mensagemMedia(avaliacao, "plano", "planos")}</span>}
+      </div>
+
+      {avaliacao ? (
+        <>
+          {mostrarRod && (
+            <p className="text-muted-foreground">
+              Rod: {formatTempoEstimado(avaliacao.alvoMin)} (definido)
+              {ativos.length > 0 && ` · planos somam ${formatTempoEstimado(somaMin)}`}
+            </p>
+          )}
+          {ativos.length > 0 && (
+            <p className={cn("font-medium", avaliacao.estourou ? "text-erro-fg" : "text-muted-foreground")}>
+              {mensagemSaldo(avaliacao, "A cena", "os planos")}
+            </p>
+          )}
+          {avaliacao.mediaSeg !== null && avaliacao.setupsAcimaDaMedia.length > 0 && (
+            <ul className="space-y-0.5 text-alerta-fg">
+              {avaliacao.setupsAcimaDaMedia.map((p) => (
+                <li key={p.id} className="flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  {p.rotulo}: {mensagemSetupAcimaDaMedia(p.setupMin, avaliacao.mediaSeg!)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        mostrarRod && <p className="text-muted-foreground">{origemRodSemAlvo}</p>
+      )}
+    </div>
+  );
+}

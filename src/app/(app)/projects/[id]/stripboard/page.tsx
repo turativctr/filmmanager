@@ -96,6 +96,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,
       tempoEstimadoMin: scene.tempoEstimadoMin,
+      duracaoAlvoMin: scene.duracaoAlvoMin,
       notasAD: scene.notasAD,
       omitida: scene.omitida,
       characterIds: scene.cast.map((c) => c.characterId),

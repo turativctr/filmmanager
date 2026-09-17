@@ -172,7 +172,8 @@ export function OrdemDoDiaWizard({
       function recomputeBloco(rows: SceneTimeRow[]): SceneTimeRow[] {
         return rows.map((row, index) => ({
           ...row,
-          rodMin: computeAutoFillRodMin(row.tempoEstimadoMin),
+          // Duração alvo da AD manda no Rod; sem ela, o tempo estimado por oitavos.
+          rodMin: computeAutoFillRodMin(row.duracaoAlvoMin ?? row.tempoEstimadoMin),
           prepMin: computeAutoFillPrepMin(rows[index - 1], row, 90),
         }));
       }

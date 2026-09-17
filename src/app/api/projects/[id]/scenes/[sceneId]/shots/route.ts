@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
 import { recalculateScene } from "@/lib/shots";
-import { computeTempoTotal } from "@/lib/shots-shared";
+import { computeTempoTotal, nextFreeShotNumero } from "@/lib/shots-shared";
 import { shotSchema } from "@/lib/validation/shot";
 
 // Espelha os @default do model Shot — usados pra resolver o valor efetivo de campos omitidos
@@ -43,7 +43,11 @@ export async function POST(request: Request, { params }: { params: { id: string;
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const last = await prisma.shot.findFirst({ where: { sceneId: scene.id }, orderBy: { ordem: "desc" } });
+  const existing = await prisma.shot.findMany({
+    where: { sceneId: scene.id },
+    select: { ordem: true, numero: true },
+  });
+  const lastOrdem = existing.reduce((max, s) => Math.max(max, s.ordem), 0);
 
   const takesPrevistos = parsed.data.takesPrevistos ?? SHOT_DEFAULTS.takesPrevistos;
   const duracaoTakeMin = parsed.data.duracaoTakeMin ?? SHOT_DEFAULTS.duracaoTakeMin;
@@ -58,7 +62,10 @@ export async function POST(request: Request, { params }: { params: { id: string;
       tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
       sceneId: scene.id,
       projectId: params.id,
-      ordem: (last?.ordem ?? 0) + 1,
+      ordem: lastOrdem + 1,
+      // Número livre, não posição: o plano entra no fim da lista mas o número é o maior + 1, mesmo
+      // que a cena já tenha sido reordenada (ver nextFreeShotNumero).
+      numero: nextFreeShotNumero(existing.map((s) => s.numero)),
     },
   });
 

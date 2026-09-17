@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
-import { recalculateScene } from "@/lib/shots";
+import { recalculateScene, writeShotOrder } from "@/lib/shots";
+import { normalizeShotOrder } from "@/lib/shots-shared";
 import { shotReorderSchema } from "@/lib/validation/shot";
 
 export async function POST(request: Request, { params }: { params: { id: string; sceneId: string } }) {
@@ -24,19 +25,19 @@ export async function POST(request: Request, { params }: { params: { id: string;
   }
 
   const { order } = parsed.data;
-  const existing = await prisma.shot.findMany({ where: { sceneId: scene.id }, select: { id: true } });
+  const existing = await prisma.shot.findMany({ where: { sceneId: scene.id }, select: { id: true, planoPaiId: true } });
   const existingIds = new Set(existing.map((s) => s.id));
 
   if (order.length !== existingIds.size || !order.every((id) => existingIds.has(id))) {
     return NextResponse.json({ error: "Lista de planos não corresponde aos planos desta cena." }, { status: 400 });
   }
 
-  // Duas fases (offset negativo, depois posição final) — evita colisão com a constraint
-  // única (sceneId, ordem) ao trocar planos de posição, sem precisar apagar e recriar linhas.
-  await prisma.$transaction([
-    ...order.map((shotId, index) => prisma.shot.update({ where: { id: shotId }, data: { ordem: -(index + 1) } })),
-    ...order.map((shotId, index) => prisma.shot.update({ where: { id: shotId }, data: { ordem: index + 1 } })),
-  ]);
+  // Reagrupa pela hierarquia do BANCO (não confia na que o cliente acha que tem): mover o pai leva
+  // os coverages junto, e um coverage arrastado pra fora do grupo volta pra baixo do pai. Reordenar
+  // nunca mexe em número — só em `ordem`.
+  const hierarchyById = new Map(existing.map((s) => [s.id, s]));
+  const normalized = normalizeShotOrder(order.map((id) => hierarchyById.get(id)!));
+  await writeShotOrder(normalized.map((s) => s.id));
 
   const shots = await recalculateScene(scene.id);
 

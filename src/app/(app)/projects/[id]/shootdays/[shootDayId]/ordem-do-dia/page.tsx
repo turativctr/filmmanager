@@ -85,6 +85,7 @@ export default async function OrdemDoDiaPage({
     sinopse: s.sinopse,
     sinopseAD: s.sinopseAD,
     tempoEstimadoMin: s.tempoEstimadoMin,
+    duracaoAlvoMin: s.duracaoAlvoMin,
     prepMin: s.prepMin,
     rodMin: s.rodMin,
     shots: s.shots,

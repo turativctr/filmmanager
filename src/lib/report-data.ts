@@ -86,6 +86,8 @@ export type ReportSceneRow = {
   paginas: string;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
+  /** Tempo reverso da AD (Scene.duracaoAlvoMin) — quando existe, manda no Rod da cena. */
+  duracaoAlvoMin: number | null;
   prepMin: number | null;
   rodMin: number | null;
   /** Notas operacionais do AD para esta cena NESTA diária (SceneShootDay.observacoes) — diferente de notasAD. */
@@ -401,6 +403,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,
       tempoEstimadoMin: scene.tempoEstimadoMin,
+      duracaoAlvoMin: scene.duracaoAlvoMin,
       prepMin: entry.prepMin,
       rodMin: entry.rodMin,
       observacoes: entry.observacoes,

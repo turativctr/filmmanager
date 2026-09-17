@@ -15,6 +15,8 @@ export type SceneSummary = {
   paginas: string;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
+  /** Tempo reverso definido pela AD — quando existe, é o Rod da cena (ver Scene.duracaoAlvoMin). */
+  duracaoAlvoMin: number | null;
   notasAD: string | null;
   omitida: boolean;
   characterIds: string[];

@@ -361,6 +361,12 @@ model Scene {
   linhas            Int?
   diaNarrativo      Int?
   tempoEstimadoMin  Int?
+  // Tempo que a AD decide dar pra cena ("tempo reverso"), digitado à mão. Diferente de
+  // tempoEstimadoMin (estimativa automática por oitavos): quando preenchido, é ELE que vira o Rod da
+  // cena em toda diária (SceneShootDay.rodMin) e a soma dos planos passa a ser só a base do aviso de
+  // estouro. null = comportamento de sempre, Rod vem da soma dos planos. Nunca redistribui os tempos
+  // dos planos — a média por plano é só exibida (ver src/lib/tempo-alvo.ts).
+  duracaoAlvoMin    Int?
   // Vira true assim que o AD edita `paginas` ou `tempoEstimadoMin` diretamente (formulário de
   // cena ou de breakdown) — a reimportação de um novo draft (import/fdx/confirm, drafts) passa a
   // preservar os três campos (paginas/tempoEstimadoMin/linhas) em vez de recalcular por cima,
@@ -469,14 +475,26 @@ model Shot {
   notasDirecao      String?       @db.Text
   notasContinuidade String?       @db.Text
   status            ShotStatus    @default(PENDENTE)
+  // Plano principal da cena — no máximo um por cena (marcar outro desmarca o anterior, ver a rota
+  // PATCH do plano). Marcar sobe o plano pro topo UMA vez; depois a AD reordena à vontade, não é
+  // trava. Independente de coverage: dá pra ter master sem coverage e coverage de plano não-master.
+  ehMaster          Boolean       @default(false)
+  // Coverage: plano pendurado em outro plano da MESMA cena, numerado com a letra do pai (6A, 6B).
+  // Um nível só — coverage não tem coverage (barrado na API). A lista plana continua sendo o
+  // padrão: null = plano solto. SetNull só como rede de segurança; a rota de DELETE desvincula os
+  // coverages antes, pra renumerá-los com o próximo número livre.
+  planoPaiId        String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  scene   Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scene     Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  planoPai  Shot?   @relation("ShotCoverage", fields: [planoPaiId], references: [id], onDelete: SetNull)
+  coverages Shot[]  @relation("ShotCoverage")
   schedule ShotSchedule?
 
   @@unique([sceneId, ordem])
+  @@index([planoPaiId])
   @@map("shots")
 }
 

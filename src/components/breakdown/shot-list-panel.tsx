@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { NewShotDialog } from "@/components/breakdown/new-shot-dialog";
 import { SortableShotRow } from "@/components/breakdown/shot-row";
+import { SceneTempoAlvo } from "@/components/shots/scene-tempo-alvo";
 import { ResetDivider } from "@/components/shots/reset-divider";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,6 +25,7 @@ import {
   HEAVY_RESETS,
   isDetalheOuInsert,
   normalize,
+  normalizeShotOrder,
   recomputeResetsForOrderedShots,
 } from "@/lib/shots";
 import { cn } from "@/lib/utils";
@@ -48,7 +50,9 @@ function computeSuggestedOrder(shots: ShotData[]): ShotData[] {
     groups.get(key)!.push(shot);
   }
 
-  return [...groupOrder.flatMap((key) => groups.get(key)!), ...detalheInsert];
+  // Agrupar por lente pode separar coverage do pai — reagrupa, senão a sugestão (e o total que ela
+  // promete) não seria a ordem que o servidor de fato grava.
+  return normalizeShotOrder([...groupOrder.flatMap((key) => groups.get(key)!), ...detalheInsert]);
 }
 
 /** Total (planos + resets) de uma ordem hipotética de planos, recalculando os resets do zero —
@@ -92,10 +96,14 @@ export function ShotListPanel({
   projectId,
   sceneId,
   initialShots,
+  initialDuracaoAlvoMin,
+  tempoEstimadoMin,
 }: {
   projectId: string;
   sceneId: string;
   initialShots: ShotData[];
+  initialDuracaoAlvoMin: number | null;
+  tempoEstimadoMin: number | null;
 }) {
   const [open, setOpen] = useState(true);
   const [shots, setShots] = useState<ShotData[]>(initialShots);
@@ -145,7 +153,9 @@ export function ShotListPanel({
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        toast.error("Erro ao salvar — tente novamente");
+        // Regras de master/coverage voltam como 400 com o motivo — mostrar o motivo, não um genérico.
+        const data = await res.json().catch(() => ({}));
+        toast.error(typeof data.error === "string" ? data.error : "Erro ao salvar — tente novamente");
         return;
       }
       const updated: ShotData[] = await res.json();
@@ -206,7 +216,8 @@ export function ShotListPanel({
     if (oldIndex === -1 || newIndex === -1) return;
 
     const previous = shots;
-    const next = arrayMove(shots, oldIndex, newIndex);
+    // Mesmo reagrupamento do servidor: arrastar o pai leva os coverages; coverage não sai do grupo.
+    const next = normalizeShotOrder(arrayMove(shots, oldIndex, newIndex));
     setShots(next);
     void persistOrder(next, previous);
   }
@@ -248,6 +259,14 @@ export function ShotListPanel({
       </div>
 
       <CollapsibleContent className="space-y-3 px-4 pb-4">
+        <SceneTempoAlvo
+          projectId={projectId}
+          sceneId={sceneId}
+          shots={shots}
+          initialDuracaoAlvoMin={initialDuracaoAlvoMin}
+          tempoEstimadoMin={tempoEstimadoMin}
+        />
+
         <p className="text-sm text-muted-foreground">
           {totals.planosMin}min de planos + {totals.resetsMin}min de resets = {totals.totalMin}min total ·{" "}
           {totals.takesTotal} take{totals.takesTotal === 1 ? "" : "s"}
@@ -316,6 +335,7 @@ export function ShotListPanel({
                       highlightContinuidade={
                         HEAVY_RESETS.includes(shot.tipoReset) && Boolean(shot.notasContinuidade?.trim())
                       }
+                      sceneShots={shots}
                     />
                   </div>
                 ))}

@@ -57,6 +57,7 @@ export type SceneTimeRow = Pick<
   | "sinopse"
   | "sinopseAD"
   | "tempoEstimadoMin"
+  | "duracaoAlvoMin"
   | "prepMin"
   | "rodMin"
 > & {

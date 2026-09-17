@@ -7,6 +7,7 @@ import {
   suggestAlmocoIndex,
   timeToMinutes,
 } from "@/lib/schedule";
+import { intercalar, scheduleDoBloco } from "@/lib/day-timeline";
 import { paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
 /** Recalcula e persiste blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de uma diária a
@@ -34,6 +35,7 @@ export async function recalculateDayBlocks(shootDayId: string) {
           scenePart: { select: { oitavos: true } },
         },
       },
+      blocos: true,
     },
   });
   if (!shootDay) return null;
@@ -42,30 +44,36 @@ export async function recalculateDayBlocks(shootDayId: string) {
   // Parte de cena dividida: fallback do Rod é o estimado da parte, não o da cena inteira.
   const tempoEstimado = (e: (typeof allScenes)[number]) =>
     tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), e.scenePart);
-  const neverSplit = allScenes.length > 0 && allScenes.every((e) => e.bloco === "MANHA");
-  let manhaEntries = allScenes.filter((e) => e.bloco === "MANHA");
+  const scheduleDaCena = (e: (typeof allScenes)[number]) => ({
+    prepMin: resolveEffectivePrepMin(e.prepMin),
+    rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
+  });
+  // Blocos de tempo (transporte etc.) ocupam horário como qualquer item da manhã — o almoço vem
+  // depois deles também.
+  const todos = intercalar(allScenes, shootDay.blocos);
+  const neverSplit = todos.length > 0 && todos.every((i) => (i.tipo === "cena" ? i.cena.bloco : i.bloco.bloco) === "MANHA");
+  let manha = todos.filter((i) => (i.tipo === "cena" ? i.cena.bloco : i.bloco.bloco) === "MANHA");
 
-  if (neverSplit) {
+  if (neverSplit && allScenes.length > 0) {
     const blocoManhaInicio = shootDay.chamadaGeral
       ? minutesToTime(timeToMinutes(shootDay.chamadaGeral) + shootDay.project.preparacaoInicialMin)
       : null;
-    const items = allScenes.map((e) => ({
-      prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
-    }));
+    const items = todos.map((i) => (i.tipo === "cena" ? scheduleDaCena(i.cena) : scheduleDoBloco(i.bloco)));
     const boundary = suggestAlmocoIndex(shootDay.chamadaGeral, blocoManhaInicio, items, shootDay.project.limiteAlmocoMin);
 
-    if (boundary < allScenes.length) {
-      const tardeIds = allScenes.slice(boundary).map((e) => e.id);
-      await prisma.sceneShootDay.updateMany({ where: { id: { in: tardeIds } }, data: { bloco: "TARDE" } });
-      manhaEntries = allScenes.slice(0, boundary);
+    if (boundary < todos.length) {
+      const depois = todos.slice(boundary);
+      const cenaIds = depois.flatMap((i) => (i.tipo === "cena" ? [i.cena.id] : []));
+      const blocoIds = depois.flatMap((i) => (i.tipo === "bloco" ? [i.bloco.id] : []));
+      await prisma.$transaction([
+        prisma.sceneShootDay.updateMany({ where: { id: { in: cenaIds } }, data: { bloco: "TARDE" } }),
+        prisma.shootDayBlock.updateMany({ where: { id: { in: blocoIds } }, data: { bloco: "TARDE" } }),
+      ]);
+      manha = todos.slice(0, boundary);
     }
   }
 
-  const manhaItems = manhaEntries.map((entry) => ({
-    prepMin: resolveEffectivePrepMin(entry.prepMin),
-    rodMin: resolveEffectiveRodMin(entry.rodMin, tempoEstimado(entry)),
-  }));
+  const manhaItems = manha.map((i) => (i.tipo === "cena" ? scheduleDaCena(i.cena) : scheduleDoBloco(i.bloco)));
 
   const derived = computeDerivedBlockTimes(shootDay.chamadaGeral, manhaItems, shootDay.project);
 

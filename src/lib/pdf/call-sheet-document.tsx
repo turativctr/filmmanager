@@ -2,8 +2,10 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { buildCastLegend, getCharacterId } from "@/lib/character-id";
+import { intercalar } from "@/lib/day-timeline";
 import { formatPaginas } from "@/lib/paginas";
 import {
+  BlocoDeTempoRow,
   CallSheetHeader,
   CastLegend,
   colors,
@@ -424,6 +426,8 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
     totalShootDays,
     manhaScenes,
     tardeScenes,
+    blocosDeTempo,
+    horaAHoraItens,
     castPresente,
     castMeals,
     extrasPresente,
@@ -432,11 +436,15 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
     rodStartManha,
     rodStartTarde,
     shotSchedule,
-    horaAHoraPlanos,
   } = data;
 
   const scenesByCharacter = new Map<string, string[]>();
   const scenesByExtra = new Map<string, string[]>();
+  // Blocos de tempo livres (transporte etc.) entram entre as cenas nas tabelas de cena, pela ordem.
+  const blocosManha = blocosDeTempo.filter((b) => b.bloco === "MANHA");
+  const blocosTarde = blocosDeTempo.filter((b) => b.bloco === "TARDE");
+  const blocoComHorario = (id: string) => blocosDeTempo.find((b) => b.id === id)!;
+
   for (const scene of [...manhaScenes, ...tardeScenes]) {
     for (const c of scene.cast) {
       scenesByCharacter.set(c.id, [...(scenesByCharacter.get(c.id) ?? []), scene.numero]);
@@ -672,12 +680,16 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
                 ROD
               </Td>
             </Tr>
-            {manhaScenes.map((scene, i) => (
-              <View key={scene.sceneId} style={{ width: "100%" }}>
-                <SceneRow scene={scene} alt={i % 2 === 1} project={project} />
-                <SceneObservacoesRow scene={scene} />
-              </View>
-            ))}
+            {intercalar(manhaScenes, blocosManha).map((item, i) =>
+              item.tipo === "bloco" ? (
+                <BlocoDeTempoRow key={item.bloco.id} bloco={blocoComHorario(item.bloco.id)} />
+              ) : (
+                <View key={item.cena.sceneId} style={{ width: "100%" }}>
+                  <SceneRow scene={item.cena} alt={i % 2 === 1} project={project} />
+                  <SceneObservacoesRow scene={item.cena} />
+                </View>
+              )
+            )}
             {(shootDay.almocoInicio || tardeScenes.length > 0) && (
               <SeparatorRow
                 bg={colors.separatorBg}
@@ -686,12 +698,16 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
                 }`}
               />
             )}
-            {tardeScenes.map((scene, i) => (
-              <View key={scene.sceneId} style={{ width: "100%" }}>
-                <SceneRow scene={scene} alt={i % 2 === 1} project={project} />
-                <SceneObservacoesRow scene={scene} />
-              </View>
-            ))}
+            {intercalar(tardeScenes, blocosTarde).map((item, i) =>
+              item.tipo === "bloco" ? (
+                <BlocoDeTempoRow key={item.bloco.id} bloco={blocoComHorario(item.bloco.id)} />
+              ) : (
+                <View key={item.cena.sceneId} style={{ width: "100%" }}>
+                  <SceneRow scene={item.cena} alt={i % 2 === 1} project={project} />
+                  <SceneObservacoesRow scene={item.cena} />
+                </View>
+              )
+            )}
             {shootDay.desprodInicio && (
               <SeparatorRow bg={colors.separatorBg} label={`DESPRODUÇÃO — ${formatHHh(shootDay.desprodInicio)}`} />
             )}
@@ -767,9 +783,13 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
               ROD
             </Td>
           </Tr>
-          {manhaScenes.map((scene, i) => (
-            <SceneRowAD key={scene.sceneId} scene={scene} alt={i % 2 === 1} project={project} />
-          ))}
+          {intercalar(manhaScenes, blocosManha).map((item, i) =>
+            item.tipo === "bloco" ? (
+              <BlocoDeTempoRow key={item.bloco.id} bloco={blocoComHorario(item.bloco.id)} />
+            ) : (
+              <SceneRowAD key={item.cena.sceneId} scene={item.cena} alt={i % 2 === 1} project={project} />
+            )
+          )}
           {(shootDay.almocoInicio || tardeScenes.length > 0) && (
             <SeparatorRow
               bg={colors.separatorBg}
@@ -778,9 +798,13 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
               }`}
             />
           )}
-          {tardeScenes.map((scene, i) => (
-            <SceneRowAD key={scene.sceneId} scene={scene} alt={i % 2 === 1} project={project} />
-          ))}
+          {intercalar(tardeScenes, blocosTarde).map((item, i) =>
+            item.tipo === "bloco" ? (
+              <BlocoDeTempoRow key={item.bloco.id} bloco={blocoComHorario(item.bloco.id)} />
+            ) : (
+              <SceneRowAD key={item.cena.sceneId} scene={item.cena} alt={i % 2 === 1} project={project} />
+            )
+          )}
           {shootDay.desprodInicio && (
             <SeparatorRow bg={colors.separatorBg} label={`DESPRODUÇÃO — ${formatHHh(shootDay.desprodInicio)}`} />
           )}
@@ -800,10 +824,19 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
           documentTitle={horaAHoraTitle}
         />
 
-        {horaAHoraPlanos.length === 0 ? (
+        {horaAHoraItens.length === 0 ? (
           <Text style={styles.hhEmptyText}>Nenhum plano cadastrado para esta diária.</Text>
         ) : (
-          horaAHoraPlanos.map((block, blockIndex) => {
+          horaAHoraItens.map((item, blockIndex) => {
+            // Bloco de tempo livre: entra na sequência com rótulo e horário, sem número de cena.
+            if (item.kind === "bloco") {
+              return (
+                <View key={item.bloco.id} style={{ width: "100%" }}>
+                  <BlocoDeTempoRow bloco={item.bloco} />
+                </View>
+              );
+            }
+            const block = item;
             const firstPlano = block.planos[0];
             // Reset do 1º plano de uma caixa reflete a transição vinda de FORA dela (troca de cena
             // via reordenação por ShotSchedule) — não tem "plano anterior" dentro da própria caixa

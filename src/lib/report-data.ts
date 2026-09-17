@@ -1,9 +1,9 @@
 import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
+import { intercalar, scheduleDaTimeline, separarTimeline, type BlocoNaTimeline } from "@/lib/day-timeline";
 import { prisma } from "@/lib/prisma";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import {
-  computeBlockSchedule,
   minutesToTime,
   resolveEffectivePrepMin,
   resolveEffectiveRodMin,
@@ -208,11 +208,16 @@ export type HoraAHoraSceneBlock = {
  *  de "resumption" já usado no stripboard/alertas da OD). Sem ShotSchedule cadastrado, cai no
  *  fallback: um bloco por cena, na ordem sequencial de manhaScenes+tardeScenes, ancorado no
  *  horário de Rod já calculado da própria cena. */
+export type HoraAHoraItem =
+  | ({ kind: "cena" } & HoraAHoraSceneBlock)
+  | { kind: "bloco"; bloco: BlocoNaTimeline };
+
 function buildHoraAHoraPlanos(
   scenes: ReportSceneRow[],
   shotSchedule: ShotScheduleRow[],
-  startTime: string | null
-): HoraAHoraSceneBlock[] {
+  startTime: string | null,
+  blocos: BlocoNaTimeline[]
+): HoraAHoraItem[] {
   const sceneById = new Map(scenes.map((s) => [s.sceneId, s]));
 
   function toHeader(scene: ReportSceneRow): Omit<HoraAHoraSceneBlock, "planos"> {
@@ -229,10 +234,28 @@ function buildHoraAHoraPlanos(
   }
 
   if (shotSchedule.length > 0) {
-    const blocks: HoraAHoraSceneBlock[] = [];
+    const blocks: HoraAHoraItem[] = [];
     let running = startTime ? timeToMinutes(startTime) : null;
 
+    // Bloco de tempo livre entre cenas: o cálculo dos planos não muda (cada plano continua somando
+    // reset + tempo), o bloco só empurra o relógio a partir de onde ele está — senão a folha mostraria
+    // horário ignorando, por exemplo, 70min de transporte.
+    const pendentes = [...blocos].sort((a, b) => a.ordem - b.ordem);
+    function emitirBlocosAte(ordemDaCena: number) {
+      while (pendentes.length > 0 && pendentes[0].ordem < ordemDaCena) {
+        const b = pendentes.shift()!;
+        const inicio = running !== null ? minutesToTime(running) : null;
+        if (running !== null) running += b.duracaoMin;
+        blocks.push({ kind: "bloco", bloco: { ...b, inicio, fim: running !== null ? minutesToTime(running) : null } });
+      }
+    }
+
     for (const entry of shotSchedule) {
+      const cenaDoPlano = sceneById.get(entry.sceneId);
+      if (cenaDoPlano && blocks.every((b) => b.kind !== "cena" || b.sceneId !== entry.sceneId)) {
+        emitirBlocosAte(cenaDoPlano.ordem);
+      }
+
       // entry.tempoResetMin é o custo de CHEGAR neste plano (classifyReset(anterior, este) — ver
       // recomputeResetsForOrderedShots em shots-shared.ts), então precisa somar em `running` ANTES
       // de ler o HH deste plano — não depois, o que empurraria o reset pro plano seguinte por
@@ -259,18 +282,21 @@ function buildHoraAHoraPlanos(
       };
 
       const last = blocks[blocks.length - 1];
-      if (last && last.sceneId === entry.sceneId) {
+      if (last && last.kind === "cena" && last.sceneId === entry.sceneId) {
         last.planos.push(plano);
       } else {
-        const scene = sceneById.get(entry.sceneId);
-        if (!scene) continue;
-        blocks.push({ ...toHeader(scene), planos: [plano] });
+        if (!cenaDoPlano) continue;
+        blocks.push({ kind: "cena", ...toHeader(cenaDoPlano), planos: [plano] });
       }
     }
+    // Bloco depois do último plano do dia (ex.: transporte de volta).
+    emitirBlocosAte(Number.POSITIVE_INFINITY);
     return blocks;
   }
 
-  return scenes
+  // Sem ordem por plano: cada caixa é ancorada no Rod já calculado da cena, que JÁ considera os
+  // blocos de tempo (ver scheduleDaTimeline) — aqui os blocos só entram na lista, pela ordem.
+  const caixas: { ordem: number; item: HoraAHoraItem }[] = scenes
     .filter((scene) => scene.shots.length > 0)
     .map((scene) => {
       let running = scene.schedule ? timeToMinutes(scene.schedule.rodStart) : null;
@@ -296,8 +322,11 @@ function buildHoraAHoraPlanos(
           horaInicio: hh,
         };
       });
-      return { ...toHeader(scene), planos };
+      return { ordem: scene.ordem, item: { kind: "cena" as const, ...toHeader(scene), planos } };
     });
+  return [...caixas, ...blocos.map((bloco) => ({ ordem: bloco.ordem, item: { kind: "bloco" as const, bloco } }))]
+    .sort((a, b) => a.ordem - b.ordem)
+    .map((x) => x.item);
 }
 
 export type MealCounts = { total: number; cafe: number; almoco: number };
@@ -375,6 +404,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
           },
         },
         callTimes: true,
+        blocos: true,
       },
     }),
     prisma.shotSchedule.findMany({
@@ -398,20 +428,27 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
   const tempoEstimado = (e: (typeof sceneEntries)[number]) =>
     tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), parteDaEntrada(e));
 
-  const manhaSchedule = computeBlockSchedule(
-    shootDay.blocoManhaInicio,
-    manhaEntries.map((e) => ({
-      prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
-    }))
-  );
-  const tardeSchedule = computeBlockSchedule(
-    shootDay.blocoTardeInicio,
-    tardeEntries.map((e) => ({
-      prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
-    }))
-  );
+  // Blocos de tempo livres (transporte etc.) ocupam horário entre as cenas: o horário de cada cena
+  // é calculado na timeline mista do bloco (manhã/tarde) e depois separado.
+  const scheduleDaCena = (e: (typeof sceneEntries)[number]) => ({
+    prepMin: resolveEffectivePrepMin(e.prepMin),
+    rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
+  });
+  const timelineManha = intercalar(manhaEntries, shootDay.blocos.filter((b) => b.bloco === "MANHA"));
+  const timelineTarde = intercalar(tardeEntries, shootDay.blocos.filter((b) => b.bloco === "TARDE"));
+  const separadoManha = separarTimeline(timelineManha, scheduleDaTimeline(shootDay.blocoManhaInicio, timelineManha, scheduleDaCena));
+  const separadoTarde = separarTimeline(timelineTarde, scheduleDaTimeline(shootDay.blocoTardeInicio, timelineTarde, scheduleDaCena));
+  const manhaSchedule = separadoManha.cenas.map((c) => c.schedule);
+  const tardeSchedule = separadoTarde.cenas.map((c) => c.schedule);
+  const blocosDeTempo: BlocoNaTimeline[] = [...separadoManha.blocos, ...separadoTarde.blocos].map((b) => ({
+    id: b.id,
+    rotulo: b.rotulo,
+    duracaoMin: b.duracaoMin,
+    ordem: b.ordem,
+    bloco: b.bloco,
+    inicio: b.inicio,
+    fim: b.fim,
+  }));
 
   function toRow(entry: (typeof sceneEntries)[number], schedule: ComputedSchedule | null): ReportSceneRow {
     const scene = entry.scene;
@@ -629,7 +666,16 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     prioridade: entry.shot.prioridade,
   }));
 
-  const horaAHoraPlanos = buildHoraAHoraPlanos(scenes, shotSchedule, shootDay.blocoManhaInicio ?? shootDay.chamadaGeral);
+  const horaAHoraItens = buildHoraAHoraPlanos(
+    scenes,
+    shotSchedule,
+    shootDay.blocoManhaInicio ?? shootDay.chamadaGeral,
+    blocosDeTempo
+  );
+  /** Só as caixas de cena — quem lista plano (Boletim de Continuísmo) não quer bloco de tempo. */
+  const horaAHoraPlanos = horaAHoraItens.filter(
+    (i): i is { kind: "cena" } & HoraAHoraSceneBlock => i.kind === "cena"
+  );
 
   const chamadaEquipeMap = asStringRecord(shootDay.chamadaEquipe);
   const chamadaEquipeList = CREW_CALL_DEPARTMENTS.map((departamento) => ({
@@ -687,6 +733,11 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     chamadaEquipeList,
     shotSchedule,
     horaAHoraPlanos,
+    /** Caixas da folha "Hora a Hora com Planos": cenas e blocos de tempo, na ordem do dia. */
+    horaAHoraItens,
+    /** Blocos de tempo livres da diária (não são cena: sem oitavo, elenco, plano) com horário.
+     *  Intercalar com as cenas pela `ordem` — ver intercalar() em src/lib/day-timeline.ts. */
+    blocosDeTempo,
   };
 }
 

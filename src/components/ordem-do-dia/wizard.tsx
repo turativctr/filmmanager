@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 import { Step1Locacao } from "./step-1-locacao";
 import { Step2Elenco } from "./step-2-elenco";
+import type { BlocoDeTempo } from "@/lib/day-timeline";
+
 import { Step2Tempos } from "./step-2-tempos";
 import { Step3Alertas } from "./step-3-alertas";
 import { Step4Revisao } from "./step-4-revisao";
@@ -100,6 +102,7 @@ export function OrdemDoDiaWizard({
   passo3,
   sceneTimeRows: initialSceneTimeRows,
   initialStep,
+  blocosDeTempo = [],
 }: {
   projectId: string;
   shootDay: ShootDayInfo;
@@ -111,6 +114,7 @@ export function OrdemDoDiaWizard({
   passo3: Passo3Data;
   sceneTimeRows: SceneTimeRow[];
   initialStep?: number;
+  blocosDeTempo?: BlocoDeTempo[];
 }) {
   const router = useRouter();
   const [step, setStep] = useState(initialStep ?? 1);
@@ -250,6 +254,8 @@ export function OrdemDoDiaWizard({
       body: JSON.stringify({
         changes: sceneTimeRows.map((row) => ({
           sceneId: row.sceneId,
+          // Parte de cena dividida: sem isto a rota recusa (e apagaria a linha errada).
+          scenePartId: row.parte?.id ?? null,
           shootDayId: shootDay.id,
           bloco: row.bloco,
           ordem: row.ordem,
@@ -334,6 +340,7 @@ export function OrdemDoDiaWizard({
             <div className="space-y-6">
               <Step2Tempos
                 rows={sceneTimeRows}
+                blocos={blocosDeTempo}
                 blocoManhaInicio={shootDay.blocoManhaInicio}
                 almocoInicio={shootDay.almocoInicio}
                 almocoFim={shootDay.almocoFim}

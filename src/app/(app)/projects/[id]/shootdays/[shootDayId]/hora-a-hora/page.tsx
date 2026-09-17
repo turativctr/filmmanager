@@ -20,6 +20,7 @@ export default async function HoraAHoraPage({ params }: { params: { id: string; 
       scenes: data.scenes,
       castPresente: data.castPresente,
       project: data.project,
+      blocos: data.blocosDeTempo,
     });
     if (generated.length > 0) {
       await prisma.horaAHoraEvent.createMany({
@@ -50,6 +51,11 @@ export default async function HoraAHoraPage({ params }: { params: { id: string; 
         projectId={params.id}
         shootDayId={params.shootDayId}
         numeroDia={data.shootDay.numeroDia}
+        // Evento é gravado uma vez e editado à mão depois — um bloco de tempo criado DEPOIS disso não
+        // entra sozinho, senão apagaria o que a AD ajustou. A tela avisa que falta regenerar.
+        blocosForaDoHoraAHora={data.blocosDeTempo
+          .filter((b) => !events.some((e) => e.descricao === b.rotulo))
+          .map((b) => b.rotulo)}
         initialEvents={events.map((e) => ({
           id: e.id,
           horaInicio: e.horaInicio,

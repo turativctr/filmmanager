@@ -11,6 +11,7 @@ import {
 } from "@/lib/ordem-do-dia";
 import { prisma } from "@/lib/prisma";
 import { getShootDayReportData } from "@/lib/report-data";
+import { minutosEmBlocos } from "@/lib/day-timeline";
 import { timeToMinutes } from "@/lib/schedule";
 import { computeCortaveisMin } from "@/lib/shots-shared";
 
@@ -83,7 +84,11 @@ export default async function ShootDayPage({
 
   const totalPessoas = new Set(data.scenes.flatMap((s) => s.cast.map((c) => c.id))).size;
 
-  const timelineBlocks: { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" }[] = [];
+  const timelineBlocks: { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" | "bloco" }[] = [];
+  for (const bloco of data.blocosDeTempo) {
+    if (!bloco.inicio) continue;
+    timelineBlocks.push({ label: bloco.rotulo, startMin: timeToMinutes(bloco.inicio), durationMin: bloco.duracaoMin, kind: "bloco" });
+  }
   for (const scene of data.scenes) {
     if (!scene.schedule) continue;
     const startMin = timeToMinutes(scene.schedule.prepStart);
@@ -121,6 +126,7 @@ export default async function ShootDayPage({
       totalCenas={data.scenes.length}
       totalPaginas={data.totalPaginas}
       totalMinutos={data.scenes.reduce((sum, s) => sum + (s.tempoEstimadoMin ?? 0), 0)}
+      blocosMin={minutosEmBlocos(data.blocosDeTempo)}
       // Parte de cena dividida: só os planos atribuídos a ela (mesma regra do Rod da parte).
       cortaveisMin={data.scenes.reduce(
         (sum, s) => sum + computeCortaveisMin(s.parte ? s.shots.filter((sh) => sh.scenePartId === s.parte!.id) : s.shots),

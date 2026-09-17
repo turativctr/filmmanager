@@ -30,14 +30,18 @@ import {
 import {
   buildDayEntries,
   computeChanges,
+  dayEntryId,
   findContainer,
   getItems,
   isContainerId,
-  setItems,
   splitDayEntries,
 } from "./board-state";
-import { almocoMarkerDayId, almocoMarkerId, dayContainerId, isAlmocoMarkerId } from "./types";
+import { almocoMarkerDayId, cenasDoDia, dayContainerId, isAlmocoMarkerId, isBlocoItemId } from "./types";
 import type { BoardState, ContainerId, DayState, StripItem } from "./types";
+
+function setBoneyard(board: BoardState, boneyard: StripItem[]): BoardState {
+  return { ...board, boneyard };
+}
 
 function arrayMoveItems<T>(items: T[], from: number, to: number): T[] {
   const copy = items.slice();
@@ -53,6 +57,7 @@ export function StripboardBoard({
   sistemaIdElenco,
   projeto,
   jornada,
+  locacoes,
 }: {
   projectId: string;
   initialBoard: BoardState;
@@ -60,6 +65,8 @@ export function StripboardBoard({
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   projeto: { titulo: string; sigla: string | null };
   jornada: { limiteAlmocoMin: number; duracaoAlmocoMin: number };
+  /** Locações do projeto, pro filtro do Boneyard. */
+  locacoes: { id: string; nome: string }[];
 }) {
   const [board, setBoard] = useState(initialBoard);
   const [activeItem, setActiveItem] = useState<StripItem | null>(null);
@@ -97,17 +104,18 @@ export function StripboardBoard({
 
     const container = findContainer(board, id);
     if (!container) return;
+    // Bloco de tempo não tem cartão fantasma — o próprio item acompanha o arraste.
     setActiveItem(getItems(board, container).find((i) => i.itemId === id) ?? null);
     setActiveMarkerDay(null);
   }
 
   async function persistChanges(nextBoard: BoardState, containers: ContainerId[], previousBoard: BoardState) {
-    const changes = computeChanges(nextBoard, containers);
+    const { changes, blocos } = computeChanges(nextBoard, containers);
     try {
       const res = await fetch(`/api/projects/${projectId}/stripboard/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ changes }),
+        body: JSON.stringify({ changes, blocos }),
       });
       if (!res.ok) {
         console.error("Falha ao salvar mudanças do Stripboard:", res.status, await res.text().catch(() => ""));
@@ -121,6 +129,10 @@ export function StripboardBoard({
     }
   }
 
+  function withDay(b: BoardState, dayId: string, patch: Partial<DayState>): BoardState {
+    return { ...b, days: b.days.map((d) => (d.id === dayId ? { ...d, ...patch } : d)) };
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveItem(null);
@@ -129,127 +141,109 @@ export function StripboardBoard({
 
     const activeId = String(active.id);
     const overId = String(over.id);
-    const draggingMarker = isAlmocoMarkerId(activeId);
+    // Marcador de almoço e bloco de tempo nunca saem do próprio dia — soltar fora dele é no-op.
+    const presoAoDia = isAlmocoMarkerId(activeId) || isBlocoItemId(activeId);
 
-    const sourceContainer = draggingMarker
+    const sourceContainer = isAlmocoMarkerId(activeId)
       ? dayContainerId(almocoMarkerDayId(activeId))
       : findContainer(board, activeId);
-    // O marcador nunca sai do próprio dia (não é um item de boneyard/outro dia) — soltar fora dele é um no-op.
-    const destContainer = draggingMarker
-      ? sourceContainer
-      : isContainerId(overId)
-        ? overId
+    const destContainer = isContainerId(overId)
+      ? overId
+      : isAlmocoMarkerId(overId)
+        ? dayContainerId(almocoMarkerDayId(overId))
         : findContainer(board, overId);
 
     if (!sourceContainer || !destContainer) return;
+    if (presoAoDia && destContainer !== sourceContainer) return;
     if (sourceContainer === destContainer && overId === activeId) return;
 
     let nextBoard: BoardState;
     const touched = new Set<ContainerId>([sourceContainer, destContainer]);
 
     if (sourceContainer === destContainer) {
-      // Reordenação dentro do mesmo dia (ou do Boneyard) — cenas e o marcador de almoço compartilham a
-      // mesma lista sortable, então tratamos os dois casos (arrastar uma cena OU o próprio marcador)
-      // pela mesma lista combinada de "entries", convertida de volta em (scenes, almocoIndex) depois.
+      // Reordenação dentro do mesmo dia (ou do Boneyard) — cenas, blocos de tempo e o marcador de
+      // almoço compartilham a mesma lista sortable, tratada como uma lista combinada de "entries" e
+      // convertida de volta em (itens, almocoIndex) depois.
       if (sourceContainer === "boneyard") {
         const items = board.boneyard;
         const oldIndex = items.findIndex((i) => i.itemId === activeId);
         const newIndex = items.findIndex((i) => i.itemId === overId);
         if (oldIndex === -1 || newIndex === -1) return;
-        nextBoard = setItems(board, "boneyard", arrayMoveItems(items, oldIndex, newIndex));
+        nextBoard = setBoneyard(board, arrayMoveItems(items, oldIndex, newIndex));
       } else {
         const dayId = sourceContainer.split(":")[1];
         const day = board.days.find((d) => d.id === dayId);
         if (!day) return;
-        const markerId = almocoMarkerId(dayId);
         const entries = buildDayEntries(day);
-        const entryIds = entries.map((e) => (e.type === "scene" ? e.item.itemId : markerId));
+        const entryIds = entries.map((e) => dayEntryId(dayId, e));
         const oldIndex = entryIds.indexOf(activeId);
         const newIndex = isContainerId(overId) ? entries.length - 1 : entryIds.indexOf(overId);
         if (oldIndex === -1 || newIndex === -1) return;
-        const { scenes, almocoIndex } = splitDayEntries(arrayMoveItems(entries, oldIndex, newIndex));
-        nextBoard = { ...board, days: board.days.map((d) => (d.id === dayId ? { ...d, scenes, almocoIndex } : d)) };
+        nextBoard = withDay(board, dayId, splitDayEntries(arrayMoveItems(entries, oldIndex, newIndex)));
       }
     } else {
-      // Cross-container: o marcador nunca participa (bloqueado acima) — só cenas migram entre Boneyard
-      // e dias, ou entre dois dias diferentes. almocoIndex do dia de origem/destino é ajustado conforme
-      // a cena saiu/entrou antes ou depois do marcador, pra manter o mesmo boundary físico de itens.
-      const sourceItems = getItems(board, sourceContainer);
-      const destItems = getItems(board, destContainer);
-      const movingItem = sourceItems.find((i) => i.itemId === activeId);
+      // Cross-container: só tiras de cena migram entre Boneyard e dias, ou entre dois dias. A posição
+      // do almoço de origem/destino se ajusta sozinha, porque a mudança é feita na lista combinada.
+      const movingItem = getItems(board, sourceContainer).find((i) => i.itemId === activeId);
       if (!movingItem) return;
-
-      // Duas partes da mesma cena não cabem na mesma diária (unique diária+cena): a AD escolhe outra.
-      if (
-        movingItem.scenePartId &&
-        destContainer.startsWith("day:") &&
-        destItems.some((i) => i.sceneId === movingItem.sceneId)
-      ) {
-        const outra = destItems.find((i) => i.sceneId === movingItem.sceneId)!;
-        toast.error(
-          `A cena ${movingItem.scene.numero} já está nesta diária (${outra.parte?.rotulo ?? "cena inteira"}). Cada diária recebe no máximo uma parte da mesma cena.`
-        );
-        return;
-      }
-
-      const newSourceItems = sourceItems.filter((i) => i.itemId !== activeId);
 
       const destDayId = destContainer.startsWith("day:") ? destContainer.split(":")[1] : null;
       const destDay = destDayId ? board.days.find((d) => d.id === destDayId) : undefined;
-      let insertIndex: number;
-      if (destDay && overId === almocoMarkerId(destDayId!)) {
-        insertIndex = destDay.almocoIndex;
-      } else if (isContainerId(overId)) {
-        insertIndex = destItems.length;
+
+      // Duas partes da mesma cena não cabem na mesma diária (unique diária+cena): a AD escolhe outra.
+      if (movingItem.scenePartId && destDay) {
+        const outra = cenasDoDia(destDay).find((i) => i.sceneId === movingItem.sceneId);
+        if (outra) {
+          toast.error(
+            `A cena ${movingItem.scene.numero} já está nesta diária (${outra.parte?.rotulo ?? "cena inteira"}). Cada diária recebe no máximo uma parte da mesma cena.`
+          );
+          return;
+        }
+      }
+
+      nextBoard = board;
+      if (sourceContainer === "boneyard") {
+        nextBoard = setBoneyard(nextBoard, board.boneyard.filter((i) => i.itemId !== activeId));
       } else {
-        const idx = destItems.findIndex((i) => i.itemId === overId);
-        insertIndex = idx === -1 ? destItems.length : idx;
-      }
-
-      // Ao entrar num dia vindo do Boneyard, preenche Prep/Rod automaticamente — Rod pelo tempo estimado
-      // da cena, Prep por comparação de set/locação com a cena anterior do bloco (0min se igual, já montado).
-      const itemToInsert: StripItem =
-        sourceContainer === "boneyard" && destContainer.startsWith("day:")
-          ? {
-              ...movingItem,
-              prepMin: computeAutoFillPrepMin(destItems[insertIndex - 1]?.scene, movingItem.scene, DEFAULT_PREP_MIN),
-              // Parte de cena dividida: o Rod da parte (planos dela, ou estimado pelos oitavos dela) — a
-              // duração alvo é do total, não da parte. Cena inteira: a duração alvo manda; sem ela, o
-              // tempo estimado por oitavos.
-              rodMin: movingItem.parte
-                ? movingItem.parte.rodMin
-                : computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
-            }
-          : movingItem;
-
-      const newDestItems = [
-        ...destItems.slice(0, insertIndex),
-        itemToInsert,
-        ...destItems.slice(insertIndex),
-      ];
-
-      nextBoard = setItems(board, sourceContainer, newSourceItems);
-
-      if (sourceContainer.startsWith("day:")) {
         const srcDayId = sourceContainer.split(":")[1];
-        const srcOldIndex = sourceItems.findIndex((i) => i.itemId === activeId);
-        nextBoard = {
-          ...nextBoard,
-          days: nextBoard.days.map((d) =>
-            d.id === srcDayId && srcOldIndex < d.almocoIndex ? { ...d, almocoIndex: d.almocoIndex - 1 } : d
-          ),
-        };
+        const srcDay = board.days.find((d) => d.id === srcDayId)!;
+        const entries = buildDayEntries(srcDay).filter((e) => dayEntryId(srcDayId, e) !== activeId);
+        nextBoard = withDay(nextBoard, srcDayId, splitDayEntries(entries));
       }
 
-      nextBoard = setItems(nextBoard, destContainer, newDestItems);
+      if (!destDay) {
+        const idx = board.boneyard.findIndex((i) => i.itemId === overId);
+        const lista = nextBoard.boneyard;
+        const insertAt = idx === -1 ? lista.length : idx;
+        nextBoard = setBoneyard(nextBoard, [...lista.slice(0, insertAt), movingItem, ...lista.slice(insertAt)]);
+      } else {
+        const entries = buildDayEntries(destDay);
+        const entryIds = entries.map((e) => dayEntryId(destDay.id, e));
+        const idx = isContainerId(overId) ? -1 : entryIds.indexOf(overId);
+        const insertAt = idx === -1 ? entries.length : idx;
 
-      if (destDayId) {
-        nextBoard = {
-          ...nextBoard,
-          days: nextBoard.days.map((d) =>
-            d.id === destDayId && insertIndex < d.almocoIndex ? { ...d, almocoIndex: d.almocoIndex + 1 } : d
-          ),
-        };
+        // Ao entrar num dia vindo do Boneyard, preenche Prep/Rod automaticamente — Rod pelo tempo estimado
+        // da cena, Prep por comparação de set/locação com a cena anterior (0min se igual, já montado).
+        const cenaAnterior = entries
+          .slice(0, insertAt)
+          .flatMap((e) => (e.type === "item" && e.item.tipo === "cena" ? [e.item.item] : []))
+          .pop();
+        const itemToInsert: StripItem =
+          sourceContainer === "boneyard"
+            ? {
+                ...movingItem,
+                prepMin: computeAutoFillPrepMin(cenaAnterior?.scene, movingItem.scene, DEFAULT_PREP_MIN),
+                // Parte de cena dividida: o Rod da parte (planos dela, ou estimado pelos oitavos dela) — a
+                // duração alvo é do total, não da parte. Cena inteira: a duração alvo manda; sem ela, o
+                // tempo estimado por oitavos.
+                rodMin: movingItem.parte
+                  ? movingItem.parte.rodMin
+                  : computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
+              }
+            : movingItem;
+
+        entries.splice(insertAt, 0, { type: "item", item: { tipo: "cena", item: itemToInsert } });
+        nextBoard = withDay(nextBoard, destDay.id, splitDayEntries(entries));
       }
     }
 
@@ -262,11 +256,16 @@ export function StripboardBoard({
     const container = findContainer(board, itemId);
     if (!container) return;
 
-    const items = getItems(board, container).map((item) =>
-      item.itemId === itemId ? { ...item, prepMin, rodMin } : item
-    );
+    const atualiza = (item: StripItem) => (item.itemId === itemId ? { ...item, prepMin, rodMin } : item);
     const previousBoard = board;
-    const nextBoard = setItems(board, container, items);
+    const nextBoard =
+      container === "boneyard"
+        ? setBoneyard(board, board.boneyard.map(atualiza))
+        : withDay(board, container.split(":")[1], {
+            itens: board.days
+              .find((d) => `day:${d.id}` === container)!
+              .itens.map((i) => (i.tipo === "cena" ? { tipo: "cena" as const, item: atualiza(i.item) } : i)),
+          });
     setBoard(nextBoard);
     persistChanges(nextBoard, [container], previousBoard);
   }
@@ -314,6 +313,7 @@ export function StripboardBoard({
             ))}
             <BoneyardSection
               projectId={projectId}
+              locacoes={locacoes}
               items={board.boneyard}
               characterMap={characterMap}
               sistemaIdElenco={sistemaIdElenco}

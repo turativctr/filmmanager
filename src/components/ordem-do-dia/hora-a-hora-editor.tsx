@@ -12,7 +12,7 @@ import {
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { HoraAHoraEventTipo } from "@prisma/client";
-import { Download, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, GripVertical, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -104,11 +104,14 @@ export function HoraAHoraEditor({
   shootDayId,
   numeroDia,
   initialEvents,
+  blocosForaDoHoraAHora = [],
 }: {
   projectId: string;
   shootDayId: string;
   numeroDia: number;
   initialEvents: HoraAHoraEventRow[];
+  /** Blocos de tempo da diária que ainda não estão no Hora a Hora (criados depois da geração). */
+  blocosForaDoHoraAHora?: string[];
 }) {
   const router = useRouter();
   const [events, setEvents] = useState(initialEvents);
@@ -177,6 +180,16 @@ export function HoraAHoraEditor({
             <HoraAHoraEventDialog projectId={projectId} shootDayId={shootDayId} onSaved={upsert} />
           </div>
         </div>
+
+        {blocosForaDoHoraAHora.length > 0 && (
+          <p className="flex items-center gap-1.5 rounded-md border border-alerta-accent/40 bg-alerta-bg px-3 py-2 text-sm font-medium text-alerta-fg">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {blocosForaDoHoraAHora.length === 1 ? "O bloco de tempo " : "Os blocos de tempo "}
+            {blocosForaDoHoraAHora.join(", ")}
+            {blocosForaDoHoraAHora.length === 1 ? " não está" : " não estão"} neste Hora a Hora — use
+            &quot;Regenerar automáticos&quot; pra incluir (isso refaz os eventos automáticos).
+          </p>
+        )}
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>

@@ -56,8 +56,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { changes } = parsed.data;
-  if (changes.length === 0) return NextResponse.json({ ok: true });
+  const { changes, blocos = [] } = parsed.data;
+  if (changes.length === 0 && blocos.length === 0) return NextResponse.json({ ok: true });
+
+  if (blocos.length > 0) {
+    const encontrados = await prisma.shootDayBlock.findMany({
+      where: { id: { in: blocos.map((b) => b.id) }, shootDay: { projectId: params.id } },
+      select: { id: true, shootDayId: true },
+    });
+    const diaDoBloco = new Map(encontrados.map((b) => [b.id, b.shootDayId]));
+    if (blocos.some((b) => diaDoBloco.get(b.id) !== b.shootDayId)) {
+      return NextResponse.json({ error: "Bloco de tempo inválido ou fora da própria diária." }, { status: 400 });
+    }
+  }
 
   // Tira = cena inteira OU uma parte de cena dividida. A chave de tudo abaixo é a tira, nunca só a
   // cena: uma cena dividida aparece em mais de uma diária, e mover uma parte não pode apagar a outra.
@@ -167,6 +178,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
   // Duas fases: apaga tudo primeiro, depois recria — evita colisão com a
   // constraint única (shootDayId, ordem) ao reordenar/trocar cenas de posição.
   await prisma.$transaction(async (tx) => {
+    for (const b of blocos) {
+      await tx.shootDayBlock.update({ where: { id: b.id }, data: { ordem: b.ordem, bloco: b.bloco } });
+    }
+    if (changes.length === 0) return;
     await tx.sceneShootDay.deleteMany({ where: tiraWhere });
 
     if (toCreate.length) {
@@ -192,7 +207,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   // Recalcula blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de toda diária tocada por este
   // reorder — inclui as diárias de ORIGEM das cenas movidas (existingByPair, via shootDayIds antigos),
   // não só as de destino, já que remover uma cena da manhã também desloca o almoço daquele dia.
-  const affectedShootDayIds = new Set<string>(shootDayIds);
+  const affectedShootDayIds = new Set<string>([...shootDayIds, ...blocos.map((b) => b.shootDayId)]);
   for (const entry of existing) {
     if (entry.shootDayId) affectedShootDayIds.add(entry.shootDayId);
   }

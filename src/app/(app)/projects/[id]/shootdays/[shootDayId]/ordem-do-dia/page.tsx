@@ -161,6 +161,7 @@ export default async function OrdemDoDiaPage({
       chamadaEquipeInicial={chamadaEquipeInicial}
       sceneTimeRows={sceneTimeRows}
       initialStep={initialStep}
+      blocosDeTempo={data.blocosDeTempo}
       passo3={{
         habilidades: habilidadesAgg.map((agg) => formatCharacterAggregation(agg, totalFor(agg.idCurto))),
         figurino: figurinoAgg.map((agg) => formatCharacterAggregation(agg, totalFor(agg.idCurto))),

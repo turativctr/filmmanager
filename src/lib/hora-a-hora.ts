@@ -58,8 +58,10 @@ export function generateHoraAHoraEvents(input: {
   scenes: HoraAHoraSceneInput[];
   castPresente: HoraAHoraCastInput[];
   project: ProjectIdSystemInput;
+  /** Blocos de tempo livres (transporte, espera de luz...) já com horário — entram com o rótulo. */
+  blocos?: { rotulo: string; inicio: string | null; fim: string | null }[];
 }): GeneratedHoraAHoraEvent[] {
-  const { chamadaGeral, almocoInicio, almocoFim, desprodInicio, scenes, castPresente, project } = input;
+  const { chamadaGeral, almocoInicio, almocoFim, desprodInicio, scenes, castPresente, project, blocos = [] } = input;
   const events: GeneratedHoraAHoraEvent[] = [];
 
   if (chamadaGeral) {
@@ -91,6 +93,11 @@ export function generateHoraAHoraEvents(input: {
       descricao: `RODANDO CENA ${scene.numero}`,
       tipo: "RODANDO",
     });
+  }
+
+  for (const bloco of blocos) {
+    if (!bloco.inicio) continue;
+    events.push({ horaInicio: bloco.inicio, horaFim: bloco.fim, descricao: bloco.rotulo, tipo: "OUTRO" });
   }
 
   if (almocoInicio) {

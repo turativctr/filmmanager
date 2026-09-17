@@ -3,6 +3,8 @@ import * as React from "react";
 import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ShotTipoReset } from "@prisma/client";
 
+import { formatHHh } from "@/lib/schedule";
+
 // Paleta original — usada também pelos documentos de Budget/Breakdown/HH Schedule,
 // que não fazem parte deste redesenho visual. Nunca alterar os valores abaixo;
 // só adicionar chaves novas (ver bloco "paleta do redesenho" logo depois).
@@ -364,6 +366,17 @@ export function SeparatorRow({ label, bg, textColor }: { label: string; bg?: str
       <Text style={{ ...kit.separatorText, ...(textColor ? { color: textColor } : {}) }}>{label}</Text>
     </View>
   );
+}
+
+/** Bloco de tempo livre da diária (transporte, espera de luz...) numa tabela de cenas: faixa de largura
+ *  inteira como a do almoço — rótulo, duração e horário, nunca número de cena. */
+export function BlocoDeTempoRow({
+  bloco,
+}: {
+  bloco: { rotulo: string; duracaoMin: number; inicio: string | null; fim: string | null };
+}) {
+  const horario = bloco.inicio && bloco.fim ? ` · ${formatHHh(bloco.inicio)} às ${formatHHh(bloco.fim)}` : "";
+  return <SeparatorRow bg={colors.rowAlt} label={`${bloco.rotulo.toUpperCase()} — ${bloco.duracaoMin}min${horario}`} />;
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {

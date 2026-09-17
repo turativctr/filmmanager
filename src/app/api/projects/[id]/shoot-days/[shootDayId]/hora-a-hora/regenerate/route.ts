@@ -30,6 +30,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
     scenes: data.scenes,
     castPresente: data.castPresente,
     project: data.project,
+    blocos: data.blocosDeTempo,
   });
 
   const manualEvents = await prisma.horaAHoraEvent.findMany({

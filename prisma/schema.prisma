@@ -697,6 +697,7 @@ model ShootDay {
 
   project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   scenes    SceneShootDay[]
+  blocos    ShootDayBlock[]
   callTimes CharacterCallTime[]
   checklist ShootDayChecklist[]
   continuityNotes     ContinuityNote[]
@@ -706,6 +707,31 @@ model ShootDay {
 
   @@unique([projectId, numeroDia])
   @@map("shoot_days")
+}
+
+// Item de agenda da diária que não é cena nem plano: transporte, mudança de locação, espera de luz.
+// Entra na timeline na posição que a AD escolher e soma no horário do dia, mas NÃO conta oitavo,
+// cena, plano, DOOD nem progresso de páginas. Convive com o almoço (que não é registro: é marcador
+// derivado do bloco das cenas, com regra própria de jornada).
+//
+// `ordem` é a posição na lista do dia junto com as cenas — SceneShootDay.ordem e ShootDayBlock.ordem
+// compartilham a mesma sequência (a rota de reordenação grava as duas). `bloco` diz de que lado do
+// almoço o item está, pela mesma regra das cenas.
+model ShootDayBlock {
+  id         String     @id @default(cuid())
+  shootDayId String
+  // Texto livre, até 30 caracteres: "Transporte", "Mudança de locação".
+  rotulo     String
+  duracaoMin Int
+  ordem      Int
+  bloco      SceneBlock @default(MANHA)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+
+  @@index([shootDayId])
+  @@map("shoot_day_blocks")
 }
 
 enum ShootDayChecklistTipo {

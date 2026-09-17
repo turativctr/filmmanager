@@ -33,6 +33,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       scenes: data.scenes,
       castPresente: data.castPresente,
       project: data.project,
+      blocos: data.blocosDeTempo,
     });
     if (generated.length > 0) {
       await prisma.horaAHoraEvent.createMany({

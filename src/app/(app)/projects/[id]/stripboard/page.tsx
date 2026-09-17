@@ -6,9 +6,11 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
 import { StripboardBoard } from "@/components/stripboard/stripboard-board";
-import type { BoardState, DayState, SceneSummary, ShotsSummary, StripItem } from "@/components/stripboard/types";
+import type { BoardState, DayItem, DayState, SceneSummary, ShotsSummary, StripItem } from "@/components/stripboard/types";
 import { Button } from "@/components/ui/button";
+import { intercalar, scheduleDoBloco } from "@/lib/day-timeline";
 import { deriveClasseLuz } from "@/lib/fdx-parser";
+import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
@@ -69,7 +71,7 @@ function toShotsSummary(
 
 
 export default async function StripboardPage({ params }: { params: { id: string } }) {
-  const [project, scenes, shootDays, characters] = await Promise.all([
+  const [project, scenes, shootDays, characters, locacoes] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { titulo: true, sigla: true, sistemaIdElenco: true, limiteAlmocoMin: true, duracaoAlmocoMin: true },
@@ -101,10 +103,13 @@ export default async function StripboardPage({ params }: { params: { id: string 
             },
           },
         },
+        blocos: true,
       },
     }),
     prisma.character.findMany({ where: { projectId: params.id } }),
+    prisma.locacao.findMany({ where: { projectId: params.id }, select: { id: true, nome: true } }),
   ]);
+  locacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
   const characterMap = Object.fromEntries(
     characters.map((c) => [c.id, { idCurto: c.idCurto, numeroElenco: c.numeroElenco, personagem: c.personagem }])
@@ -127,6 +132,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
       classeLuzFim: classeLuzFim === "DIA" || classeLuzFim === "NOITE" ? classeLuzFim : null,
       set: scene.set,
       locacao: scene.locacao?.nome ?? null,
+      locacaoId: scene.locacaoId,
       sinopse: scene.sinopse,
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,
@@ -194,39 +200,52 @@ export default async function StripboardPage({ params }: { params: { id: string 
     });
 
   const days: DayState[] = shootDays.map((day) => {
-    const sceneItems: StripItem[] = day.scenes.map((entry) => ({
-      ...toStripItem(entry.scene, entry.scene.parts.find((p) => p.id === entry.scenePartId) ?? null),
-      prepMin: entry.prepMin,
-      rodMin: entry.rodMin,
-      observacoes: entry.observacoes,
-      observacoesAutoGeradas: entry.observacoesAutoGeradas,
-    }));
+    // Cenas e blocos de tempo livres (transporte etc.) numa lista só, pela `ordem` compartilhada.
+    const timeline = intercalar(day.scenes, day.blocos);
+    const itens: DayItem[] = timeline.map((t) =>
+      t.tipo === "bloco"
+        ? { tipo: "bloco", bloco: { id: t.bloco.id, rotulo: t.bloco.rotulo, duracaoMin: t.bloco.duracaoMin } }
+        : {
+            tipo: "cena",
+            item: {
+              ...toStripItem(t.cena.scene, t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId) ?? null),
+              prepMin: t.cena.prepMin,
+              rodMin: t.cena.rodMin,
+              observacoes: t.cena.observacoes,
+              observacoesAutoGeradas: t.cena.observacoesAutoGeradas,
+            },
+          }
+    );
 
     // Bloco não existe mais como duas listas: manhã/tarde são derivadas da posição do marcador de
-    // almoço (almocoIndex) dentro da lista única `scenes`, já ordenada por SceneShootDay.ordem.
-    // Enquanto a diária nunca foi dividida manualmente (todas as cenas ainda em bloco MANHA — o
-    // mesmo critério usado por recalculateDayBlocks pra decidir se ainda pode auto-posicionar),
-    // sugere aqui a mesma posição que seria persistida no próximo recálculo, pra já exibir a posição
-    // certa do marcador antes mesmo de qualquer gravação.
-    const neverSplit = day.scenes.length > 0 && day.scenes.every((e) => e.bloco === "MANHA");
+    // almoço (almocoIndex) dentro da lista única `itens`. Enquanto a diária nunca foi dividida
+    // manualmente (tudo ainda em bloco MANHA — o mesmo critério usado por recalculateDayBlocks pra
+    // decidir se ainda pode auto-posicionar), sugere aqui a mesma posição que seria persistida no
+    // próximo recálculo, pra já exibir a posição certa do marcador antes mesmo de qualquer gravação.
+    const blocoDe = (t: (typeof timeline)[number]) => (t.tipo === "cena" ? t.cena.bloco : t.bloco.bloco);
+    const neverSplit = day.scenes.length > 0 && timeline.every((t) => blocoDe(t) === "MANHA");
     const almocoIndex = neverSplit
       ? suggestAlmocoIndex(
           day.chamadaGeral,
           day.blocoManhaInicio,
-          day.scenes.map((e) => ({
-            prepMin: resolveEffectivePrepMin(e.prepMin),
-            rodMin: resolveEffectiveRodMin(
-              e.rodMin,
-              tempoEstimadoDaEntrada(
-                e.scene.tempoEstimadoMin,
-                paginasParaOitavos(e.scene.paginas),
-                e.scene.parts.find((p) => p.id === e.scenePartId)
-              )
-            ),
-          })),
+          timeline.map((t) =>
+            t.tipo === "bloco"
+              ? scheduleDoBloco(t.bloco)
+              : {
+                  prepMin: resolveEffectivePrepMin(t.cena.prepMin),
+                  rodMin: resolveEffectiveRodMin(
+                    t.cena.rodMin,
+                    tempoEstimadoDaEntrada(
+                      t.cena.scene.tempoEstimadoMin,
+                      paginasParaOitavos(t.cena.scene.paginas),
+                      t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId)
+                    )
+                  ),
+                }
+          ),
           project.limiteAlmocoMin
         )
-      : day.scenes.filter((e) => e.bloco === "MANHA").length;
+      : timeline.filter((t) => blocoDe(t) === "MANHA").length;
 
     return {
       id: day.id,
@@ -240,7 +259,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
       blocoTardeInicio: day.blocoTardeInicio,
       desprodInicio: day.desprodInicio,
       fatorResetPercent: day.fatorResetPercent,
-      scenes: sceneItems,
+      itens,
       almocoIndex,
     };
   });
@@ -276,6 +295,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
           sistemaIdElenco={project.sistemaIdElenco}
           projeto={{ titulo: project.titulo, sigla: project.sigla }}
           jornada={{ limiteAlmocoMin: project.limiteAlmocoMin, duracaoAlmocoMin: project.duracaoAlmocoMin }}
+          locacoes={locacoes}
         />
       )}
 

@@ -1,13 +1,14 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, ChevronUp, LogOut, MessageSquarePlus, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Clock, LogOut, MessageSquarePlus, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Button } from "@/components/ui/button";
-import { timeToMinutes } from "@/lib/schedule";
+import { intercalar, type BlocoNaTimeline } from "@/lib/day-timeline";
+import { formatHHh, timeToMinutes } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 
 import type { ShotPrioridade } from "@prisma/client";
@@ -30,6 +31,8 @@ export type SetModeShot = {
 
 export type SetModeScene = {
   sceneId: string;
+  ordem: number;
+  bloco: "MANHA" | "TARDE";
   /** "19 · Voice off" quando é parte de cena dividida. */
   numero: string;
   /** Onde estão as outras partes: "imagem na diária 2". */
@@ -82,6 +85,7 @@ export function SetModeView({
   data,
   chamadaGeral,
   initialScenes,
+  blocosDeTempo = [],
 }: {
   projectId: string;
   shootDayId: string;
@@ -90,6 +94,8 @@ export function SetModeView({
   data: string;
   chamadaGeral: string | null;
   initialScenes: SetModeScene[];
+  /** Transporte, espera de luz etc. — aparecem entre as cenas, com rótulo, duração e horário. */
+  blocosDeTempo?: BlocoNaTimeline[];
 }) {
   const [scenes, setScenes] = useState(initialScenes);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -284,155 +290,181 @@ export function SetModeView({
             </p>
           )}
 
-          {scenes.map((scene) => {
-            const expanded = expandedIds.has(scene.sceneId);
-            const allShotsDone =
-              scene.shots.length > 0 && scene.shots.every((sh) => sh.status !== "PENDENTE");
-            const showConcluirBanner = expanded && allShotsDone && scene.status !== "CONCLUIDA";
-
-            return (
-              <div key={scene.sceneId} className="overflow-hidden rounded-lg border bg-card">
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(scene.sceneId)}
-                  className="flex min-h-[64px] w-full items-center gap-3 p-3 text-left"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-lg font-bold">Cena {scene.numero}</span>
-                      {scene.vinculoParte && (
-                        <span className="text-xs text-muted-foreground">{scene.vinculoParte}</span>
-                      )}
-                      <span
-                        className={cn(
-                          "rounded px-2 py-0.5 text-xs font-semibold",
-                          SCENE_STATUS_BADGE_CLASS[scene.status]
-                        )}
-                      >
-                        {SCENE_STATUS_LABEL[scene.status]}
+          {(["MANHA", "TARDE"] as const)
+            .flatMap((lado) =>
+              intercalar(
+                scenes.filter((sc) => sc.bloco === lado),
+                blocosDeTempo.filter((b) => b.bloco === lado)
+              )
+            )
+            .map((itemDoDia) => {
+              if (itemDoDia.tipo === "bloco") {
+                const b = blocosDeTempo.find((x) => x.id === itemDoDia.bloco.id)!;
+                return (
+                  <div
+                    key={b.id}
+                    className="flex min-h-[48px] items-center gap-3 rounded-lg border border-dashed bg-muted/40 px-3 text-sm"
+                  >
+                    <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="font-semibold">{b.rotulo}</span>
+                    <span className="text-muted-foreground">{b.duracaoMin}min</span>
+                    {b.inicio && b.fim && (
+                      <span className="ml-auto text-muted-foreground">
+                        {formatHHh(b.inicio)} às {formatHHh(b.fim)}
                       </span>
-                    </div>
-                    <p className="truncate text-sm text-muted-foreground">{scene.setLocacaoDisplay}</p>
-                    {scene.sinopseAD && <p className="mt-0.5 truncate text-sm">{scene.sinopseAD}</p>}
+                    )}
                   </div>
-                  {expanded ? (
-                    <ChevronUp className="h-6 w-6 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-6 w-6 shrink-0 text-muted-foreground" />
-                  )}
-                </button>
+                );
+              }
+              const scene = itemDoDia.cena;
+              const expanded = expandedIds.has(scene.sceneId);
+              const allShotsDone =
+                scene.shots.length > 0 && scene.shots.every((sh) => sh.status !== "PENDENTE");
+              const showConcluirBanner = expanded && allShotsDone && scene.status !== "CONCLUIDA";
 
-                {expanded && (
-                  <div className="space-y-2 border-t p-3">
-                    {showConcluirBanner && (
-                      <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
-                        <p className="mb-2 font-medium">
-                          Todos os planos desta cena foram filmados ou cortados. Marcar cena como concluída?
-                        </p>
-                        <Button
-                          size="sm"
-                          className="h-11 px-4 text-base"
-                          onClick={() => markSceneConcluida(scene.sceneId)}
-                          disabled={savingSceneId === scene.sceneId}
-                        >
-                          {savingSceneId === scene.sceneId ? "Salvando..." : "Marcar cena como concluída"}
-                        </Button>
-                      </div>
-                    )}
-
-                    {scene.shots.length === 0 && (
-                      <p className="py-2 text-sm text-muted-foreground">Nenhum plano cadastrado para esta cena.</p>
-                    )}
-
-                    {scene.shots.map((shot) => {
-                      const notesOpen = notesOpenIds.has(shot.id);
-                      const isCortado = shot.status === "DESCARTADO";
-                      const isFilmado = shot.status === "FILMADO";
-
-                      return (
-                        <div
-                          key={shot.id}
-                          className={cn("rounded-md border p-3", isCortado && "bg-muted/40 opacity-70")}
-                        >
-                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                            <span className={cn("text-base font-semibold", isCortado && "line-through")}>
-                              P{shot.numero}
-                            </span>
-                            <PrioridadeTag prioridade={shot.prioridade} className="self-center" />
-                            {shot.tamanho && (
-                              <span className={cn("text-sm text-muted-foreground", isCortado && "line-through")}>
-                                {shot.tamanho}
-                              </span>
-                            )}
-                            {shot.movimento && (
-                              <span className={cn("text-sm text-muted-foreground", isCortado && "line-through")}>
-                                {shot.movimento}
-                              </span>
-                            )}
-                            {isCortado && (
-                              <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-semibold text-destructive">
-                                Cortado
-                              </span>
-                            )}
-                          </div>
-                          <p className={cn("mt-1 text-sm", isCortado && "text-muted-foreground line-through")}>
-                            {shot.descricao}
-                          </p>
-                          <p className={cn("mt-0.5 text-sm text-muted-foreground", isCortado && "line-through")}>
-                            {shot.takesPrevistos}T × {shot.duracaoTakeMin}min
-                          </p>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <Button
-                              type="button"
-                              className={cn(
-                                "h-11 min-w-[44px] flex-1 gap-1.5 text-base sm:flex-initial",
-                                isFilmado
-                                  ? "bg-emerald-600 text-white hover:bg-emerald-600/90"
-                                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                              )}
-                              onClick={() => setShotStatus(scene.sceneId, shot.id, "FILMADO")}
-                              disabled={savingShotId === shot.id}
-                            >
-                              <CheckCircle2 className="h-4 w-4" />✓ Filmado
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={isCortado ? "destructive" : "outline"}
-                              className="h-11 min-w-[44px] flex-1 gap-1.5 text-base sm:flex-initial"
-                              onClick={() => setShotStatus(scene.sceneId, shot.id, "DESCARTADO")}
-                              disabled={savingShotId === shot.id}
-                            >
-                              ✗ Cortado
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="h-11 min-w-[44px] gap-1.5 px-2 text-base"
-                              onClick={() => toggleNotesOpen(shot.id)}
-                            >
-                              <MessageSquarePlus className="h-4 w-4" />
-                              Observação
-                            </Button>
-                          </div>
-
-                          {notesOpen && (
-                            <textarea
-                              className="mt-2 w-full min-h-[44px] rounded-md border bg-background p-2 text-base"
-                              placeholder="Observação de direção..."
-                              value={shot.notasDirecao ?? ""}
-                              onChange={(e) => updateShotLocal(scene.sceneId, shot.id, { notasDirecao: e.target.value })}
-                              onBlur={(e) => saveNotasDirecao(scene.sceneId, shot.id, e.target.value)}
-                            />
+              return (
+                <div key={scene.sceneId} className="overflow-hidden rounded-lg border bg-card">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(scene.sceneId)}
+                    className="flex min-h-[64px] w-full items-center gap-3 p-3 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-lg font-bold">Cena {scene.numero}</span>
+                        {scene.vinculoParte && (
+                          <span className="text-xs text-muted-foreground">{scene.vinculoParte}</span>
+                        )}
+                        <span
+                          className={cn(
+                            "rounded px-2 py-0.5 text-xs font-semibold",
+                            SCENE_STATUS_BADGE_CLASS[scene.status]
                           )}
+                        >
+                          {SCENE_STATUS_LABEL[scene.status]}
+                        </span>
+                      </div>
+                      <p className="truncate text-sm text-muted-foreground">{scene.setLocacaoDisplay}</p>
+                      {scene.sinopseAD && <p className="mt-0.5 truncate text-sm">{scene.sinopseAD}</p>}
+                    </div>
+                    {expanded ? (
+                      <ChevronUp className="h-6 w-6 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-6 w-6 shrink-0 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  {expanded && (
+                    <div className="space-y-2 border-t p-3">
+                      {showConcluirBanner && (
+                        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+                          <p className="mb-2 font-medium">
+                            Todos os planos desta cena foram filmados ou cortados. Marcar cena como concluída?
+                          </p>
+                          <Button
+                            size="sm"
+                            className="h-11 px-4 text-base"
+                            onClick={() => markSceneConcluida(scene.sceneId)}
+                            disabled={savingSceneId === scene.sceneId}
+                          >
+                            {savingSceneId === scene.sceneId ? "Salvando..." : "Marcar cena como concluída"}
+                          </Button>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      )}
+
+                      {scene.shots.length === 0 && (
+                        <p className="py-2 text-sm text-muted-foreground">Nenhum plano cadastrado para esta cena.</p>
+                      )}
+
+                      {scene.shots.map((shot) => {
+                        const notesOpen = notesOpenIds.has(shot.id);
+                        const isCortado = shot.status === "DESCARTADO";
+                        const isFilmado = shot.status === "FILMADO";
+
+                        return (
+                          <div
+                            key={shot.id}
+                            className={cn("rounded-md border p-3", isCortado && "bg-muted/40 opacity-70")}
+                          >
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                              <span className={cn("text-base font-semibold", isCortado && "line-through")}>
+                                P{shot.numero}
+                              </span>
+                              <PrioridadeTag prioridade={shot.prioridade} className="self-center" />
+                              {shot.tamanho && (
+                                <span className={cn("text-sm text-muted-foreground", isCortado && "line-through")}>
+                                  {shot.tamanho}
+                                </span>
+                              )}
+                              {shot.movimento && (
+                                <span className={cn("text-sm text-muted-foreground", isCortado && "line-through")}>
+                                  {shot.movimento}
+                                </span>
+                              )}
+                              {isCortado && (
+                                <span className="rounded bg-destructive/15 px-1.5 py-0.5 text-xs font-semibold text-destructive">
+                                  Cortado
+                                </span>
+                              )}
+                            </div>
+                            <p className={cn("mt-1 text-sm", isCortado && "text-muted-foreground line-through")}>
+                              {shot.descricao}
+                            </p>
+                            <p className={cn("mt-0.5 text-sm text-muted-foreground", isCortado && "line-through")}>
+                              {shot.takesPrevistos}T × {shot.duracaoTakeMin}min
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <Button
+                                type="button"
+                                className={cn(
+                                  "h-11 min-w-[44px] flex-1 gap-1.5 text-base sm:flex-initial",
+                                  isFilmado
+                                    ? "bg-emerald-600 text-white hover:bg-emerald-600/90"
+                                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                                )}
+                                onClick={() => setShotStatus(scene.sceneId, shot.id, "FILMADO")}
+                                disabled={savingShotId === shot.id}
+                              >
+                                <CheckCircle2 className="h-4 w-4" />✓ Filmado
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={isCortado ? "destructive" : "outline"}
+                                className="h-11 min-w-[44px] flex-1 gap-1.5 text-base sm:flex-initial"
+                                onClick={() => setShotStatus(scene.sceneId, shot.id, "DESCARTADO")}
+                                disabled={savingShotId === shot.id}
+                              >
+                                ✗ Cortado
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="h-11 min-w-[44px] gap-1.5 px-2 text-base"
+                                onClick={() => toggleNotesOpen(shot.id)}
+                              >
+                                <MessageSquarePlus className="h-4 w-4" />
+                                Observação
+                              </Button>
+                            </div>
+
+                            {notesOpen && (
+                              <textarea
+                                className="mt-2 w-full min-h-[44px] rounded-md border bg-background p-2 text-base"
+                                placeholder="Observação de direção..."
+                                value={shot.notasDirecao ?? ""}
+                                onChange={(e) => updateShotLocal(scene.sceneId, shot.id, { notasDirecao: e.target.value })}
+                                onBlur={(e) => saveNotasDirecao(scene.sceneId, shot.id, e.target.value)}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </main>
     </div>

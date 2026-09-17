@@ -90,6 +90,7 @@ const PIOR = {
   // Cena dividida entre diárias: o rótulo da parte vai junto do número em todo documento por diária.
   // 30 é o máximo que a API aceita; palavras longas pra forçar quebra em coluna estreita.
   rotuloParte: comTamanho("Continuação do dublê voice off", 30),
+  rotuloBloco: comTamanho("TP. Transporte equipe e elenco", 30),
   shotNumero: "12B",
   tresDigitos: 888, // dígitos têm a mesma largura em Helvetica; 888 é o pior caso de 3 dígitos
   paginas: 12.875, // "12 7/8"
@@ -316,6 +317,7 @@ export function odPiorCaso(base: ShootDayReportData, comOrdemDePlanos: boolean):
       }))
     : [];
   data.horaAHoraPlanos = data.scenes.map((s) => ({
+    kind: "cena" as const,
     sceneId: s.sceneId,
     numero: s.numero,
     tipo: s.tipo,
@@ -351,7 +353,21 @@ export function odPiorCaso(base: ShootDayReportData, comOrdemDePlanos: boolean):
     scene.parte = { id: "parte", rotulo: PIOR.rotuloParte, oitavos: 7, vinculo: `${PIOR.rotuloParte.toLowerCase()} na diária 88` };
   }
   for (const entry of data.shotSchedule) entry.sceneNumero = comParte;
+  // Blocos de tempo livres, um de cada lado do almoço, com o rótulo no limite de 30.
+  data.blocosDeTempo = (["MANHA", "TARDE"] as const).map((bloco, i) => ({
+    id: `bloco-${i}`,
+    rotulo: PIOR.rotuloBloco,
+    duracaoMin: PIOR.tresDigitos,
+    ordem: bloco === "MANHA" ? 0 : 999,
+    bloco,
+    inicio: "10:00",
+    fim: "23:55",
+  }));
   for (const block of data.horaAHoraPlanos) block.numero = comParte;
+  data.horaAHoraItens = [
+    ...data.horaAHoraPlanos,
+    ...data.blocosDeTempo.map((bloco) => ({ kind: "bloco" as const, bloco })),
+  ];
   return data;
 }
 
@@ -410,6 +426,7 @@ async function montarDocumentos(): Promise<Documento[]> {
           scenes: data.scenes,
           castPresente: data.castPresente,
           project: data.project,
+          blocos: data.blocosDeTempo,
         });
         return (
           <HoraAHoraDocument

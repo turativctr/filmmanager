@@ -42,7 +42,7 @@ async function downloadOrdemDoDiaPdf(
   URL.revokeObjectURL(objectUrl);
 }
 
-type TimelineBlock = { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" };
+type TimelineBlock = { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" | "bloco" };
 
 type ChecklistItem = {
   id: string;
@@ -60,6 +60,7 @@ export function ShootDayDashboard({
   totalCenas,
   totalPaginas,
   totalMinutos,
+  blocosMin,
   cortaveisMin,
   totalPessoas,
   timelineBlocks,
@@ -83,6 +84,8 @@ export function ShootDayDashboard({
   totalCenas: number;
   totalPaginas: number;
   totalMinutos: number;
+  /** Minutos em blocos de tempo livres (transporte etc.) — não é filmagem, mas ocupa o dia. */
+  blocosMin: number;
   /** Minutos em planos Desejável/Se der tempo — o que dá pra cortar se o dia estourar. */
   cortaveisMin: number;
   totalPessoas: number;
@@ -223,6 +226,9 @@ export function ShootDayDashboard({
             {cortaveisMin > 0 && (
               <p className="text-xs text-muted-foreground">{formatTempoEstimado(cortaveisMin)} cortáveis</p>
             )}
+            {blocosMin > 0 && (
+              <p className="text-xs text-muted-foreground">+ {formatTempoEstimado(blocosMin)} em blocos de tempo</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -244,7 +250,11 @@ export function ShootDayDashboard({
                 style={{ flexGrow: block.durationMin / totalSpan }}
                 className={cn(
                   "flex min-w-[2px] items-center justify-center truncate border-r px-1 text-[10px] font-medium last:border-r-0",
-                  block.kind === "pause" ? "bg-muted text-muted-foreground" : "bg-blue-100 text-blue-900"
+                  block.kind === "pause"
+                    ? "bg-muted text-muted-foreground"
+                    : block.kind === "bloco"
+                      ? "bg-alerta-bg text-alerta-fg"
+                      : "bg-blue-100 text-blue-900"
                 )}
               >
                 {block.durationMin >= 30 && block.label}

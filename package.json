@@ -18,6 +18,8 @@
     "verify:elenco": "tsx scripts/verify-elenco-fixture.ts",
     "verify:planos": "tsx scripts/verify-planos-tempo.ts",
     "verify:divisao": "tsx scripts/verify-divisao-cena.ts",
+    "verify:boneyard": "tsx scripts/verify-boneyard-filtro.ts",
+    "verify:timeline": "tsx scripts/verify-timeline-dia.ts",
     "verify:pdf": "tsx --tsconfig scripts/tsconfig.pdf.json scripts/verify-pdf-colisoes.tsx"
   },
   "prisma": {

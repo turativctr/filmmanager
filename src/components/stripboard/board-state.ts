@@ -1,11 +1,12 @@
-import { almocoMarkerId } from "./types";
-import type { BoardState, ContainerId, DayState, StripItem } from "./types";
+import { almocoMarkerId, cenasDoDia, dayItemId } from "./types";
+import type { BoardState, ContainerId, DayItem, DayState, StripItem } from "./types";
 
+/** Container de uma tira de cena OU de um bloco de tempo (id "bloco:..."). */
 export function findContainer(board: BoardState, itemId: string): ContainerId | undefined {
   if (board.boneyard.some((item) => item.itemId === itemId)) return "boneyard";
 
   for (const day of board.days) {
-    if (day.scenes.some((item) => item.itemId === itemId)) return `day:${day.id}`;
+    if (day.itens.some((item) => dayItemId(item) === itemId)) return `day:${day.id}`;
   }
 
   return undefined;
@@ -15,47 +16,43 @@ export function isContainerId(id: string): id is ContainerId {
   return id === "boneyard" || id.startsWith("day:");
 }
 
+/** Só as tiras de cena do container (blocos de tempo ficam de fora). */
 export function getItems(board: BoardState, container: ContainerId): StripItem[] {
   if (container === "boneyard") return board.boneyard;
 
   const dayId = container.split(":")[1];
-  return board.days.find((d) => d.id === dayId)?.scenes ?? [];
+  const day = board.days.find((d) => d.id === dayId);
+  return day ? cenasDoDia(day) : [];
 }
 
-export function setItems(board: BoardState, container: ContainerId, items: StripItem[]): BoardState {
-  if (container === "boneyard") return { ...board, boneyard: items };
-
-  const dayId = container.split(":")[1];
-  return {
-    ...board,
-    days: board.days.map((day) => (day.id === dayId ? { ...day, scenes: items } : day)),
-  };
-}
-
-/** Uma entrada da lista sortable exibida de um dia — cenas e o marcador de almoço compartilham a
- *  mesma lista/SortableContext (ver StripDropZone em shoot-day-column.tsx), então qualquer drag
- *  dentro do dia (mover uma cena OU mover o próprio marcador) é tratado como reordenar esta lista
- *  combinada, depois convertida de volta em (scenes, almocoIndex) por splitDayEntries. */
-export type DayEntry = { type: "scene"; item: StripItem } | { type: "almoco" };
+/** Uma entrada da lista sortable exibida de um dia — cenas, blocos de tempo e o marcador de almoço
+ *  compartilham a mesma lista/SortableContext (ver StripDropZone em shoot-day-column.tsx), então
+ *  qualquer drag dentro do dia é tratado como reordenar esta lista combinada, depois convertida de
+ *  volta em (itens, almocoIndex) por splitDayEntries. */
+export type DayEntry = { type: "item"; item: DayItem } | { type: "almoco" };
 
 export function buildDayEntries(day: DayState): DayEntry[] {
-  const entries: DayEntry[] = day.scenes.map((item) => ({ type: "scene", item }));
+  const entries: DayEntry[] = day.itens.map((item) => ({ type: "item", item }));
   entries.splice(day.almocoIndex, 0, { type: "almoco" });
   return entries;
 }
 
-export function dayEntryIds(day: DayState): string[] {
-  return buildDayEntries(day).map((entry) => (entry.type === "scene" ? entry.item.itemId : almocoMarkerId(day.id)));
+export function dayEntryId(dayId: string, entry: DayEntry): string {
+  return entry.type === "item" ? dayItemId(entry.item) : almocoMarkerId(dayId);
 }
 
-export function splitDayEntries(entries: DayEntry[]): { scenes: StripItem[]; almocoIndex: number } {
-  const scenes: StripItem[] = [];
+export function dayEntryIds(day: DayState): string[] {
+  return buildDayEntries(day).map((entry) => dayEntryId(day.id, entry));
+}
+
+export function splitDayEntries(entries: DayEntry[]): { itens: DayItem[]; almocoIndex: number } {
+  const itens: DayItem[] = [];
   let almocoIndex = entries.length - 1;
   for (const entry of entries) {
-    if (entry.type === "almoco") almocoIndex = scenes.length;
-    else scenes.push(entry.item);
+    if (entry.type === "almoco") almocoIndex = itens.length;
+    else itens.push(entry.item);
   }
-  return { scenes, almocoIndex };
+  return { itens, almocoIndex };
 }
 
 export type StripboardChangePayload = {
@@ -68,17 +65,22 @@ export type StripboardChangePayload = {
   rodMin: number | null;
 };
 
+export type StripboardBlocoChangePayload = { id: string; shootDayId: string; ordem: number; bloco: "MANHA" | "TARDE" };
+
 /** Serializa o conteúdo atual de um conjunto de containers em mudanças para persistir via API —
  *  bloco nunca é lido de um estado próprio: é sempre derivado da posição do item em relação ao
- *  almocoIndex do dia (índice < almocoIndex = manhã, consequência da posição do marcador). */
-export function computeChanges(board: BoardState, containers: ContainerId[]): StripboardChangePayload[] {
+ *  almocoIndex do dia (índice < almocoIndex = manhã, consequência da posição do marcador). `ordem` é a
+ *  posição na lista do dia, compartilhada entre cenas e blocos de tempo. */
+export function computeChanges(
+  board: BoardState,
+  containers: ContainerId[]
+): { changes: StripboardChangePayload[]; blocos: StripboardBlocoChangePayload[] } {
   const changes: StripboardChangePayload[] = [];
+  const blocos: StripboardBlocoChangePayload[] = [];
 
   for (const container of containers) {
-    const items = getItems(board, container);
-
     if (container === "boneyard") {
-      items.forEach((item, index) => {
+      board.boneyard.forEach((item, index) => {
         changes.push({
           sceneId: item.sceneId,
           scenePartId: item.scenePartId,
@@ -95,18 +97,23 @@ export function computeChanges(board: BoardState, containers: ContainerId[]): St
     const dayId = container.split(":")[1];
     const day = board.days.find((d) => d.id === dayId)!;
 
-    items.forEach((item, index) => {
+    day.itens.forEach((entry, index) => {
+      const bloco = index < day.almocoIndex ? "MANHA" : "TARDE";
+      if (entry.tipo === "bloco") {
+        blocos.push({ id: entry.bloco.id, shootDayId: dayId, ordem: index, bloco });
+        return;
+      }
       changes.push({
-        sceneId: item.sceneId,
-        scenePartId: item.scenePartId,
+        sceneId: entry.item.sceneId,
+        scenePartId: entry.item.scenePartId,
         shootDayId: dayId,
-        bloco: index < day.almocoIndex ? "MANHA" : "TARDE",
+        bloco,
         ordem: index,
-        prepMin: item.prepMin,
-        rodMin: item.rodMin,
+        prepMin: entry.item.prepMin,
+        rodMin: entry.item.rodMin,
       });
     });
   }
 
-  return changes;
+  return { changes, blocos };
 }

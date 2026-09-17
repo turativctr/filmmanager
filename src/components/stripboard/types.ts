@@ -11,6 +11,7 @@ export type SceneSummary = {
   classeLuzFim: "DIA" | "NOITE" | null;
   set: string | null;
   locacao: string | null;
+  locacaoId: string | null;
   sinopse: string | null;
   paginas: string;
   diaNarrativo: number | null;
@@ -77,13 +78,36 @@ export type DayState = {
   desprodInicio: string | null;
   /** Ritmo dos resets desta diária (nível 3 de "tempos de reset configuráveis") — 100 = sem ajuste. */
   fatorResetPercent: number;
-  /** Lista única do dia, já na ordem de filmagem (SceneShootDay.ordem) — bloco não existe mais como
-   *  duas listas separadas: itens em índice < almocoIndex são manhã, os demais são tarde. */
-  scenes: StripItem[];
-  /** Posição do marcador de almoço dentro de `scenes` — arrastar o marcador é o que move este número,
+  /** Lista única do dia, já na ordem de filmagem: cenas e blocos de tempo livres (transporte etc.)
+   *  intercalados pela `ordem` compartilhada — itens em índice < almocoIndex são manhã, os demais são
+   *  tarde. Pra só as cenas, use cenasDoDia(). */
+  itens: DayItem[];
+  /** Posição do marcador de almoço dentro de `itens` — arrastar o marcador é o que move este número,
    *  nunca um horário declarado diretamente (ver AlmocoMarker/StripboardBoard). */
   almocoIndex: number;
 };
+
+/** Bloco de tempo livre da diária (ShootDayBlock): não é cena nem plano, só ocupa horário. */
+export type StripBloco = { id: string; rotulo: string; duracaoMin: number };
+
+export type DayItem = { tipo: "cena"; item: StripItem } | { tipo: "bloco"; bloco: StripBloco };
+
+export function cenasDoDia(day: Pick<DayState, "itens">): StripItem[] {
+  return day.itens.flatMap((i) => (i.tipo === "cena" ? [i.item] : []));
+}
+
+/** Id do item na lista sortable do dia — mesmo namespace das tiras e do marcador de almoço. */
+export function dayItemId(item: DayItem): string {
+  return item.tipo === "cena" ? item.item.itemId : blocoItemId(item.bloco.id);
+}
+
+export function blocoItemId(blocoId: string): string {
+  return `bloco:${blocoId}`;
+}
+
+export function isBlocoItemId(id: string): boolean {
+  return id.startsWith("bloco:");
+}
 
 export type BoardState = {
   boneyard: StripItem[];

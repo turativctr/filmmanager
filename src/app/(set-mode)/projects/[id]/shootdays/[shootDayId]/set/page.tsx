@@ -14,6 +14,8 @@ export default async function SetModePage({
 
   const scenes = data.scenes.map((scene) => ({
     sceneId: scene.sceneId,
+    ordem: scene.ordem,
+    bloco: scene.bloco,
     numero: scene.numero,
     vinculoParte: scene.parte?.vinculo ?? null,
     setLocacaoDisplay: scene.setLocacaoDisplay,
@@ -35,6 +37,7 @@ export default async function SetModePage({
 
   return (
     <SetModeView
+      blocosDeTempo={data.blocosDeTempo}
       projectId={params.id}
       shootDayId={params.shootDayId}
       projetoTitulo={data.project.titulo}

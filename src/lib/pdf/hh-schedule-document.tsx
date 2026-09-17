@@ -3,7 +3,19 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
-import { colors, DocHeader, kit, SectionTitle, SeparatorRow, Table, Td, TimeRangeCell, Tr } from "@/lib/pdf/kit";
+import { intercalar } from "@/lib/day-timeline";
+import {
+  BlocoDeTempoRow,
+  colors,
+  DocHeader,
+  kit,
+  SectionTitle,
+  SeparatorRow,
+  Table,
+  Td,
+  TimeRangeCell,
+  Tr,
+} from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
 import { formatHHh } from "@/lib/schedule";
 import { HEAVY_RESETS, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-shared";
@@ -159,7 +171,7 @@ function ShotSubRows({ scene }: { scene: ShootDayReportData["scenes"][number] })
 }
 
 export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
-  const { project, shootDay, totalShootDays, manhaScenes, tardeScenes, totalPaginas } = data;
+  const { project, shootDay, totalShootDays, manhaScenes, tardeScenes, totalPaginas, blocosDeTempo } = data;
 
   return (
     <Document>
@@ -212,13 +224,17 @@ export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
                 Filmagem
               </Td>
             </Tr>
-            {manhaScenes.map((scene) => (
-              <View key={scene.sceneId} style={{ width: "100%" }}>
-                <SceneRow scene={scene} project={project} />
-                <SceneObservacoesRow scene={scene} />
-                <ShotSubRows scene={scene} />
-              </View>
-            ))}
+            {intercalar(manhaScenes, blocosDeTempo.filter((b) => b.bloco === "MANHA")).map((item) =>
+              item.tipo === "bloco" ? (
+                <BlocoDeTempoRow key={item.bloco.id} bloco={blocosDeTempo.find((b) => b.id === item.bloco.id)!} />
+              ) : (
+                <View key={item.cena.sceneId} style={{ width: "100%" }}>
+                  <SceneRow scene={item.cena} project={project} />
+                  <SceneObservacoesRow scene={item.cena} />
+                  <ShotSubRows scene={item.cena} />
+                </View>
+              )
+            )}
             {(shootDay.almocoInicio || tardeScenes.length > 0) && (
               <SeparatorRow
                 label={`ALMOÇO${shootDay.almocoInicio ? ` — ${formatHHh(shootDay.almocoInicio)}` : ""}${
@@ -226,13 +242,17 @@ export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
                 }`}
               />
             )}
-            {tardeScenes.map((scene) => (
-              <View key={scene.sceneId} style={{ width: "100%" }}>
-                <SceneRow scene={scene} project={project} />
-                <SceneObservacoesRow scene={scene} />
-                <ShotSubRows scene={scene} />
-              </View>
-            ))}
+            {intercalar(tardeScenes, blocosDeTempo.filter((b) => b.bloco === "TARDE")).map((item) =>
+              item.tipo === "bloco" ? (
+                <BlocoDeTempoRow key={item.bloco.id} bloco={blocosDeTempo.find((b) => b.id === item.bloco.id)!} />
+              ) : (
+                <View key={item.cena.sceneId} style={{ width: "100%" }}>
+                  <SceneRow scene={item.cena} project={project} />
+                  <SceneObservacoesRow scene={item.cena} />
+                  <ShotSubRows scene={item.cena} />
+                </View>
+              )
+            )}
             {shootDay.desprodInicio && <SeparatorRow label={`DESPRODUÇÃO — ${formatHHh(shootDay.desprodInicio)}`} />}
           </Table>
         </View>

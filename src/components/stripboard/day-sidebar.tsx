@@ -1,5 +1,8 @@
 "use client";
 
+import { Tablet } from "lucide-react";
+import Link from "next/link";
+
 import { NewShootDayDialog } from "@/components/stripboard/new-shoot-day-dialog";
 import { cn } from "@/lib/utils";
 
@@ -20,21 +23,30 @@ export function DaySidebar({ projectId, days }: { projectId: string; days: DaySt
       <NewShootDayDialog projectId={projectId} nextNumeroDia={nextNumeroDia} />
       <nav className="flex flex-wrap gap-1 lg:flex-col lg:flex-nowrap">
         {days.map((day) => (
-          <button
-            key={day.id}
-            type="button"
-            onClick={() => scrollToDay(day.id)}
-            className={cn(
-              "rounded-md px-3 py-2 text-left text-sm hover:bg-accent",
-              "text-muted-foreground hover:text-accent-foreground"
-            )}
-          >
-            <span className="font-medium text-foreground">Diária {day.numeroDia}</span>
-            <br />
-            <span className="text-xs">
-              {new Date(day.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
-            </span>
-          </button>
+          <div key={day.id} className="flex items-stretch rounded-md hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => scrollToDay(day.id)}
+              className={cn(
+                "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm",
+                "text-muted-foreground hover:text-accent-foreground"
+              )}
+            >
+              <span className="font-medium text-foreground">Diária {day.numeroDia}</span>
+              <br />
+              <span className="text-xs">
+                {new Date(day.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}
+              </span>
+            </button>
+            <Link
+              href={`/projects/${projectId}/shootdays/${day.id}/set`}
+              className="flex shrink-0 items-center rounded-md px-2 text-muted-foreground hover:text-foreground"
+              title={`Abrir a Diária ${day.numeroDia} no Modo Set`}
+              aria-label={`Modo Set da Diária ${day.numeroDia}`}
+            >
+              <Tablet className="h-4 w-4" />
+            </Link>
+          </div>
         ))}
         <button
           type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { Clock, RotateCcw } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { intercalar, scheduleDaTimeline, type BlocoDeTempo, type ItemTimeline } from "@/lib/day-timeline";
 import {
-  computeBlockSchedule,
   formatHHh,
   resolveEffectivePrepMin,
   resolveEffectiveRodMin,
@@ -24,13 +24,14 @@ import { SceneTimeRowItem } from "./scene-time-row";
 import type { SceneTimeRow, ShotSummary } from "./types";
 
 function BlocoTable({
-  rows,
+  itens,
   schedule,
   projectId,
   onRowChange,
   onShotsUpdated,
 }: {
-  rows: SceneTimeRow[];
+  /** Cenas e blocos de tempo livres do bloco (manhã ou tarde), na ordem; `schedule` é paralelo. */
+  itens: ItemTimeline<SceneTimeRow>[];
   schedule: (ComputedSchedule | null)[];
   projectId: string;
   onRowChange: (sceneId: string, patch: Partial<Pick<SceneTimeRow, "prepMin" | "rodMin">>) => void;
@@ -51,17 +52,35 @@ function BlocoTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row, index) => (
-            <SceneTimeRowItem
-              key={row.sceneId}
-              row={row}
-              schedule={schedule[index]}
-              projectId={projectId}
-              onRowChange={onRowChange}
-              onShotsUpdated={onShotsUpdated}
-            />
-          ))}
-          {rows.length === 0 && (
+          {itens.map((item, index) =>
+            item.tipo === "cena" ? (
+              <SceneTimeRowItem
+                key={item.cena.sceneId}
+                row={item.cena}
+                schedule={schedule[index]}
+                projectId={projectId}
+                onRowChange={onRowChange}
+                onShotsUpdated={onShotsUpdated}
+              />
+            ) : (
+              // Bloco de tempo: só rótulo, duração e horário — posição e duração se editam no stripboard.
+              <TableRow key={item.bloco.id} className="bg-muted/40">
+                <TableCell colSpan={5} className="text-sm">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {item.bloco.rotulo}
+                  </span>
+                </TableCell>
+                <TableCell className="text-sm">{item.bloco.duracaoMin}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {schedule[index]
+                    ? `${formatHHh(schedule[index]!.rodStart)} às ${formatHHh(schedule[index]!.rodEnd)}`
+                    : "—"}
+                </TableCell>
+              </TableRow>
+            )
+          )}
+          {itens.length === 0 && (
             <TableRow>
               <TableCell colSpan={7} className="py-4 text-center text-sm text-muted-foreground">
                 Nenhuma cena neste bloco.
@@ -84,8 +103,11 @@ export function Step2Tempos({
   onRowChange,
   onDistribuir,
   onShotsUpdated,
+  blocos = [],
 }: {
   rows: SceneTimeRow[];
+  /** Blocos de tempo livres da diária (transporte etc.), intercalados com as cenas pela ordem. */
+  blocos?: BlocoDeTempo[];
   blocoManhaInicio: string | null;
   almocoInicio: string | null;
   almocoFim: string | null;
@@ -104,27 +126,19 @@ export function Step2Tempos({
     [rows]
   );
 
+  const scheduleDaCena = (r: SceneTimeRow) => ({
+    prepMin: resolveEffectivePrepMin(r.prepMin),
+    rodMin: resolveEffectiveRodMin(r.rodMin, r.tempoEstimadoMin),
+  });
+  const manhaItens = useMemo(() => intercalar(manhaRows, blocos.filter((b) => b.bloco === "MANHA")), [manhaRows, blocos]);
+  const tardeItens = useMemo(() => intercalar(tardeRows, blocos.filter((b) => b.bloco === "TARDE")), [tardeRows, blocos]);
   const manhaSchedule = useMemo(
-    () =>
-      computeBlockSchedule(
-        blocoManhaInicio,
-        manhaRows.map((r) => ({
-          prepMin: resolveEffectivePrepMin(r.prepMin),
-          rodMin: resolveEffectiveRodMin(r.rodMin, r.tempoEstimadoMin),
-        }))
-      ),
-    [blocoManhaInicio, manhaRows]
+    () => scheduleDaTimeline(blocoManhaInicio, manhaItens, scheduleDaCena),
+    [blocoManhaInicio, manhaItens]
   );
   const tardeSchedule = useMemo(
-    () =>
-      computeBlockSchedule(
-        blocoTardeInicio,
-        tardeRows.map((r) => ({
-          prepMin: resolveEffectivePrepMin(r.prepMin),
-          rodMin: resolveEffectiveRodMin(r.rodMin, r.tempoEstimadoMin),
-        }))
-      ),
-    [blocoTardeInicio, tardeRows]
+    () => scheduleDaTimeline(blocoTardeInicio, tardeItens, scheduleDaCena),
+    [blocoTardeInicio, tardeItens]
   );
 
   return (
@@ -140,7 +154,7 @@ export function Step2Tempos({
       <div>
         <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Bloco manhã</p>
         <BlocoTable
-          rows={manhaRows}
+          itens={manhaItens}
           schedule={manhaSchedule}
           projectId={projectId}
           onRowChange={onRowChange}
@@ -159,7 +173,7 @@ export function Step2Tempos({
       <div>
         <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">Bloco tarde</p>
         <BlocoTable
-          rows={tardeRows}
+          itens={tardeItens}
           schedule={tardeSchedule}
           projectId={projectId}
           onRowChange={onRowChange}

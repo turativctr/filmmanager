@@ -23,6 +23,21 @@ const styles = StyleSheet.create({
   sceneObsText: { fontSize: 7, fontStyle: "italic", color: colors.muted },
 });
 
+// Larguras em PONTOS, medidas pelo pior valor em Helvetica 8.5 + 8pt de padding da célula — mesma
+// régua da Ordem do Dia (call-sheet-document.tsx). Porcentagem dimensionada pelo caso médio fazia
+// ENTARDECER quebrar em "EN-TARDE-CER" por cima de Set/Locação. Set/Locação e Sinopse dividem o
+// que sobra (A4 com kit.page = 543pt úteis).
+const COL = {
+  horario: 36, // "10h15" em 7pt = 20pt; cabeçalho "HH Prep" quebra em duas linhas
+  cena: 40, // "102APL" = 30pt
+  tipo: 42, // "INT/EXT" = 33pt
+  periodo: 68, // "ENTARDECER" = 59pt, a palavra mais longa dos períodos
+  elenco: 68, // 3 IDs por linha
+  paginas: 34, // "12 7/8" = 24pt
+  diaNarrativo: 34, // "Dia 88" = 24pt; cabeçalho "Dia Narr." quebra em duas linhas
+  filmagem: 50, // cabeçalho "Filmagem" em negrito 8.5 = 40pt
+} as const;
+
 /** Correção 1: NENHUM/AJUSTE não têm divisória; TROCA_LENTE/TROCA_CAMERA usam cinza neutro;
  *  RESET_POSICAO usa âmbar; RESET_COMPLETO usa vermelho/perigo — mesma lógica do Call Sheet
  *  (call-sheet-document.tsx), adaptada à paleta legado (colors.muted) deste documento. */
@@ -42,28 +57,28 @@ function SceneRow({
   return (
     <Tr>
       <TimeRangeCell
-        width="10%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.prepStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.prepEnd) : null}
       />
       <TimeRangeCell
-        width="10%"
+        width={COL.horario}
         start={scene.schedule ? formatHHh(scene.schedule.rodStart) : null}
         end={scene.schedule ? formatHHh(scene.schedule.rodEnd) : null}
       />
-      <Td width="5%">{scene.numero}</Td>
-      <Td width="8%">{scene.tipo ?? "—"}</Td>
-      <Td width="5%">{scene.periodo ?? "—"}</Td>
-      <Td width="14%">{scene.setLocacaoDisplay}</Td>
-      <Td width="23%">{scene.sinopse || "—"}</Td>
-      <Td width="9%">{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
-      <Td width="5%" align="right">
+      <Td width={COL.cena}>{scene.numero}</Td>
+      <Td width={COL.tipo}>{scene.tipo ?? "—"}</Td>
+      <Td width={COL.periodo}>{scene.periodo ?? "—"}</Td>
+      <Td flex={2}>{scene.setLocacaoDisplay}</Td>
+      <Td flex={3}>{scene.sinopse || "—"}</Td>
+      <Td width={COL.elenco}>{scene.cast.map((c) => getCharacterId(c, project)).join(", ") || "—"}</Td>
+      <Td width={COL.paginas} align="right">
         {formatPaginas(scene.paginas)}
       </Td>
-      <Td width="5%" align="center">
+      <Td width={COL.diaNarrativo} align="center">
         {scene.diaNarrativo != null ? `Dia ${scene.diaNarrativo}` : "—"}
       </Td>
-      <Td width="6%" align="center">
+      <Td width={COL.filmagem} align="center">
         {scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}
       </Td>
     </Tr>
@@ -77,8 +92,8 @@ function SceneObservacoesRow({ scene }: { scene: ShootDayReportData["scenes"][nu
 
   return (
     <Tr wrap={false}>
-      <Td width="20%" />
-      <Td width="80%">
+      <Td width={COL.horario * 2} />
+      <Td flex={1}>
         <Text style={styles.sceneObsText}>Obs.: {scene.observacoes}</Text>
       </Td>
     </Tr>
@@ -86,7 +101,7 @@ function SceneObservacoesRow({ scene }: { scene: ShootDayReportData["scenes"][nu
 }
 
 /** Sub-linhas de plano/reset logo abaixo de cada <SceneRow>, indentadas sob as colunas de horário
- *  (HH Prep + HH Rod = 20% de largura). Mesmo tratamento visual do Call Sheet (ver call-sheet-document.tsx),
+ *  (HH Prep + HH Rod = COL.horario × 2). Mesmo tratamento visual do Call Sheet (ver call-sheet-document.tsx),
  *  adaptado à paleta legado (kit.page/colors) usada neste documento. [] quando a cena não tem planos. */
 function ShotSubRows({ scene }: { scene: ShootDayReportData["scenes"][number] }) {
   if (scene.shots.length === 0) return null;
@@ -102,8 +117,8 @@ function ShotSubRows({ scene }: { scene: ShootDayReportData["scenes"][number] })
           <View key={shot.id} style={{ width: "100%" }}>
             {i > 0 && shot.tipoReset !== "NENHUM" && shot.tipoReset !== "AJUSTE" && (
               <Tr bg={colors.rowAlt} wrap={false}>
-                <Td width="20%" />
-                <Td width="80%">
+                <Td width={COL.horario * 2} />
+                <Td flex={1}>
                   <Text style={{ fontSize: 7, color: resetDividerColor(shot.tipoReset) }}>
                     +{shot.tempoResetMin ?? 0}min {RESET_LABEL[shot.tipoReset].toLowerCase()}
                   </Text>
@@ -120,8 +135,8 @@ function ShotSubRows({ scene }: { scene: ShootDayReportData["scenes"][number] })
               }
               wrap={false}
             >
-              <Td width="20%" />
-              <Td width="80%">
+              <Td width={COL.horario * 2} />
+              <Td flex={1}>
                 <Text
                   style={{
                     fontSize: 7,
@@ -161,37 +176,37 @@ export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
           <SectionTitle>PLANO DE FILMAGEM</SectionTitle>
           <Table>
             <Tr header>
-              <Td width="10%" bold align="center">
+              <Td width={COL.horario} bold align="center">
                 HH Prep
               </Td>
-              <Td width="10%" bold align="center">
+              <Td width={COL.horario} bold align="center">
                 HH Rod
               </Td>
-              <Td width="5%" bold>
+              <Td width={COL.cena} bold>
                 Cena
               </Td>
-              <Td width="8%" bold>
+              <Td width={COL.tipo} bold>
                 INT/EXT
               </Td>
-              <Td width="5%" bold>
+              <Td width={COL.periodo} bold>
                 D/N
               </Td>
-              <Td width="14%" bold>
+              <Td flex={2} bold>
                 Set / Locação
               </Td>
-              <Td width="23%" bold>
+              <Td flex={3} bold>
                 Sinopse
               </Td>
-              <Td width="9%" bold>
+              <Td width={COL.elenco} bold>
                 Elenco
               </Td>
-              <Td width="5%" bold align="right">
+              <Td width={COL.paginas} bold align="right">
                 Págs
               </Td>
-              <Td width="5%" bold align="center">
+              <Td width={COL.diaNarrativo} bold align="center">
                 Dia Narr.
               </Td>
-              <Td width="6%" bold align="center">
+              <Td width={COL.filmagem} bold align="center">
                 Filmagem
               </Td>
             </Tr>

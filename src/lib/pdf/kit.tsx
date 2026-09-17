@@ -244,6 +244,8 @@ export function Tr({
   alt,
   bg,
   wrap = false,
+  fixed,
+  minPresenceAhead,
 }: {
   children: React.ReactNode;
   header?: boolean;
@@ -254,6 +256,12 @@ export function Tr({
   /** Opt-in: cor de fundo específica desta linha (tem prioridade sobre `alt`). */
   bg?: string;
   wrap?: boolean;
+  /** Repete a linha no topo de cada página em que o elemento pai continua — pra cabeçalho de
+   *  tabela que quebra página. */
+  fixed?: boolean;
+  /** Pula pra próxima página se não couber ao menos isso (pt) do que vem depois — evita cabeçalho
+   *  de tabela sozinho no pé da página. */
+  minPresenceAhead?: number;
 }) {
   const rowStyle = {
     ...(header
@@ -274,7 +282,7 @@ export function Tr({
       : children;
 
   return (
-    <View style={rowStyle} wrap={wrap}>
+    <View style={rowStyle} wrap={wrap} fixed={fixed} minPresenceAhead={minPresenceAhead}>
       {content}
     </View>
   );
@@ -291,9 +299,9 @@ function cellWidthStyle(width: string | number | undefined, flex: number | undef
   return { flex: flex ?? 1 };
 }
 
-/** Coluna da prioridade do plano (E/D/T). Pior caso é o cabeçalho "PRI" em negrito (~14pt) + 8pt de
- *  padding; a letra cabe folgada. Largura fixa: a descrição, com `flex`, fica com o resto. */
-export const PRIORIDADE_COL_PT = 26;
+/** Coluna da prioridade do plano (E/D/T). Pior caso é o cabeçalho "PRI" em negrito 8pt (13pt) + 8pt
+ *  de padding; a letra cabe folgada. Largura fixa: a descrição, com `flex`, fica com o resto. */
+export const PRIORIDADE_COL_PT = 22;
 
 export function Td({
   children,

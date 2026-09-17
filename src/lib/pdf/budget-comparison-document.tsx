@@ -150,14 +150,14 @@ export function BudgetComparisonDocument({
         </View>
 
         <View style={styles.section}>
-          <SectionTitle>Δ VS. BASE</SectionTitle>
+          <SectionTitle>DIF. VS. BASE</SectionTitle>
           <Table>
             <Tr header>
               <Td width={`${labelWidth}%`} bold>
                 Cenário
               </Td>
               <Td width={`${colWidth}%`} bold align="right">
-                Δ Grand Total
+                Dif. Grand Total
               </Td>
             </Tr>
             {scenarios.map((scenario) => {

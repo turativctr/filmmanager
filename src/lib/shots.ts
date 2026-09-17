@@ -14,6 +14,7 @@ import {
   resolveRodDaCena,
   type ResetMinutesConfig,
 } from "@/lib/shots-shared";
+import { paginasParaOitavos, resolveRodDaParte } from "@/lib/scene-parts-shared";
 import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 
 const RESET_CONFIG_SELECT = {
@@ -85,19 +86,49 @@ export async function writeShotOrder(orderedIds: string[]): Promise<void> {
  *  O terceiro caso (sem alvo e sem planos) só é aplicado com `semNadaVolta`, nas TRANSIÇÕES que
  *  levam a ele: apagar a duração alvo, apagar o último plano. Fora delas não mexe — esta função
  *  também roda via recalculateScene pra toda cena do projeto quando a config de resets muda, e aí
- *  zeraria o Rod que a AD digitou à mão no stripboard em toda cena sem planos. */
+ *  zeraria o Rod que a AD digitou à mão no stripboard em toda cena sem planos.
+ *
+ *  Cena dividida: cada linha agendada recebe o Rod da SUA parte (resolveRodDaParte) — soma dos planos
+ *  atribuídos a ela, ou o estimado proporcional aos oitavos (esse, de novo, só com `semNadaVolta`).
+ *  A duração alvo não entra: em cena dividida ela é só referência do total. */
 export async function syncSceneRodMin(
   sceneId: string,
   shots?: Shot[],
   { semNadaVolta = false }: { semNadaVolta?: boolean } = {}
 ): Promise<void> {
-  const scene = await prisma.scene.findUniqueOrThrow({ where: { id: sceneId }, select: { duracaoAlvoMin: true } });
+  const scene = await prisma.scene.findUniqueOrThrow({
+    where: { id: sceneId },
+    select: {
+      duracaoAlvoMin: true,
+      tempoEstimadoMin: true,
+      paginas: true,
+      parts: { select: { id: true, oitavos: true, sceneShootDay: { select: { id: true } } } },
+    },
+  });
   const planos = shots ?? (await prisma.shot.findMany({ where: { sceneId } }));
 
-  const { rodMin, fonte } = resolveRodDaCena({ duracaoAlvoMin: scene.duracaoAlvoMin, planos });
-  if (fonte === "ESTIMADO" && !semNadaVolta) return;
+  if (scene.parts.length > 0) {
+    const oitavosCena = paginasParaOitavos(scene.paginas);
+    const updates = scene.parts.flatMap((parte) => {
+      if (!parte.sceneShootDay) return [];
+      const { rodMin, fonte } = resolveRodDaParte({
+        parteId: parte.id,
+        oitavosParte: parte.oitavos,
+        oitavosCena,
+        tempoEstimadoCenaMin: scene.tempoEstimadoMin,
+        planos,
+      });
+      if (fonte !== "PLANOS" && !semNadaVolta) return [];
+      return [prisma.sceneShootDay.update({ where: { id: parte.sceneShootDay.id }, data: { rodMin } })];
+    });
+    if (updates.length === 0) return;
+    await prisma.$transaction(updates);
+  } else {
+    const { rodMin, fonte } = resolveRodDaCena({ duracaoAlvoMin: scene.duracaoAlvoMin, planos });
+    if (fonte === "ESTIMADO" && !semNadaVolta) return;
 
-  await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin } });
+    await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin } });
+  }
 
   // Rod mudou, então o cronograma daquela(s) diária(s) mudou — recalcula blocoManha/almoço de cada
   // uma delas (normalmente uma só, mas nada impede a mesma cena de estar agendada em mais de um dia).

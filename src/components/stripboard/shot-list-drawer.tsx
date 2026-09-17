@@ -13,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { planosDaParte } from "@/lib/scene-parts-shared";
 import { cn } from "@/lib/utils";
 
 import type { ShotPrioridade } from "@prisma/client";
@@ -35,6 +36,7 @@ type Shot = {
   notasContinuidade: string | null;
   status: ShotStatus;
   prioridade: ShotPrioridade;
+  scenePartId: string | null;
 };
 
 const STATUS_LABEL: Record<ShotStatus, string> = {
@@ -56,6 +58,7 @@ export function ShotListDrawer({
   sceneId,
   sceneNumero,
   shootDayId,
+  parteId = null,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +66,8 @@ export function ShotListDrawer({
   sceneId: string;
   sceneNumero: string;
   shootDayId?: string;
+  /** Parte de cena dividida: só os planos dela + os sem parte. */
+  parteId?: string | null;
 }) {
   const [shots, setShots] = useState<Shot[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -84,7 +89,7 @@ export function ShotListDrawer({
         return res.json();
       })
       .then((data: Shot[]) => {
-        if (!cancelled) setShots(data);
+        if (!cancelled) setShots(planosDaParte(data, parteId));
       })
       .catch((err) => {
         console.error("Erro ao carregar planos:", err);
@@ -97,7 +102,7 @@ export function ShotListDrawer({
     return () => {
       cancelled = true;
     };
-  }, [open, projectId, sceneId]);
+  }, [open, projectId, sceneId, parteId]);
 
   const activeShots = (shots ?? []).filter((s) => s.status !== "DESCARTADO");
   const filmedCount = activeShots.filter((s) => s.status === "FILMADO").length;
@@ -117,7 +122,7 @@ export function ShotListDrawer({
       });
       if (!res.ok) throw new Error(`status ${res.status}`);
       const updated: Shot[] = await res.json();
-      setShots(updated);
+      setShots(planosDaParte(updated, parteId));
     } catch (err) {
       console.error("Erro ao marcar plano como filmado:", err);
       toast.error("Erro ao salvar — tente novamente");

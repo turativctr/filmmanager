@@ -43,7 +43,13 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { ehMaster, planoPaiId, ...fields } = parsed.data;
+  const { ehMaster, planoPaiId, scenePartId, ...fields } = parsed.data;
+
+  if (scenePartId) {
+    const parte = await prisma.scenePart.findFirst({ where: { id: scenePartId, sceneId: shot.sceneId } });
+    if (!parte) return badRequest("A parte precisa ser desta mesma cena.");
+  }
+  const mudouParte = scenePartId !== undefined && scenePartId !== shot.scenePartId;
 
   const sceneShots = normalizeShotOrder(
     await prisma.shot.findMany({ where: { sceneId: shot.sceneId }, orderBy: { ordem: "asc" } })
@@ -122,6 +128,7 @@ export async function PATCH(
       data: {
         ...fields,
         ...hierarchyData,
+        ...(scenePartId !== undefined ? { scenePartId } : {}),
         tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
       },
     }),
@@ -130,6 +137,9 @@ export async function PATCH(
   if (nextOrder) await writeShotOrder(nextOrder);
 
   const shots = await recalculateScene(shot.sceneId);
+  // Tirar o último plano de uma parte é transição: o Rod dela volta ao estimado proporcional aos
+  // oitavos, em vez de ficar com a soma antiga (mesmo caso de apagar o último plano da cena).
+  if (mudouParte) await syncSceneRodMin(shot.sceneId, shots, { semNadaVolta: true });
 
   return NextResponse.json(shots);
 }
@@ -168,8 +178,10 @@ export async function DELETE(
   const shots = await recalculateScene(shot.sceneId);
   // Apagou o último plano: recalculateScene não tem o que somar e não mexe no Rod — que ficaria
   // com a soma antiga (a cena 14A do demo ficou com 6min em vez dos 90 estimados). Sem planos, o
-  // Rod volta à duração alvo, se houver, senão ao tempo estimado pelos oitavos.
-  if (shots.length === 0) await syncSceneRodMin(shot.sceneId, [], { semNadaVolta: true });
+  // Rod volta à duração alvo, se houver, senão ao tempo estimado pelos oitavos. Em cena dividida, o
+  // mesmo vale pra parte que ficou sem planos (volta ao estimado proporcional).
+  const esvaziouAParte = shot.scenePartId !== null && !shots.some((s) => s.scenePartId === shot.scenePartId);
+  if (shots.length === 0 || esvaziouAParte) await syncSceneRodMin(shot.sceneId, shots, { semNadaVolta: true });
 
   return NextResponse.json(shots);
 }

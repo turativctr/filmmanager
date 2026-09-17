@@ -30,7 +30,10 @@ export type SetModeShot = {
 
 export type SetModeScene = {
   sceneId: string;
+  /** "19 · Voice off" quando é parte de cena dividida. */
   numero: string;
+  /** Onde estão as outras partes: "imagem na diária 2". */
+  vinculoParte: string | null;
   setLocacaoDisplay: string;
   sinopseAD: string;
   status: SceneStatus;
@@ -297,6 +300,9 @@ export function SetModeView({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-lg font-bold">Cena {scene.numero}</span>
+                      {scene.vinculoParte && (
+                        <span className="text-xs text-muted-foreground">{scene.vinculoParte}</span>
+                      )}
                       <span
                         className={cn(
                           "rounded px-2 py-0.5 text-xs font-semibold",

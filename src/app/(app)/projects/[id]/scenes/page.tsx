@@ -36,7 +36,17 @@ export default async function ScenesPage({
       where: { projectId: params.id },
       select: { id: true, nome: true },
     }),
-    prisma.scene.count({ where: { projectId: params.id, omitida: false, shootDays: { none: {} } } }),
+    // Sem diária: cena inteira fora de diária, ou dividida com alguma parte ainda fora.
+    prisma.scene.count({
+      where: {
+        projectId: params.id,
+        omitida: false,
+        OR: [
+          { parts: { none: {} }, shootDays: { none: {} } },
+          { parts: { some: { sceneShootDay: { is: null } } } },
+        ],
+      },
+    }),
     prisma.scene.count({ where: { projectId: params.id, omitida: false, locacaoId: null } }),
   ]);
 

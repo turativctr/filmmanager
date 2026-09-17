@@ -29,7 +29,9 @@ const styles = StyleSheet.create({
 // que sobra (A4 com kit.page = 543pt úteis).
 const COL = {
   horario: 36, // "10h15" em 7pt = 20pt; cabeçalho "HH Prep" quebra em duas linhas
-  cena: 40, // "102APL" = 30pt
+  // "102APL" = 30pt; parte de cena dividida vem junto ("102APL · Continuação do dublê voice off") e
+  // quebra entre palavras — "Continuação" (45pt) é a palavra longa típica de rótulo e cabe inteira.
+  cena: 64,
   tipo: 42, // "INT/EXT" = 33pt
   periodo: 68, // "ENTARDECER" = 59pt, a palavra mais longa dos períodos
   elenco: 68, // 3 IDs por linha

@@ -1,5 +1,6 @@
 import { toDateKey } from "./calendar-grid";
 import { prisma } from "./prisma";
+import { paginasDaEntrada } from "./scene-parts-shared";
 
 export type TerminoForecast =
   | { kind: "agendado"; data: Date; diariasAgendadas: number }
@@ -13,15 +14,22 @@ export type TerminoForecast =
  *  marcados como tal. Retorna null quando não há nenhuma diária com cena ainda (não há base pra
  *  estimar um ritmo médio de páginas/diária). */
 export async function computeTerminoForecast(projectId: string): Promise<TerminoForecast | null> {
-  const [boneyardScenes, shootDaysComCena, skipEvents] = await Promise.all([
+  const [cenas, shootDaysComCena, skipEvents] = await Promise.all([
     prisma.scene.findMany({
-      where: { projectId, omitida: false, shootDays: { none: {} } },
-      select: { paginas: true },
+      where: { projectId, omitida: false },
+      select: {
+        paginas: true,
+        shootDays: { select: { id: true } },
+        parts: { select: { oitavos: true, sceneShootDay: { select: { id: true } } } },
+      },
     }),
     prisma.shootDay.findMany({
       where: { projectId, scenes: { some: {} } },
       orderBy: { data: "asc" },
-      select: { data: true, scenes: { select: { scene: { select: { paginas: true } } } } },
+      select: {
+        data: true,
+        scenes: { select: { scene: { select: { paginas: true } }, scenePart: { select: { oitavos: true } } } },
+      },
     }),
     prisma.calendarEvent.findMany({
       where: { projectId, tipo: { in: ["FOLGA", "FERIADO"] } },
@@ -33,15 +41,26 @@ export async function computeTerminoForecast(projectId: string): Promise<Termino
 
   const ultimaDiaria = shootDaysComCena[shootDaysComCena.length - 1].data;
 
-  if (boneyardScenes.length === 0) {
+  // "Boneyard" em páginas: cena inteira sem diária, e cada parte ainda sem diária de cena dividida
+  // (pelos oitavos da parte — a outra parte já agendada não conta de novo).
+  const paginasPendentes = cenas.flatMap((c) =>
+    c.parts.length === 0
+      ? c.shootDays.length === 0
+        ? [Number(c.paginas)]
+        : []
+      : c.parts.filter((p) => !p.sceneShootDay).map((p) => p.oitavos / 8)
+  );
+
+  if (paginasPendentes.length === 0) {
     return { kind: "agendado", data: ultimaDiaria, diariasAgendadas: shootDaysComCena.length };
   }
 
   const paginasAgendadas = shootDaysComCena.reduce(
-    (sum, day) => sum + day.scenes.reduce((s, entry) => s + Number(entry.scene.paginas), 0),
+    (sum, day) =>
+      sum + day.scenes.reduce((s, entry) => s + paginasDaEntrada(Number(entry.scene.paginas), entry.scenePart), 0),
     0
   );
-  const paginasRestantes = boneyardScenes.reduce((sum, s) => sum + Number(s.paginas), 0);
+  const paginasRestantes = paginasPendentes.reduce((sum, p) => sum + p, 0);
   const avgPaginasPorDiaria = paginasAgendadas / shootDaysComCena.length;
 
   // Sem páginas agendadas ainda pra calcular uma média (diárias existem mas ainda vazias de
@@ -58,5 +77,5 @@ export async function computeTerminoForecast(projectId: string): Promise<Termino
     if (!skipDates.has(toDateKey(cursor))) contadas++;
   }
 
-  return { kind: "estimado", data: new Date(cursor), cenasNoBoneyard: boneyardScenes.length };
+  return { kind: "estimado", data: new Date(cursor), cenasNoBoneyard: paginasPendentes.length };
 }

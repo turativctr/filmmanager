@@ -15,6 +15,7 @@ export default async function SetModePage({
   const scenes = data.scenes.map((scene) => ({
     sceneId: scene.sceneId,
     numero: scene.numero,
+    vinculoParte: scene.parte?.vinculo ?? null,
     setLocacaoDisplay: scene.setLocacaoDisplay,
     sinopseAD: resolveSinopseAD(scene),
     status: scene.status,

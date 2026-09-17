@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const stripboardChangeSchema = z.object({
   sceneId: z.string(),
+  // Parte da cena dividida que esta tira agenda; null/ausente = cena inteira.
+  scenePartId: z.string().nullable().optional(),
   shootDayId: z.string().nullable(),
   bloco: z.enum(["MANHA", "TARDE"]).nullable(),
   ordem: z.number().int(),

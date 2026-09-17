@@ -17,6 +17,7 @@ import type { ShotData } from "@/components/breakdown/shot-types";
 import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Button } from "@/components/ui/button";
 import { getSceneColor } from "@/lib/scene-color";
+import { planosDaParte } from "@/lib/scene-parts-shared";
 
 import {
   computeOrderTotalMin,
@@ -54,7 +55,7 @@ export function DayPlanoView({
   /** Cenas agendadas neste dia no Stripboard (bloco manhã, depois tarde), com número pra exibição —
    *  usada tanto pra descobrir quais planos pertencem a este dia (Correção 2) quanto pelo botão
    *  "Agrupar por cena". */
-  scenes: { id: string; numero: string }[];
+  scenes: { id: string; numero: string; parteId: string | null }[];
   /** Ritmo dos resets desta diária (nível 3 de "tempos de reset configuráveis") — 100 = sem ajuste. */
   fatorResetPercent?: number;
 }) {
@@ -102,7 +103,10 @@ export function DayPlanoView({
               const res = await fetch(`/api/projects/${projectId}/scenes/${sceneId}/shots`);
               if (!res.ok) throw new Error(`status ${res.status}`);
               const shots: ShotData[] = await res.json();
-              return shots.map((shot): UnscheduledShot => ({ ...shot, sceneId }));
+              // Cena dividida: só os planos desta parte e os sem parte — os de outra parte são de
+              // outra diária.
+              const parteId = scenes.find((s) => s.id === sceneId)?.parteId ?? null;
+              return planosDaParte(shots, parteId).map((shot): UnscheduledShot => ({ ...shot, sceneId }));
             })
           ),
         ]);
@@ -383,6 +387,7 @@ export function DayPlanoView({
                     )}
                     <PlanoStrip
                       entry={entry}
+                      sceneLabel={sceneNumeroById.get(entry.shot.sceneId)}
                       colorHex={getSceneColor(entry.shot.sceneId)}
                       onBlocoChange={handleBlocoChange}
                       savingBloco={savingBlocoId === entry.id}
@@ -412,7 +417,7 @@ export function DayPlanoView({
                 key={shot.id}
                 className="flex items-center gap-3 rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm"
               >
-                <span className="w-16 shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
+                <span className="min-w-[4rem] shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
                   C{sceneNumeroById.get(shot.sceneId) ?? "?"}·P{shot.numero}
                 </span>
                 <PrioridadeTag prioridade={shot.prioridade} className="w-[72px] justify-center" />

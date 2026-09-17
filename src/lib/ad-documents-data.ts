@@ -6,6 +6,7 @@ import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { formatSetLocacao, getShootDayReportData } from "@/lib/report-data";
+import { numeroComParte, paginasDaEntrada, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
 type ProjectHeader = {
   titulo: string;
@@ -28,6 +29,27 @@ function sortByCharacterId<T extends { id: string }>(entries: T[], sistemaIdElen
   return [...entries].sort((a, b) =>
     sistemaIdElenco === "NUMERACAO" ? Number(a.id) - Number(b.id) : naturalCompare(a.id, b.id)
   );
+}
+
+const partesComDiaria = {
+  orderBy: { ordem: "asc" as const },
+  select: { rotulo: true, sceneShootDay: { select: { shootDay: { select: { numeroDia: true } } } } },
+};
+
+/** Uma linha por cena com a diária dela — ou, se a cena é dividida, uma por parte ("19 · Voice
+ *  off", diária 5), senão a lista mostraria só a diária da primeira parte. */
+function linhasPorParte(scene: {
+  numero: string;
+  shootDays: { shootDay: { numeroDia: number } }[];
+  parts: { rotulo: string; sceneShootDay: { shootDay: { numeroDia: number } } | null }[];
+}): { numero: string; numeroDia: number | null }[] {
+  if (scene.parts.length === 0) {
+    return [{ numero: scene.numero, numeroDia: scene.shootDays[0]?.shootDay.numeroDia ?? null }];
+  }
+  return scene.parts.map((p) => ({
+    numero: numeroComParte(scene.numero, p),
+    numeroDia: p.sceneShootDay?.shootDay.numeroDia ?? null,
+  }));
 }
 
 function mondayOf(date: Date): Date {
@@ -65,7 +87,7 @@ export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanDa
     orderBy: { numeroDia: "asc" },
     include: {
       scenes: {
-        include: { scene: { include: { cast: { include: { character: true } } } } },
+        include: { scene: { include: { cast: { include: { character: true } } } }, scenePart: true },
       },
     },
   });
@@ -75,10 +97,14 @@ export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanDa
     data: day.data,
     locacaoNome: day.locacaoNome,
     cenas: day.scenes.map((s) => ({
-      numero: s.scene.numero,
+      numero: numeroComParte(s.scene.numero, s.scenePart),
       sinopse: s.scene.sinopse,
-      paginas: Number(s.scene.paginas),
-      tempoEstimadoMin: s.scene.tempoEstimadoMin,
+      paginas: paginasDaEntrada(Number(s.scene.paginas), s.scenePart),
+      tempoEstimadoMin: tempoEstimadoDaEntrada(
+        s.scene.tempoEstimadoMin,
+        paginasParaOitavos(s.scene.paginas),
+        s.scenePart
+      ),
       elenco: s.scene.cast.map((c) => getCharacterId(c.character, project)),
     })),
     elenco: [...new Set(day.scenes.flatMap((s) => s.scene.cast.map((c) => getCharacterId(c.character, project))))],
@@ -122,6 +148,7 @@ export async function getActorSceneListData(projectId: string): Promise<ActorSce
             include: {
               shootDays: { include: { shootDay: { select: { numeroDia: true } } } },
               locacao: { select: { nome: true } },
+              parts: partesComDiaria,
             },
           },
         },
@@ -138,11 +165,9 @@ export async function getActorSceneListData(projectId: string): Promise<ActorSce
       ator: c.ator,
       scenes: c.scenes
         .filter((sc) => !sc.scene.omitida)
-        .map((sc) => ({
-          numero: sc.scene.numero,
-          locacao: sc.scene.locacao?.nome ?? null,
-          numeroDia: sc.scene.shootDays[0]?.shootDay.numeroDia ?? null,
-        }))
+        .flatMap((sc) =>
+          linhasPorParte(sc.scene).map((linha) => ({ ...linha, locacao: sc.scene.locacao?.nome ?? null }))
+        )
         .sort((a, b) => naturalCompare(a.numero, b.numero)),
     }));
 
@@ -171,6 +196,7 @@ export async function getLocationSceneListData(projectId: string): Promise<Locat
       cast: { include: { character: true } },
       shootDays: { include: { shootDay: { select: { numeroDia: true } } } },
       locacao: { select: { id: true, nome: true, endereco: true } },
+      parts: partesComDiaria,
     },
   });
 
@@ -184,11 +210,9 @@ export async function getLocationSceneListData(projectId: string): Promise<Locat
         endereco: scene.locacao?.endereco ?? null,
         scenes: [],
       };
-    group.scenes.push({
-      numero: scene.numero,
-      numeroDia: scene.shootDays[0]?.shootDay.numeroDia ?? null,
-      elenco: scene.cast.map((c) => getCharacterId(c.character, project)),
-    });
+    for (const linha of linhasPorParte(scene)) {
+      group.scenes.push({ ...linha, elenco: scene.cast.map((c) => getCharacterId(c.character, project)) });
+    }
     byLocation.set(key, group);
   }
 
@@ -573,14 +597,16 @@ export async function getPlanoSimplesData(projectId: string): Promise<PlanoSimpl
     orderBy: { data: "asc" },
     include: {
       scenes: {
-        include: { scene: { include: { locacao: { select: { nome: true } } } } },
+        include: { scene: { include: { locacao: { select: { nome: true } } } }, scenePart: true },
         orderBy: { ordem: "asc" },
       },
     },
   });
 
   const days: PlanoSimplesDay[] = shootDays.map((day) => {
-    const scenes = day.scenes.map((s) => s.scene).filter((s) => !s.omitida);
+    const scenes = day.scenes
+      .filter((s) => !s.scene.omitida)
+      .map((s) => ({ ...s.scene, numero: numeroComParte(s.scene.numero, s.scenePart) }));
     const sets = [...new Set(scenes.map((s) => formatSetLocacao(s.set, s.locacao?.nome ?? null)))].filter(
       (s) => s !== "—"
     );

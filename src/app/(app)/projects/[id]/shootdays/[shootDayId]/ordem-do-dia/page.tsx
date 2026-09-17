@@ -79,6 +79,7 @@ export default async function OrdemDoDiaPage({
     bloco: s.bloco,
     ordem: s.ordem,
     numero: s.numero,
+    parte: s.parte,
     setLocacaoDisplay: s.setLocacaoDisplay,
     set: s.set,
     locacao: s.locacao,

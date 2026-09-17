@@ -99,6 +99,8 @@ export function ShotListPanel({
   initialShots,
   initialDuracaoAlvoMin,
   tempoEstimadoMin,
+  partes = [],
+  oitavosCena = 0,
 }: {
   projectId: string;
   sceneId: string;
@@ -106,6 +108,9 @@ export function ShotListPanel({
   initialShots: ShotData[];
   initialDuracaoAlvoMin: number | null;
   tempoEstimadoMin: number | null;
+  /** Partes da cena dividida entre diárias (vazio = cena inteira). */
+  partes?: { id: string; rotulo: string; oitavos: number }[];
+  oitavosCena?: number;
 }) {
   const [open, setOpen] = useState(true);
   const [shots, setShots] = useState<ShotData[]>(initialShots);
@@ -268,6 +273,7 @@ export function ShotListPanel({
           shots={shots}
           initialDuracaoAlvoMin={initialDuracaoAlvoMin}
           tempoEstimadoMin={tempoEstimadoMin}
+          divisao={partes.length > 0 ? { partes, oitavosCena } : null}
         />
 
         <p className="text-sm text-muted-foreground">
@@ -339,6 +345,7 @@ export function ShotListPanel({
                         HEAVY_RESETS.includes(shot.tipoReset) && Boolean(shot.notasContinuidade?.trim())
                       }
                       sceneShots={shots}
+                      partes={partes}
                     />
                   </div>
                 ))}

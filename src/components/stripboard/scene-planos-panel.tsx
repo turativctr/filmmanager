@@ -20,9 +20,11 @@ import { ResetDivider } from "@/components/shots/reset-divider";
 import { SceneTempoAlvo } from "@/components/shots/scene-tempo-alvo";
 import { Badge } from "@/components/ui/badge";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
+import { planosDaParte } from "@/lib/scene-parts-shared";
 import { HEAVY_RESETS, normalizeShotOrder } from "@/lib/shots-shared";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
+import type { StripParte } from "@/components/stripboard/types";
 import type { ShotInput } from "@/lib/validation/shot";
 
 /** Detalhe entre parênteses pro ResetDivider quando o reset é TROCA_LENTE, ex.: "(24mm→50mm)". */
@@ -47,6 +49,7 @@ export function ScenePlanosPanel({
   fatorResetPercent = 100,
   initialDuracaoAlvoMin = null,
   tempoEstimadoMin = null,
+  parte = null,
 }: {
   projectId: string;
   sceneId: string;
@@ -60,6 +63,8 @@ export function ScenePlanosPanel({
   fatorResetPercent?: number;
   initialDuracaoAlvoMin?: number | null;
   tempoEstimadoMin?: number | null;
+  /** Tira de uma parte de cena dividida: mostra só os planos dela + os sem parte. */
+  parte?: StripParte | null;
 }) {
   const router = useRouter();
   const [shots, setShots] = useState<ShotData[] | null>(null);
@@ -168,17 +173,25 @@ export function ScenePlanosPanel({
     }
   }
 
+  // Parte: só os planos dela + os sem parte. A reordenação mexe nesses e mantém os planos das outras
+  // partes nas posições que já ocupavam na cena.
+  const visiveis = shots ? planosDaParte(shots, parte?.id ?? null) : null;
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id || !shots) return;
+    if (!over || active.id === over.id || !shots || !visiveis) return;
 
-    const oldIndex = shots.findIndex((s) => s.id === active.id);
-    const newIndex = shots.findIndex((s) => s.id === over.id);
+    const oldIndex = visiveis.findIndex((s) => s.id === active.id);
+    const newIndex = visiveis.findIndex((s) => s.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
     const previous = shots;
+    const reordenados = arrayMove(visiveis, oldIndex, newIndex);
+    const idsVisiveis = new Set(visiveis.map((s) => s.id));
+    let cursor = 0;
+    const merged = shots.map((s) => (idsVisiveis.has(s.id) ? reordenados[cursor++] : s));
     // Mesmo reagrupamento do servidor: arrastar o pai leva os coverages; coverage não sai do grupo.
-    const next = normalizeShotOrder(arrayMove(shots, oldIndex, newIndex));
+    const next = normalizeShotOrder(merged);
     setShots(next);
     void persistOrder(next, previous);
   }
@@ -196,20 +209,21 @@ export function ScenePlanosPanel({
             tempoEstimadoMin={tempoEstimadoMin}
             onSaved={() => router.refresh()}
             mostrarRod={false}
+            divisao={parte ? { partes: parte.todas, oitavosCena: parte.oitavosCena } : null}
           />
         </div>
       )}
-      {shots === null || loading ? (
+      {shots === null || visiveis === null || loading ? (
         <p className="pl-2 text-xs text-muted-foreground">Carregando planos...</p>
-      ) : shots.length === 0 ? (
+      ) : visiveis.length === 0 ? (
         <p className="pl-2 text-xs text-muted-foreground">Nenhum plano cadastrado ainda.</p>
       ) : !mounted ? (
         <p className="pl-2 text-xs text-muted-foreground">Carregando planos...</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={shots.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={visiveis.map((s) => s.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-1 pl-2">
-              {shots.map((shot, index) => (
+              {visiveis.map((shot, index) => (
                 <div key={shot.id}>
                   {index > 0 && (
                     <ResetDivider
@@ -217,7 +231,7 @@ export function ScenePlanosPanel({
                       tempoResetMin={shot.tempoResetMin}
                       tempoResetMinManual={shot.tempoResetMinManual}
                       fatorResetPercent={fatorResetPercent}
-                      detail={lensChangeDetail(shots[index - 1], shot)}
+                      detail={lensChangeDetail(visiveis[index - 1], shot)}
                       onUpdateManual={(min) => handleUpdate(shot.id, { tempoResetMinManual: min })}
                     />
                   )}
@@ -236,6 +250,7 @@ export function ScenePlanosPanel({
                         HEAVY_RESETS.includes(shot.tipoReset) && Boolean(shot.notasContinuidade?.trim())
                       }
                       sceneShots={shots}
+                      partes={parte?.todas ?? []}
                     />
                   </div>
                 </div>

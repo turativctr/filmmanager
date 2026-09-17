@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { gerarNomeArquivo } from "@/lib/filename";
 import { naturalCompare } from "@/lib/natural-sort";
 import { formatPaginas } from "@/lib/paginas";
+import { formatOitavos, numeroComParte, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 import { findOwnedProject } from "@/lib/project-access";
 import { prisma } from "@/lib/prisma";
 
@@ -22,22 +23,37 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       cast: { include: { character: { select: { idCurto: true } } } },
       shootDays: { include: { shootDay: { select: { numeroDia: true, data: true } } } },
       locacao: { select: { nome: true } },
+      parts: { orderBy: { ordem: "asc" } },
     },
   });
 
-  const scheduled = scenes.filter((s) => s.shootDays.length > 0);
-  const unscheduled = scenes.filter((s) => s.shootDays.length === 0);
+  // Uma linha por tira: cena inteira, ou cada parte de cena dividida (com a diária DELA e os oitavos
+  // dela — a mesma cena em duas diárias aparece duas vezes, sem contar página em dobro).
+  type Cena = (typeof scenes)[number];
+  type Linha = { scene: Cena; entry: Cena["shootDays"][number] | null; parte: Cena["parts"][number] | null };
+  const linhas = scenes.flatMap((scene): Linha[] =>
+    scene.parts.length === 0
+      ? [{ scene, entry: scene.shootDays[0] ?? null, parte: null }]
+      : scene.parts.map((parte) => ({
+          scene,
+          entry: scene.shootDays.find((d) => d.scenePartId === parte.id) ?? null,
+          parte,
+        }))
+  );
+
+  const scheduled = linhas.filter((l) => l.entry);
+  const unscheduled = linhas.filter((l) => !l.entry);
 
   scheduled.sort((a, b) => {
-    const ea = a.shootDays[0];
-    const eb = b.shootDays[0];
+    const ea = a.entry!;
+    const eb = b.entry!;
     if (ea.shootDay.numeroDia !== eb.shootDay.numeroDia) return ea.shootDay.numeroDia - eb.shootDay.numeroDia;
     if (ea.bloco !== eb.bloco) return ea.bloco === "MANHA" ? -1 : 1;
     return ea.ordem - eb.ordem;
   });
-  unscheduled.sort((a, b) => naturalCompare(a.numero, b.numero));
+  unscheduled.sort((a, b) => naturalCompare(a.scene.numero, b.scene.numero) || (a.parte?.ordem ?? 0) - (b.parte?.ordem ?? 0));
 
-  const orderedScenes = [...scheduled, ...unscheduled];
+  const orderedLinhas = [...scheduled, ...unscheduled];
 
   const columns = [
     "Dia de Set",
@@ -79,23 +95,23 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   });
 
   let rowIndex = headerRowIndex + 1;
-  for (const scene of orderedScenes) {
-    const entry = scene.shootDays[0];
+  for (const { scene, entry, parte } of orderedLinhas) {
     const row = sheet.getRow(rowIndex);
     row.getCell(1).value = entry ? `Dia ${entry.shootDay.numeroDia}` : "Boneyard";
     row.getCell(2).value = entry ? entry.shootDay.data.toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "";
     row.getCell(3).value = entry ? (entry.bloco === "MANHA" ? "Manhã" : "Tarde") : "";
     row.getCell(4).value = entry ? entry.ordem : "";
-    row.getCell(5).value = scene.numero;
+    row.getCell(5).value = numeroComParte(scene.numero, parte);
     row.getCell(6).value = scene.tipo;
     row.getCell(7).value = scene.periodo;
     row.getCell(8).value = scene.locacao?.nome ?? "";
     row.getCell(9).value = scene.set ?? "";
     row.getCell(10).value = scene.sinopse ?? "";
     row.getCell(11).value = scene.cast.map((c) => c.character.idCurto).join(", ");
-    row.getCell(12).value = formatPaginas(scene.paginas);
+    row.getCell(12).value = parte ? formatOitavos(parte.oitavos) : formatPaginas(scene.paginas);
     row.getCell(13).value = scene.diaNarrativo ?? "";
-    row.getCell(14).value = scene.tempoEstimadoMin ?? "";
+    row.getCell(14).value =
+      tempoEstimadoDaEntrada(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas), parte) ?? "";
     rowIndex += 1;
   }
 
@@ -103,7 +119,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   sheet.getColumn(2).width = 12;
   sheet.getColumn(3).width = 9;
   sheet.getColumn(4).width = 8;
-  sheet.getColumn(5).width = 8;
+  sheet.getColumn(5).width = 20;
   sheet.getColumn(6).width = 9;
   sheet.getColumn(7).width = 7;
   sheet.getColumn(8).width = 18;

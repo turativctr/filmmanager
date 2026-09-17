@@ -10,6 +10,14 @@ import {
   timeToMinutes,
   type ComputedSchedule,
 } from "@/lib/schedule";
+import {
+  descreverOutrasPartes,
+  numeroComParte,
+  paginasDaEntrada,
+  paginasParaOitavos,
+  planosDaParte,
+  tempoEstimadoDaEntrada,
+} from "@/lib/scene-parts-shared";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
 import { computeSceneShotTotals, resolveEffectiveResetMin } from "@/lib/shots";
 import { formatTimeValue } from "@/lib/time";
@@ -36,6 +44,7 @@ export type ShotRow = {
   notasContinuidade: string | null;
   status: ShotStatus;
   prioridade: ShotPrioridade;
+  scenePartId: string | null;
 };
 
 /** Uma entrada da ordem de filmagem do dia (ShotSchedule) — planos de cenas diferentes podem se
@@ -71,7 +80,15 @@ export type ReportSceneRow = {
   sceneId: string;
   ordem: number;
   bloco: "MANHA" | "TARDE";
+  /** O que se EXIBE como número: "19 · Voice off" quando a linha agenda uma parte de cena dividida,
+   *  senão "19". Nunca só "19" pra uma parte — a equipe montaria o set de imagem achando que vai
+   *  filmar. Não é chave: pra identidade use sceneId; o número puro está em numeroCena. */
   numero: string;
+  numeroCena: string;
+  /** Parte de cena dividida que esta linha agenda (null = cena inteira). `vinculo` é o outro lado:
+   *  "imagem na diária 2". Com parte, paginas/tempoEstimadoMin são os da parte e `shots` traz só os
+   *  planos dela + os sem parte. */
+  parte: { id: string; rotulo: string; oitavos: number; vinculo: string } | null;
   tipo: "INT" | "EXT" | null;
   periodo: string | null;
   classeLuz: "DIA" | "NOITE" | "TRANSICAO" | "INDEFINIDO";
@@ -349,6 +366,10 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
                 shots: { orderBy: { ordem: "asc" } },
                 breakdownSheet: true,
                 locacao: { select: { nome: true } },
+                parts: {
+                  orderBy: { ordem: "asc" },
+                  include: { sceneShootDay: { select: { shootDay: { select: { numeroDia: true } } } } },
+                },
               },
             },
           },
@@ -373,29 +394,50 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
   const manhaEntries = sceneEntries.filter((e) => e.bloco === "MANHA");
   const tardeEntries = sceneEntries.filter((e) => e.bloco === "TARDE");
 
+  const parteDaEntrada = (e: (typeof sceneEntries)[number]) => e.scene.parts.find((p) => p.id === e.scenePartId) ?? null;
+  const tempoEstimado = (e: (typeof sceneEntries)[number]) =>
+    tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), parteDaEntrada(e));
+
   const manhaSchedule = computeBlockSchedule(
     shootDay.blocoManhaInicio,
     manhaEntries.map((e) => ({
       prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, e.scene.tempoEstimadoMin),
+      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
     }))
   );
   const tardeSchedule = computeBlockSchedule(
     shootDay.blocoTardeInicio,
     tardeEntries.map((e) => ({
       prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, e.scene.tempoEstimadoMin),
+      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
     }))
   );
 
   function toRow(entry: (typeof sceneEntries)[number], schedule: ComputedSchedule | null): ReportSceneRow {
     const scene = entry.scene;
-    const shotsTotal = scene.shots.length > 0 ? computeSceneShotTotals(scene.shots) : null;
+    const parte = parteDaEntrada(entry);
+    // Parte: planos dela + sem parte na lista; no total (base do Rod), só os atribuídos a ela.
+    const shots = planosDaParte(scene.shots, parte?.id ?? null);
+    const planosDoRod = parte ? scene.shots.filter((s) => s.scenePartId === parte.id) : scene.shots;
+    const shotsTotal = planosDoRod.length > 0 ? computeSceneShotTotals(planosDoRod) : null;
     return {
       sceneId: scene.id,
       ordem: entry.ordem,
       bloco: entry.bloco,
-      numero: scene.numero,
+      numero: numeroComParte(scene.numero, parte),
+      numeroCena: scene.numero,
+      parte: parte
+        ? {
+            id: parte.id,
+            rotulo: parte.rotulo,
+            oitavos: parte.oitavos,
+            vinculo: descreverOutrasPartes(
+              scene.parts
+                .filter((p) => p.id !== parte.id)
+                .map((p) => ({ rotulo: p.rotulo, numeroDia: p.sceneShootDay?.shootDay.numeroDia ?? null }))
+            ),
+          }
+        : null,
       tipo: scene.tipo,
       periodo: scene.periodo,
       classeLuz: scene.classeLuz,
@@ -405,9 +447,9 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       setLocacaoDisplay: formatSetLocacao(scene.set, scene.locacao?.nome ?? null),
       sinopse: scene.sinopse,
       sinopseAD: scene.sinopseAD,
-      paginas: scene.paginas.toString(),
+      paginas: paginasDaEntrada(Number(scene.paginas), parte).toString(),
       diaNarrativo: scene.diaNarrativo,
-      tempoEstimadoMin: scene.tempoEstimadoMin,
+      tempoEstimadoMin: tempoEstimado(entry),
       duracaoAlvoMin: scene.duracaoAlvoMin,
       prepMin: entry.prepMin,
       rodMin: entry.rodMin,
@@ -430,7 +472,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
         personagem: es.extra.personagem,
         quantidade: es.extra.quantidade,
       })),
-      shots: scene.shots.map((shot) => ({
+      shots: shots.map((shot) => ({
         id: shot.id,
         ordem: shot.ordem,
         numero: shot.numero,
@@ -449,6 +491,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
         notasContinuidade: shot.notasContinuidade,
         status: shot.status,
         prioridade: shot.prioridade,
+        scenePartId: shot.scenePartId,
       })),
       shotsTotal,
       breakdownSheet: scene.breakdownSheet
@@ -561,6 +604,8 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
   const castMeals = computeMealCounts(castPresente, shootDay.blocoManhaInicio, shootDay.almocoInicio);
   const extrasMeals = computeMealCounts(extrasPresente, shootDay.blocoManhaInicio, shootDay.almocoInicio);
 
+  // Plano de cena dividida agendado no dia: o rótulo é o da parte que está NESTE dia.
+  const numeroExibidoPorCena = new Map(scenes.map((row) => [row.sceneId, row.numero]));
   const shotSchedule: ShotScheduleRow[] = shotScheduleEntries.map((entry) => ({
     id: entry.id,
     ordem: entry.ordem,
@@ -569,7 +614,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     tipoReset: entry.tipoReset,
     shotId: entry.shot.id,
     sceneId: entry.shot.sceneId,
-    sceneNumero: entry.shot.scene.numero,
+    sceneNumero: numeroExibidoPorCena.get(entry.shot.sceneId) ?? entry.shot.scene.numero,
     numero: entry.shot.numero,
     descricao: entry.shot.descricao,
     tamanho: entry.shot.tamanho,

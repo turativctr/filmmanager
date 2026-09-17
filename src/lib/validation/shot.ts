@@ -28,9 +28,12 @@ export const shotSchema = z.object({
 // Edição: os campos de cima (todos opcionais) + hierarquia master/coverage, que só existe depois do
 // plano criado. planoPaiId: string = vira coverage daquele plano; null = volta pra lista plana;
 // ausente = não mexe.
+// scenePartId: string = atribui a uma parte da cena dividida; null = sem parte (aparece em todas);
+// ausente = não mexe.
 export const shotPatchSchema = shotSchema.partial().extend({
   ehMaster: z.boolean().optional(),
   planoPaiId: z.string().min(1).nullable().optional(),
+  scenePartId: z.string().min(1).nullable().optional(),
 });
 
 export type ShotInput = z.infer<typeof shotPatchSchema>;

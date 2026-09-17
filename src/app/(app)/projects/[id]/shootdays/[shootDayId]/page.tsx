@@ -121,7 +121,11 @@ export default async function ShootDayPage({
       totalCenas={data.scenes.length}
       totalPaginas={data.totalPaginas}
       totalMinutos={data.scenes.reduce((sum, s) => sum + (s.tempoEstimadoMin ?? 0), 0)}
-      cortaveisMin={data.scenes.reduce((sum, s) => sum + computeCortaveisMin(s.shots), 0)}
+      // Parte de cena dividida: só os planos atribuídos a ela (mesma regra do Rod da parte).
+      cortaveisMin={data.scenes.reduce(
+        (sum, s) => sum + computeCortaveisMin(s.parte ? s.shots.filter((sh) => sh.scenePartId === s.parte!.id) : s.shots),
+        0
+      )}
       totalPessoas={totalPessoas}
       timelineBlocks={timelineBlocks}
       alerts={{

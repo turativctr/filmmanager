@@ -161,7 +161,12 @@ export function SceneTimeRowItem({
                 {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
               </button>
             )}
-            {row.numero}
+            <span>
+              {row.numero}
+              {row.parte?.vinculo && (
+                <span className="block text-[10px] font-normal text-muted-foreground">{row.parte.vinculo}</span>
+              )}
+            </span>
           </div>
         </TableCell>
         <TableCell className="text-muted-foreground">{row.setLocacaoDisplay}</TableCell>

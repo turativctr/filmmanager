@@ -34,7 +34,9 @@ import { HEAVY_RESETS, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-share
 // POR CIMA dela ("NOITETEL · AIRBNB RYOKAN"), e isso só aparece com dado longo. Só SET e SINOPSE
 // dividem o espaço que sobra. Página A4 com pageV2 = 531pt úteis.
 const COL = {
-  cena: 40, // "102APL" = 30pt
+  // "102APL" = 30pt; parte de cena dividida vem junto ("102APL · Continuação do dublê voice off") e
+  // quebra entre palavras — "Continuação" (45pt) é a palavra longa típica de rótulo e cabe inteira.
+  cena: 64,
   tipo: 42, // "INT/EXT" = 33pt
   // Período é texto livre; a palavra mais longa das reconhecidas é ENTARDECER (59pt), não
   // MADRUGADA (55pt). "NOITE PARA MADRUGADA" quebra entre palavras, cada uma cabe.

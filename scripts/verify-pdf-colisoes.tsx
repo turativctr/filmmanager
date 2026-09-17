@@ -6,7 +6,8 @@
  * Os dados vêm das mesmas funções que as rotas usam, lidos (só leitura) do projeto demo "Ressaca",
  * e depois são levados ao pior caso: período ENTARDECER, locação com 40+ caracteres, 6
  * personagens, sinopse de 200, descrição de plano de 150, números de 3 dígitos. Nada é gravado no
- * banco. Precisa do Postgres rodando e do seed do demo.
+ * banco. Precisa do Postgres rodando e do seed do demo. Nos documentos por diária, toda cena vem
+ * como parte de cena dividida ("102APL · " + rótulo de 30 caracteres).
  *
  * Também confere que nenhum caractere escrito no código dos PDFs fica fora da Helvetica (ver
  * scripts/lib/pdf-glifos.tsx).
@@ -86,6 +87,9 @@ const PIOR = {
   personagem: "Maria Aparecida dos Santos Filha",
   ator: "Antônio Carlos Figueiredo Neto",
   sceneNumero: "102APL",
+  // Cena dividida entre diárias: o rótulo da parte vai junto do número em todo documento por diária.
+  // 30 é o máximo que a API aceita; palavras longas pra forçar quebra em coluna estreita.
+  rotuloParte: comTamanho("Continuação do dublê voice off", 30),
   shotNumero: "12B",
   tresDigitos: 888, // dígitos têm a mesma largura em Helvetica; 888 é o pior caso de 3 dígitos
   paginas: 12.875, // "12 7/8"
@@ -178,7 +182,8 @@ function piorCaso(valor: unknown, chavePai = ""): void {
       if (k === "periodo") obj[k] = PIOR.periodo;
       else if (TEXTO_LONGO.has(k)) obj[k] = PIOR.sinopse;
       else if (k === "descricao") obj[k] = PIOR.descricaoPlano;
-      else if (LOCACAO.has(k)) obj[k] = PIOR.locacao;
+      // `set` do elenco presente é horário (chamada no set), não o set da ficção.
+      else if (LOCACAO.has(k) && !(k === "set" && "camarim" in obj)) obj[k] = PIOR.locacao;
       else if (ENDERECO.has(k)) obj[k] = PIOR.endereco;
       else if (k === "personagem") obj[k] = PIOR.personagem;
       else if (k === "ator") obj[k] = PIOR.ator;
@@ -249,6 +254,7 @@ function planoSintetico(i: number): ShotRow {
     notasContinuidade: null,
     status: i % 3 === 2 ? "DESCARTADO" : "PENDENTE",
     prioridade: PRIORIDADES[i % PRIORIDADES.length],
+    scenePartId: null,
   };
 }
 
@@ -337,6 +343,15 @@ export function odPiorCaso(base: ShootDayReportData, comOrdemDePlanos: boolean):
   }));
 
   piorCaso(data);
+
+  // Toda linha como parte de cena dividida — o pior caso de largura do número da cena.
+  const comParte = `${PIOR.sceneNumero} · ${PIOR.rotuloParte}`;
+  for (const scene of [...data.manhaScenes, ...data.tardeScenes, ...data.scenes]) {
+    scene.numero = comParte;
+    scene.parte = { id: "parte", rotulo: PIOR.rotuloParte, oitavos: 7, vinculo: `${PIOR.rotuloParte.toLowerCase()} na diária 88` };
+  }
+  for (const entry of data.shotSchedule) entry.sceneNumero = comParte;
+  for (const block of data.horaAHoraPlanos) block.numero = comParte;
   return data;
 }
 
@@ -360,6 +375,7 @@ async function montarDocumentos(): Promise<Documento[]> {
   if (!od) throw new Error("Diária do demo sem dados");
   const header = { titulo: projeto.titulo, diretor: PIOR.ator, producao: PIOR.locacao };
 
+  const numeroParte = `${PIOR.sceneNumero} · ${PIOR.rotuloParte}`;
   const comPior = <T,>(dados: T): T => {
     const copia = structuredClone(dados);
     piorCaso(copia);
@@ -414,11 +430,46 @@ async function montarDocumentos(): Promise<Documento[]> {
         return <EscaletaDocument data={data} />;
       },
     },
-    { nome: "Cronograma de Elenco", gerar: async () => <CastScheduleDocument data={comPior(await getCastScheduleData(projeto.id))} /> },
-    { nome: "Plano de Diárias", gerar: async () => <PlanoDiariasDocument data={comPior(await getPlanoSimplesData(projeto.id))} /> },
-    { nome: "Plano Semanal", gerar: async () => <WeeklyPlanDocument data={comPior(await getWeeklyPlanData(projeto.id))} /> },
-    { nome: "Cenas por Ator", gerar: async () => <ActorSceneListDocument data={comPior(await getActorSceneListData(projeto.id))} /> },
-    { nome: "Cenas por Locação", gerar: async () => <LocationSceneListDocument data={comPior(await getLocationSceneListData(projeto.id))} /> },
+    {
+      nome: "Cronograma de Elenco",
+      gerar: async () => {
+        const data = comPior(await getCastScheduleData(projeto.id));
+        for (const d of data.days) for (const g of d.setGroups) for (const sc of g.scenes) sc.numero = numeroParte;
+        return <CastScheduleDocument data={data} />;
+      },
+    },
+    {
+      nome: "Plano de Diárias",
+      gerar: async () => {
+        const data = comPior(await getPlanoSimplesData(projeto.id));
+        for (const d of data.days) d.scenesNumeros = d.scenesNumeros.map(() => numeroParte);
+        return <PlanoDiariasDocument data={data} />;
+      },
+    },
+    {
+      nome: "Plano Semanal",
+      gerar: async () => {
+        const data = comPior(await getWeeklyPlanData(projeto.id));
+        for (const w of data.weeks) for (const d of w.days) for (const c of d.cenas) c.numero = numeroParte;
+        return <WeeklyPlanDocument data={data} />;
+      },
+    },
+    {
+      nome: "Cenas por Ator",
+      gerar: async () => {
+        const data = comPior(await getActorSceneListData(projeto.id));
+        for (const a of data.actors) for (const sc of a.scenes) sc.numero = numeroParte;
+        return <ActorSceneListDocument data={data} />;
+      },
+    },
+    {
+      nome: "Cenas por Locação",
+      gerar: async () => {
+        const data = comPior(await getLocationSceneListData(projeto.id));
+        for (const l of data.locations) for (const sc of l.scenes) sc.numero = numeroParte;
+        return <LocationSceneListDocument data={data} />;
+      },
+    },
     {
       nome: "Prestação de Contas do Elenco",
       gerar: async () => {

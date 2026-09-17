@@ -1,11 +1,11 @@
 import { almocoMarkerId } from "./types";
 import type { BoardState, ContainerId, DayState, StripItem } from "./types";
 
-export function findContainer(board: BoardState, sceneId: string): ContainerId | undefined {
-  if (board.boneyard.some((item) => item.sceneId === sceneId)) return "boneyard";
+export function findContainer(board: BoardState, itemId: string): ContainerId | undefined {
+  if (board.boneyard.some((item) => item.itemId === itemId)) return "boneyard";
 
   for (const day of board.days) {
-    if (day.scenes.some((item) => item.sceneId === sceneId)) return `day:${day.id}`;
+    if (day.scenes.some((item) => item.itemId === itemId)) return `day:${day.id}`;
   }
 
   return undefined;
@@ -45,7 +45,7 @@ export function buildDayEntries(day: DayState): DayEntry[] {
 }
 
 export function dayEntryIds(day: DayState): string[] {
-  return buildDayEntries(day).map((entry) => (entry.type === "scene" ? entry.item.sceneId : almocoMarkerId(day.id)));
+  return buildDayEntries(day).map((entry) => (entry.type === "scene" ? entry.item.itemId : almocoMarkerId(day.id)));
 }
 
 export function splitDayEntries(entries: DayEntry[]): { scenes: StripItem[]; almocoIndex: number } {
@@ -60,6 +60,7 @@ export function splitDayEntries(entries: DayEntry[]): { scenes: StripItem[]; alm
 
 export type StripboardChangePayload = {
   sceneId: string;
+  scenePartId: string | null;
   shootDayId: string | null;
   bloco: "MANHA" | "TARDE" | null;
   ordem: number;
@@ -80,6 +81,7 @@ export function computeChanges(board: BoardState, containers: ContainerId[]): St
       items.forEach((item, index) => {
         changes.push({
           sceneId: item.sceneId,
+          scenePartId: item.scenePartId,
           shootDayId: null,
           bloco: null,
           ordem: index,
@@ -96,6 +98,7 @@ export function computeChanges(board: BoardState, containers: ContainerId[]): St
     items.forEach((item, index) => {
       changes.push({
         sceneId: item.sceneId,
+        scenePartId: item.scenePartId,
         shootDayId: dayId,
         bloco: index < day.almocoIndex ? "MANHA" : "TARDE",
         ordem: index,

@@ -7,6 +7,7 @@ import {
   suggestAlmocoIndex,
   timeToMinutes,
 } from "@/lib/schedule";
+import { paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
 /** Recalcula e persiste blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de uma diária a
  *  partir de chamadaGeral + Jornada do projeto (limiteAlmocoMin/duracaoAlmocoMin/preparacaoInicialMin)
@@ -28,13 +29,19 @@ export async function recalculateDayBlocks(shootDayId: string) {
       project: { select: { limiteAlmocoMin: true, duracaoAlmocoMin: true, preparacaoInicialMin: true } },
       scenes: {
         orderBy: { ordem: "asc" },
-        include: { scene: { select: { tempoEstimadoMin: true } } },
+        include: {
+          scene: { select: { tempoEstimadoMin: true, paginas: true } },
+          scenePart: { select: { oitavos: true } },
+        },
       },
     },
   });
   if (!shootDay) return null;
 
   const allScenes = shootDay.scenes;
+  // Parte de cena dividida: fallback do Rod é o estimado da parte, não o da cena inteira.
+  const tempoEstimado = (e: (typeof allScenes)[number]) =>
+    tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), e.scenePart);
   const neverSplit = allScenes.length > 0 && allScenes.every((e) => e.bloco === "MANHA");
   let manhaEntries = allScenes.filter((e) => e.bloco === "MANHA");
 
@@ -44,7 +51,7 @@ export async function recalculateDayBlocks(shootDayId: string) {
       : null;
     const items = allScenes.map((e) => ({
       prepMin: resolveEffectivePrepMin(e.prepMin),
-      rodMin: resolveEffectiveRodMin(e.rodMin, e.scene.tempoEstimadoMin),
+      rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),
     }));
     const boundary = suggestAlmocoIndex(shootDay.chamadaGeral, blocoManhaInicio, items, shootDay.project.limiteAlmocoMin);
 
@@ -57,7 +64,7 @@ export async function recalculateDayBlocks(shootDayId: string) {
 
   const manhaItems = manhaEntries.map((entry) => ({
     prepMin: resolveEffectivePrepMin(entry.prepMin),
-    rodMin: resolveEffectiveRodMin(entry.rodMin, entry.scene.tempoEstimadoMin),
+    rodMin: resolveEffectiveRodMin(entry.rodMin, tempoEstimado(entry)),
   }));
 
   const derived = computeDerivedBlockTimes(shootDay.chamadaGeral, manhaItems, shootDay.project);

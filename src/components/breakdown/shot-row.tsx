@@ -45,6 +45,7 @@ function StatusBadge({ status }: { status: ShotData["status"] }) {
 }
 
 const PLANO_SOLTO = "__solto__";
+const SEM_PARTE = "__sem_parte__";
 
 export function SortableShotRow({
   shot,
@@ -55,6 +56,7 @@ export function SortableShotRow({
   onDelete,
   highlightContinuidade,
   sceneShots,
+  partes = [],
 }: {
   shot: ShotData;
   index: number;
@@ -65,7 +67,10 @@ export function SortableShotRow({
   highlightContinuidade: boolean;
   /** Todos os planos da cena — pra montar a lista "Coverage de" e saber se este tem coverages. */
   sceneShots: ShotData[];
+  /** Partes da cena dividida entre diárias; vazio = cena inteira, sem seletor de parte. */
+  partes?: { id: string; rotulo: string }[];
 }) {
+  const parteDoPlano = partes.find((p) => p.id === shot.scenePartId) ?? null;
   // Um nível só: só planos soltos podem ser pai, e um plano que já tem coverages não pode virar
   // coverage de outro (a API barra os dois; aqui a tela nem oferece).
   const hasCoverages = sceneShots.some((s) => s.planoPaiId === shot.id);
@@ -207,6 +212,19 @@ export function SortableShotRow({
               </Badge>
             )}
             <PrioridadeTag prioridade={shot.prioridade} />
+            {partes.length > 0 && (
+              <span
+                className={cn(
+                  "max-w-28 shrink-0 truncate rounded border px-1.5 text-[10px] leading-4",
+                  parteDoPlano
+                    ? "border-scheduling-fg/40 bg-scheduling-bg text-scheduling-fg"
+                    : "border-dashed text-muted-foreground"
+                )}
+                title={parteDoPlano ? `Parte: ${parteDoPlano.rotulo}` : "Sem parte — aparece em todas as partes e não conta no Rod de nenhuma"}
+              >
+                {parteDoPlano?.rotulo ?? "sem parte"}
+              </span>
+            )}
             <span className="w-28 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>
               {shot.tamanho ?? "—"}
             </span>
@@ -303,6 +321,30 @@ export function SortableShotRow({
                 </SelectContent>
               </Select>
             </div>
+            {partes.length > 0 && (
+              <div className="space-y-1">
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                  Parte
+                  <TermTooltip content="Em qual parte da cena dividida este plano é filmado. Sem parte, o plano aparece em todas as partes, mas não entra no Rod de nenhuma — atribua pra ele contar no tempo da diária certa." />
+                </label>
+                <Select
+                  value={shot.scenePartId ?? SEM_PARTE}
+                  onValueChange={(value) => void onUpdate(shot.id, { scenePartId: value === SEM_PARTE ? null : value })}
+                >
+                  <SelectTrigger className="h-8 w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SEM_PARTE}>Sem parte</SelectItem>
+                    {partes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.rotulo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <label
               className={cn(
                 "flex items-center gap-2 text-sm",

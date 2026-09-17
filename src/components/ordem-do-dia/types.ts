@@ -44,6 +44,7 @@ export type ShotSummary = Pick<
   | "tempoResetMin"
   | "status"
   | "prioridade"
+  | "scenePartId"
 >;
 
 export type SceneTimeRow = Pick<
@@ -52,6 +53,7 @@ export type SceneTimeRow = Pick<
   | "bloco"
   | "ordem"
   | "numero"
+  | "parte"
   | "setLocacaoDisplay"
   | "set"
   | "locacao"

@@ -12,6 +12,15 @@ import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
+import {
+  divisaoNaoFecha,
+  mensagemDivisaoNaoFecha,
+  minutosEmPlanosSemParte,
+  paginasParaOitavos,
+  planosDaParte,
+  resolveRodDaParte,
+  tempoEstimadoDaEntrada,
+} from "@/lib/scene-parts-shared";
 import { computeSceneShotTotals } from "@/lib/shots";
 import { computeCortaveisMin } from "@/lib/shots-shared";
 
@@ -24,28 +33,40 @@ const shotsSelect = {
     takesPrevistos: true,
     status: true,
     prioridade: true,
+    scenePartId: true,
   },
 };
 
+const partsInclude = {
+  orderBy: { ordem: "asc" as const },
+  include: { sceneShootDay: { select: { shootDay: { select: { numeroDia: true } } } } },
+};
+
+type ShotParaResumo = {
+  tempoTotalMin: number | null;
+  tempoResetMin: number | null;
+  tempoResetMinManual: number | null;
+  takesPrevistos: number | null;
+  status: ShotStatus;
+  prioridade: ShotPrioridade;
+};
+
 function toShotsSummary(
-  shots: {
-    tempoTotalMin: number | null;
-    tempoResetMin: number | null;
-    tempoResetMinManual: number | null;
-    takesPrevistos: number | null;
-    status: ShotStatus;
-    prioridade: ShotPrioridade;
-  }[]
+  shots: ShotParaResumo[],
+  /** Planos que valem pro tempo: numa parte, só os atribuídos a ela (os sem parte aparecem na lista
+   *  mas não entram no Rod nem nos cortáveis — senão contariam em toda diária da cena). */
+  planosDoTempo: ShotParaResumo[] = shots
 ): ShotsSummary | null {
   if (shots.length === 0) return null;
   const totals = computeSceneShotTotals(shots);
   return {
     count: totals.count,
-    totalMin: totals.totalMin,
+    totalMin: computeSceneShotTotals(planosDoTempo).totalMin,
     takesTotal: totals.takesTotal,
-    cortaveisMin: computeCortaveisMin(shots),
+    cortaveisMin: computeCortaveisMin(planosDoTempo),
   };
 }
+
 
 export default async function StripboardPage({ params }: { params: { id: string } }) {
   const [project, scenes, shootDays, characters] = await Promise.all([
@@ -59,6 +80,8 @@ export default async function StripboardPage({ params }: { params: { id: string 
         cast: { select: { characterId: true } },
         shots: shotsSelect,
         locacao: { select: { nome: true } },
+        parts: partsInclude,
+        shootDays: { select: { scenePartId: true } },
       },
     }),
     prisma.shootDay.findMany({
@@ -73,6 +96,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
                 cast: { select: { characterId: true } },
                 shots: shotsSelect,
                 locacao: { select: { nome: true } },
+                parts: partsInclude,
               },
             },
           },
@@ -86,7 +110,10 @@ export default async function StripboardPage({ params }: { params: { id: string 
     characters.map((c) => [c.id, { idCurto: c.idCurto, numeroElenco: c.numeroElenco, personagem: c.personagem }])
   );
 
-  function toSceneSummary(scene: (typeof scenes)[number]): SceneSummary {
+  type SceneComPartes = Omit<(typeof scenes)[number], "shootDays">;
+  type Parte = SceneComPartes["parts"][number];
+
+  function toSceneSummary(scene: SceneComPartes): SceneSummary {
     // classeLuzFim só importa pra cena em TRANSICAO (decide a direção do degradê na tira — ver
     // strip-card.tsx); pra qualquer outra classe fica null, sem custo de calcular à toa.
     const classeLuzFim =
@@ -108,29 +135,69 @@ export default async function StripboardPage({ params }: { params: { id: string 
       notasAD: scene.notasAD,
       omitida: scene.omitida,
       characterIds: scene.cast.map((c) => c.characterId),
+      divisaoNaoFecha: divisaoNaoFecha(paginasParaOitavos(scene.paginas), scene.parts)
+        ? mensagemDivisaoNaoFecha(paginasParaOitavos(scene.paginas), scene.parts)
+        : null,
     };
   }
 
-  const scheduledSceneIds = new Set(shootDays.flatMap((day) => day.scenes.map((s) => s.sceneId)));
-
-  const boneyard: StripItem[] = scenes
-    .filter((scene) => !scheduledSceneIds.has(scene.id))
-    .sort((a, b) => naturalCompare(a.numero, b.numero))
-    .map((scene) => ({
+  /** Tira de uma cena inteira ou de UMA parte dela. Parte mostra só os planos dela + os sem parte. */
+  function toStripItem(scene: SceneComPartes, parte: Parte | null): StripItem {
+    const oitavosCena = paginasParaOitavos(scene.paginas);
+    const rodDaParte = parte
+      ? resolveRodDaParte({
+          parteId: parte.id,
+          oitavosParte: parte.oitavos,
+          oitavosCena,
+          tempoEstimadoCenaMin: scene.tempoEstimadoMin,
+          planos: scene.shots,
+        })
+      : null;
+    return {
+      itemId: parte?.id ?? scene.id,
       sceneId: scene.id,
+      scenePartId: parte?.id ?? null,
+      parte:
+        parte && rodDaParte
+          ? {
+              id: parte.id,
+              rotulo: parte.rotulo,
+              oitavos: parte.oitavos,
+              outras: scene.parts
+                .filter((p) => p.id !== parte.id)
+                .map((p) => ({ rotulo: p.rotulo, numeroDia: p.sceneShootDay?.shootDay.numeroDia ?? null })),
+              rodMin: rodDaParte.rodMin,
+              fonteRod: rodDaParte.fonte,
+              minSemParte: minutosEmPlanosSemParte(scene.shots),
+              tempoEstimadoMin: tempoEstimadoDaEntrada(scene.tempoEstimadoMin, oitavosCena, parte),
+              todas: scene.parts.map((p) => ({ id: p.id, rotulo: p.rotulo, oitavos: p.oitavos })),
+              oitavosCena,
+            }
+          : null,
       prepMin: null,
       rodMin: null,
       scene: toSceneSummary(scene),
-      shotsSummary: toShotsSummary(scene.shots),
-    }));
+      shotsSummary: toShotsSummary(
+        planosDaParte(scene.shots, parte?.id ?? null),
+        parte ? scene.shots.filter((s) => s.scenePartId === parte.id) : scene.shots
+      ),
+    };
+  }
+
+  // Boneyard: cena inteira que não está em diária nenhuma, e cada PARTE ainda não alocada de uma
+  // cena dividida (a outra parte pode já estar num dia).
+  const boneyard: StripItem[] = scenes
+    .sort((a, b) => naturalCompare(a.numero, b.numero))
+    .flatMap((scene) => {
+      if (scene.parts.length === 0) return scene.shootDays.length === 0 ? [toStripItem(scene, null)] : [];
+      return scene.parts.filter((p) => !p.sceneShootDay).map((p) => toStripItem(scene, p));
+    });
 
   const days: DayState[] = shootDays.map((day) => {
     const sceneItems: StripItem[] = day.scenes.map((entry) => ({
-      sceneId: entry.sceneId,
+      ...toStripItem(entry.scene, entry.scene.parts.find((p) => p.id === entry.scenePartId) ?? null),
       prepMin: entry.prepMin,
       rodMin: entry.rodMin,
-      scene: toSceneSummary(entry.scene),
-      shotsSummary: toShotsSummary(entry.scene.shots),
       observacoes: entry.observacoes,
       observacoesAutoGeradas: entry.observacoesAutoGeradas,
     }));
@@ -148,7 +215,14 @@ export default async function StripboardPage({ params }: { params: { id: string 
           day.blocoManhaInicio,
           day.scenes.map((e) => ({
             prepMin: resolveEffectivePrepMin(e.prepMin),
-            rodMin: resolveEffectiveRodMin(e.rodMin, e.scene.tempoEstimadoMin),
+            rodMin: resolveEffectiveRodMin(
+              e.rodMin,
+              tempoEstimadoDaEntrada(
+                e.scene.tempoEstimadoMin,
+                paginasParaOitavos(e.scene.paginas),
+                e.scene.parts.find((p) => p.id === e.scenePartId)
+              )
+            ),
           })),
           project.limiteAlmocoMin
         )

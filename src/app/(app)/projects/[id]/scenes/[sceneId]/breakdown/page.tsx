@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BreakdownForm } from "@/components/breakdown/breakdown-form";
+import { SceneDivisionPanel } from "@/components/breakdown/scene-division-panel";
 import { SinopseADField } from "@/components/breakdown/sinopse-ad-field";
 import { ShotListPanel } from "@/components/breakdown/shot-list-panel";
 import { ContinuityNotesPanel } from "@/components/ad-documents/continuity-notes-panel";
@@ -11,6 +12,7 @@ import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { Button } from "@/components/ui/button";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
+import { getDivisaoDaCena } from "@/lib/scene-parts";
 
 export default async function BreakdownPage({
   params,
@@ -52,6 +54,9 @@ export default async function BreakdownPage({
       select: { id: true, numero: true },
     }),
   ]);
+
+  const divisao = await getDivisaoDaCena(scene.id);
+  const partes = divisao.partes.map((p) => ({ id: p.id, rotulo: p.rotulo, oitavos: p.oitavos }));
 
   const proximaSemBreakdown = [...semBreakdown].sort((a, b) => naturalCompare(a.numero, b.numero))[0];
 
@@ -126,10 +131,14 @@ export default async function BreakdownPage({
         initialNotes={continuityNotes}
       />
 
+      <SceneDivisionPanel projectId={params.id} sceneId={scene.id} sceneNumero={scene.numero} divisao={divisao} />
+
       <ShotListPanel
         projectId={params.id}
         sceneId={scene.id}
         sceneNumero={scene.numero}
+        partes={partes}
+        oitavosCena={divisao.oitavosCena}
         initialShots={shots}
         initialDuracaoAlvoMin={scene.duracaoAlvoMin}
         tempoEstimadoMin={scene.tempoEstimadoMin}

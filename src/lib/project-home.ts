@@ -2,6 +2,7 @@ import type { Task } from "@prisma/client";
 
 import { computeTerminoForecast, type TerminoForecast } from "./project-forecast";
 import { prisma } from "./prisma";
+import { cenaConcluida, numeroComParte } from "./scene-parts-shared";
 
 /** Meia-noite UTC de hoje — mesma convenção usada por `ShootDay.data`/`CalendarEvent.data`
  *  (strings "yyyy-mm-dd" parseadas como `new Date(...)` caem em meia-noite UTC), então comparar
@@ -87,7 +88,12 @@ export async function getProjectHomeState(projectId: string): Promise<ProjectHom
 
   const todayShootDay = await prisma.shootDay.findFirst({
     where: { projectId, data: hoje },
-    include: { scenes: { orderBy: { ordem: "asc" }, include: { scene: { select: { numero: true } } } } },
+    include: {
+      scenes: {
+        orderBy: { ordem: "asc" },
+        include: { scene: { select: { numero: true } }, scenePart: { select: { rotulo: true } } },
+      },
+    },
   });
 
   if (todayShootDay) {
@@ -108,13 +114,17 @@ export async function getProjectHomeState(projectId: string): Promise<ProjectHom
         locacaoNome: todayShootDay.locacaoNome,
         chamadaGeral: todayShootDay.chamadaGeral,
       },
-      scenes: todayShootDay.scenes.map((s) => ({ sceneId: s.sceneId, numero: s.scene.numero, status: s.status })),
+      scenes: todayShootDay.scenes.map((s) => ({
+        sceneId: s.sceneId,
+        numero: numeroComParte(s.scene.numero, s.scenePart),
+        status: s.status,
+      })),
       tarefasAtrasadas,
       eventos: eventos.map((e) => ({ id: e.id, nome: e.nome, tipo: e.tipo, data: e.data })),
     };
   }
 
-  const [proximaDiariaRow, forecast, todasCenas, concluidas, tarefas, eventos] = await Promise.all([
+  const [proximaDiariaRow, forecast, todasCenas, tarefas, eventos] = await Promise.all([
     prisma.shootDay.findFirst({
       where: { projectId, data: { gte: hoje } },
       orderBy: { data: "asc" },
@@ -123,20 +133,37 @@ export async function getProjectHomeState(projectId: string): Promise<ProjectHom
       },
     }),
     computeTerminoForecast(projectId),
-    prisma.scene.findMany({ where: { projectId, omitida: false }, select: { id: true, paginas: true } }),
-    prisma.sceneShootDay.findMany({
-      where: { shootDay: { projectId }, status: "CONCLUIDA" },
-      select: { sceneId: true },
-      distinct: ["sceneId"],
+    prisma.scene.findMany({
+      where: { projectId, omitida: false },
+      select: {
+        id: true,
+        paginas: true,
+        parts: { select: { oitavos: true, sceneShootDay: { select: { status: true } } } },
+        shootDays: { select: { status: true } },
+      },
     }),
     getUpcomingTasks(projectId),
     getEventosProximos(projectId, hoje),
   ]);
 
-  const concluidaIds = new Set(concluidas.map((c) => c.sceneId));
-  const paginasConcluidas = todasCenas
-    .filter((s) => concluidaIds.has(s.id))
-    .reduce((sum, s) => sum + Number(s.paginas), 0);
+  // Cena dividida: páginas concluídas contam parte a parte (os oitavos de cada parte concluída), mas
+  // a CENA só conta como concluída quando todas as partes estão.
+  let cenasConcluidas = 0;
+  let paginasConcluidas = 0;
+  for (const cena of todasCenas) {
+    if (cena.parts.length === 0) {
+      if (cenaConcluida(0, cena.shootDays.map((d) => d.status))) {
+        cenasConcluidas++;
+        paginasConcluidas += Number(cena.paginas);
+      }
+      continue;
+    }
+    const statusPorParte = cena.parts.map((p) => p.sceneShootDay?.status ?? "PENDENTE");
+    paginasConcluidas += cena.parts
+      .filter((p) => p.sceneShootDay?.status === "CONCLUIDA")
+      .reduce((sum, p) => sum + p.oitavos / 8, 0);
+    if (cenaConcluida(cena.parts.length, statusPorParte)) cenasConcluidas++;
+  }
   const totalPaginas = todasCenas.reduce((sum, s) => sum + Number(s.paginas), 0);
 
   const proximaDiaria = proximaDiariaRow
@@ -153,7 +180,7 @@ export async function getProjectHomeState(projectId: string): Promise<ProjectHom
     proximaDiaria,
     forecast,
     progresso: {
-      cenasConcluidas: concluidaIds.size,
+      cenasConcluidas,
       totalCenas: todasCenas.length,
       paginasConcluidas,
       totalPaginas,

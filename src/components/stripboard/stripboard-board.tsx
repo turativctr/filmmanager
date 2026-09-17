@@ -97,7 +97,7 @@ export function StripboardBoard({
 
     const container = findContainer(board, id);
     if (!container) return;
-    setActiveItem(getItems(board, container).find((i) => i.sceneId === id) ?? null);
+    setActiveItem(getItems(board, container).find((i) => i.itemId === id) ?? null);
     setActiveMarkerDay(null);
   }
 
@@ -153,8 +153,8 @@ export function StripboardBoard({
       // pela mesma lista combinada de "entries", convertida de volta em (scenes, almocoIndex) depois.
       if (sourceContainer === "boneyard") {
         const items = board.boneyard;
-        const oldIndex = items.findIndex((i) => i.sceneId === activeId);
-        const newIndex = items.findIndex((i) => i.sceneId === overId);
+        const oldIndex = items.findIndex((i) => i.itemId === activeId);
+        const newIndex = items.findIndex((i) => i.itemId === overId);
         if (oldIndex === -1 || newIndex === -1) return;
         nextBoard = setItems(board, "boneyard", arrayMoveItems(items, oldIndex, newIndex));
       } else {
@@ -163,7 +163,7 @@ export function StripboardBoard({
         if (!day) return;
         const markerId = almocoMarkerId(dayId);
         const entries = buildDayEntries(day);
-        const entryIds = entries.map((e) => (e.type === "scene" ? e.item.sceneId : markerId));
+        const entryIds = entries.map((e) => (e.type === "scene" ? e.item.itemId : markerId));
         const oldIndex = entryIds.indexOf(activeId);
         const newIndex = isContainerId(overId) ? entries.length - 1 : entryIds.indexOf(overId);
         if (oldIndex === -1 || newIndex === -1) return;
@@ -176,10 +176,23 @@ export function StripboardBoard({
       // a cena saiu/entrou antes ou depois do marcador, pra manter o mesmo boundary físico de itens.
       const sourceItems = getItems(board, sourceContainer);
       const destItems = getItems(board, destContainer);
-      const movingItem = sourceItems.find((i) => i.sceneId === activeId);
+      const movingItem = sourceItems.find((i) => i.itemId === activeId);
       if (!movingItem) return;
 
-      const newSourceItems = sourceItems.filter((i) => i.sceneId !== activeId);
+      // Duas partes da mesma cena não cabem na mesma diária (unique diária+cena): a AD escolhe outra.
+      if (
+        movingItem.scenePartId &&
+        destContainer.startsWith("day:") &&
+        destItems.some((i) => i.sceneId === movingItem.sceneId)
+      ) {
+        const outra = destItems.find((i) => i.sceneId === movingItem.sceneId)!;
+        toast.error(
+          `A cena ${movingItem.scene.numero} já está nesta diária (${outra.parte?.rotulo ?? "cena inteira"}). Cada diária recebe no máximo uma parte da mesma cena.`
+        );
+        return;
+      }
+
+      const newSourceItems = sourceItems.filter((i) => i.itemId !== activeId);
 
       const destDayId = destContainer.startsWith("day:") ? destContainer.split(":")[1] : null;
       const destDay = destDayId ? board.days.find((d) => d.id === destDayId) : undefined;
@@ -189,7 +202,7 @@ export function StripboardBoard({
       } else if (isContainerId(overId)) {
         insertIndex = destItems.length;
       } else {
-        const idx = destItems.findIndex((i) => i.sceneId === overId);
+        const idx = destItems.findIndex((i) => i.itemId === overId);
         insertIndex = idx === -1 ? destItems.length : idx;
       }
 
@@ -200,8 +213,12 @@ export function StripboardBoard({
           ? {
               ...movingItem,
               prepMin: computeAutoFillPrepMin(destItems[insertIndex - 1]?.scene, movingItem.scene, DEFAULT_PREP_MIN),
-              // Duração alvo da AD manda no cronograma; sem ela, o tempo estimado por oitavos.
-              rodMin: computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
+              // Parte de cena dividida: o Rod da parte (planos dela, ou estimado pelos oitavos dela) — a
+              // duração alvo é do total, não da parte. Cena inteira: a duração alvo manda; sem ela, o
+              // tempo estimado por oitavos.
+              rodMin: movingItem.parte
+                ? movingItem.parte.rodMin
+                : computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
             }
           : movingItem;
 
@@ -215,7 +232,7 @@ export function StripboardBoard({
 
       if (sourceContainer.startsWith("day:")) {
         const srcDayId = sourceContainer.split(":")[1];
-        const srcOldIndex = sourceItems.findIndex((i) => i.sceneId === activeId);
+        const srcOldIndex = sourceItems.findIndex((i) => i.itemId === activeId);
         nextBoard = {
           ...nextBoard,
           days: nextBoard.days.map((d) =>
@@ -241,12 +258,12 @@ export function StripboardBoard({
     persistChanges(nextBoard, Array.from(touched), previousBoard);
   }
 
-  function handleUpdateTimes(sceneId: string, prepMin: number | null, rodMin: number | null) {
-    const container = findContainer(board, sceneId);
+  function handleUpdateTimes(itemId: string, prepMin: number | null, rodMin: number | null) {
+    const container = findContainer(board, itemId);
     if (!container) return;
 
     const items = getItems(board, container).map((item) =>
-      item.sceneId === sceneId ? { ...item, prepMin, rodMin } : item
+      item.itemId === itemId ? { ...item, prepMin, rodMin } : item
     );
     const previousBoard = board;
     const nextBoard = setItems(board, container, items);

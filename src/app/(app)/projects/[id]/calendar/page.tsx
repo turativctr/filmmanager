@@ -3,6 +3,7 @@ import type { CalendarDayData, CalendarMonthSummary } from "@/components/calenda
 import { PageHeader } from "@/components/shared/page-header";
 import { getMonthGrid, toDateKey } from "@/lib/calendar-grid";
 import { prisma } from "@/lib/prisma";
+import { numeroComParte, paginasDaEntrada, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
 export default async function CalendarPage({
   params,
@@ -36,6 +37,7 @@ export default async function CalendarPage({
                 locacao: { select: { nome: true } },
               },
             },
+            scenePart: { select: { rotulo: true, oitavos: true } },
           },
         },
         callTimes: true,
@@ -53,8 +55,12 @@ export default async function CalendarPage({
   const shootDaysByDate = new Map(
     shootDays.map((day) => {
       const firstScene = day.scenes[0]?.scene;
-      const totalPaginas = day.scenes.reduce((sum, s) => sum + Number(s.scene.paginas), 0);
-      const totalMinutos = day.scenes.reduce((sum, s) => sum + (s.scene.tempoEstimadoMin ?? 0), 0);
+      const totalPaginas = day.scenes.reduce((sum, s) => sum + paginasDaEntrada(Number(s.scene.paginas), s.scenePart), 0);
+      const totalMinutos = day.scenes.reduce(
+        (sum, s) =>
+          sum + (tempoEstimadoDaEntrada(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas), s.scenePart) ?? 0),
+        0
+      );
 
       const callTimeByCharacter = new Map(
         day.callTimes.map((ct) => [ct.characterId, { chamada: ct.chamada, saida: ct.saida }])
@@ -83,7 +89,7 @@ export default async function CalendarPage({
           locacao: firstScene?.locacao?.nome ?? null,
           totalPaginas: totalPaginas.toString(),
           totalMinutos,
-          scenes: day.scenes.map((s) => ({ numero: s.scene.numero, sinopse: s.scene.sinopse })),
+          scenes: day.scenes.map((s) => ({ numero: numeroComParte(s.scene.numero, s.scenePart), sinopse: s.scene.sinopse })),
           scenesSemTempoCount: day.scenes.filter((s) => !s.rodMin || s.rodMin === 0).length,
           chamadaGeral: day.chamadaGeral,
           blocoManhaInicio: day.blocoManhaInicio,

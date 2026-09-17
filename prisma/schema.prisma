@@ -396,9 +396,41 @@ model Scene {
   breakdownSheet  BreakdownSheet?
   continuityNotes ContinuityNote[]
   shots           Shot[]
+  parts           ScenePart[]
 
   @@unique([projectId, numero])
   @@map("scenes")
+}
+
+// Divisão da MESMA cena entre diárias (ex.: a imagem numa diária, o voice off em outra). Cena sem
+// divisão não tem linha aqui — a parte é implícita e tudo funciona como sempre. Só existe quando a
+// AD divide de fato, e aí são 2+ partes.
+//
+// Regra dura: a soma de `oitavos` das partes é igual aos oitavos da cena (paginas × 8) — oitavo
+// nunca conta duas vezes, senão o total do projeto infla e o progresso mente. A API barra divisão
+// que não fecha. Editar `Scene.paginas` depois continua liberado: aí a divisão pode deixar de
+// fechar e a cena mostra o aviso "divisão não fecha" (avisa, não trava).
+//
+// A diária de cada parte mora em SceneShootDay.scenePartId (não aqui), pra não duplicar ordem,
+// bloco, prep, Rod, status e horários reais.
+model ScenePart {
+  id        String   @id @default(cuid())
+  sceneId   String
+  // Texto livre: "Imagem", "Voice off", "Continuação", "Plano do dublê".
+  rotulo    String
+  // Fatia dos oitavos da cena. 0 é válido (captação de som pura, sem página).
+  oitavos   Int
+  // Ordem de exibição das partes dentro da cena (1, 2, ...).
+  ordem     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scene         Scene          @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  sceneShootDay SceneShootDay?
+  shots         Shot[]
+
+  @@index([sceneId])
+  @@map("scene_parts")
 }
 
 // Lugar real onde se filma — decisão de produção, distinta do Set (lugar da ficção, vem do
@@ -494,6 +526,9 @@ model Shot {
   // padrão: null = plano solto. SetNull só como rede de segurança; a rota de DELETE desvincula os
   // coverages antes, pra renumerá-los com o próximo número livre.
   planoPaiId        String?
+  // Parte da cena dividida em que o plano é filmado. null = sem parte: aparece em todas as partes,
+  // mas não entra no Rod de nenhuma (senão contaria duas vezes). Nunca obrigatório.
+  scenePartId       String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -502,9 +537,11 @@ model Shot {
   planoPai  Shot?   @relation("ShotCoverage", fields: [planoPaiId], references: [id], onDelete: SetNull)
   coverages Shot[]  @relation("ShotCoverage")
   schedule ShotSchedule?
+  scenePart ScenePart? @relation(fields: [scenePartId], references: [id], onDelete: SetNull)
 
   @@unique([sceneId, ordem])
   @@index([planoPaiId])
+  @@index([scenePartId])
   @@map("shots")
 }
 
@@ -758,8 +795,14 @@ model SceneShootDay {
   observacoes            String?  @db.Text
   observacoesAutoGeradas Boolean  @default(false)
 
-  scene    Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  shootDay ShootDay @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+  // Qual parte da cena dividida esta linha agenda. null = cena sem divisão. Unique: cada parte está
+  // em no máximo uma diária. O unique (shootDayId, sceneId) abaixo continua valendo, então duas
+  // partes da mesma cena nunca caem na mesma diária.
+  scenePartId String? @unique
+
+  scene     Scene      @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  shootDay  ShootDay   @relation(fields: [shootDayId], references: [id], onDelete: Cascade)
+  scenePart ScenePart? @relation(fields: [scenePartId], references: [id], onDelete: SetNull)
 
   @@unique([shootDayId, sceneId])
   @@unique([shootDayId, ordem])

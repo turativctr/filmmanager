@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { getCharacterId } from "@/lib/character-id";
 import { detectSceneConflicts } from "@/lib/conflicts";
 import { gerarNomeArquivo } from "@/lib/filename";
+import { numeroComParte, paginasDaEntrada } from "@/lib/scene-parts-shared";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import {
   computeBlockSchedule,
@@ -38,7 +39,8 @@ import type { DayState, StripItem } from "./types";
 function toScheduleItem(item: StripItem) {
   return {
     prepMin: resolveEffectivePrepMin(item.prepMin),
-    rodMin: resolveEffectiveRodMin(item.rodMin, item.scene.tempoEstimadoMin),
+    // Parte: o fallback é o estimado da PARTE, não o da cena inteira.
+    rodMin: resolveEffectiveRodMin(item.rodMin, item.parte ? item.parte.tempoEstimadoMin : item.scene.tempoEstimadoMin),
   };
 }
 
@@ -57,7 +59,7 @@ export function ShootDayColumn({
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   projeto: { titulo: string; sigla: string | null };
   jornada: { limiteAlmocoMin: number; duracaoAlmocoMin: number };
-  onUpdateTimes: (sceneId: string, prepMin: number | null, rodMin: number | null) => void;
+  onUpdateTimes: (itemId: string, prepMin: number | null, rodMin: number | null) => void;
 }) {
   const resolveId = (id: string) => {
     const c = characterMap[id];
@@ -134,7 +136,7 @@ export function ShootDayColumn({
     return detectSceneConflicts(
       all.map(({ item, schedule }) => ({
         sceneId: item.sceneId,
-        numero: item.scene.numero,
+        numero: numeroComParte(item.scene.numero, item.parte),
         characterIds: item.scene.characterIds,
         rodStartMin: timeToMinutes(schedule!.rodStart),
         rodEndMin: timeToMinutes(schedule!.rodEnd),
@@ -146,15 +148,19 @@ export function ShootDayColumn({
     );
   }, [manhaItems, tardeItems, manhaSchedule, tardeSchedule, characterMap, sistemaIdElenco]);
 
-  const totalPaginas = allItems.reduce((sum, item) => sum + Number(item.scene.paginas), 0);
-  const totalMinutos = allItems.reduce((sum, item) => sum + (item.scene.tempoEstimadoMin ?? 0), 0);
+  // Parte de cena dividida conta só os oitavos dela — a outra parte está em outra diária.
+  const totalPaginas = allItems.reduce((sum, item) => sum + paginasDaEntrada(Number(item.scene.paginas), item.parte), 0);
+  const totalMinutos = allItems.reduce(
+    (sum, item) => sum + ((item.parte ? item.parte.tempoEstimadoMin : item.scene.tempoEstimadoMin) ?? 0),
+    0
+  );
   const cortaveisMin = allItems.reduce((sum, item) => sum + (item.shotsSummary?.cortaveisMin ?? 0), 0);
   const elencoPresente = [...new Set(allItems.flatMap((item) => item.scene.characterIds))].map(resolveId);
 
   const entryIds =
     allItems.length === 0
       ? []
-      : [...manhaItems.map((i) => i.sceneId), almocoMarkerId(day.id), ...tardeItems.map((i) => i.sceneId)];
+      : [...manhaItems.map((i) => i.itemId), almocoMarkerId(day.id), ...tardeItems.map((i) => i.itemId)];
 
   function characterLabels(item: StripItem) {
     return item.scene.characterIds.map(resolveId);
@@ -240,12 +246,12 @@ export function ShootDayColumn({
         >
           {manhaItems.map((item, index) => (
             <StripCard
-              key={item.sceneId}
+              key={item.itemId}
               item={item}
               characterLabels={characterLabels(item)}
               schedule={manhaSchedule[index]}
               conflicts={conflicts.get(item.sceneId)}
-              onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
+              onUpdateTimes={(prep, rod) => onUpdateTimes(item.itemId, prep, rod)}
               projectId={projectId}
               shootDayId={day.id}
               fatorResetPercent={day.fatorResetPercent}
@@ -261,12 +267,12 @@ export function ShootDayColumn({
           )}
           {tardeItems.map((item, index) => (
             <StripCard
-              key={item.sceneId}
+              key={item.itemId}
               item={item}
               characterLabels={characterLabels(item)}
               schedule={tardeSchedule[index]}
               conflicts={conflicts.get(item.sceneId)}
-              onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
+              onUpdateTimes={(prep, rod) => onUpdateTimes(item.itemId, prep, rod)}
               projectId={projectId}
               shootDayId={day.id}
               fatorResetPercent={day.fatorResetPercent}
@@ -302,7 +308,11 @@ export function ShootDayColumn({
             <DayPlanoView
               projectId={projectId}
               shootDayId={day.id}
-              scenes={allItems.map((item) => ({ id: item.sceneId, numero: item.scene.numero }))}
+              scenes={allItems.map((item) => ({
+                id: item.sceneId,
+                numero: numeroComParte(item.scene.numero, item.parte),
+                parteId: item.scenePartId,
+              }))}
               fatorResetPercent={day.fatorResetPercent}
             />
           )}

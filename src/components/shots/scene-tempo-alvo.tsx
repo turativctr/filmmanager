@@ -8,6 +8,7 @@ import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Input } from "@/components/ui/input";
 import { formatTempoEstimado } from "@/lib/paginas";
 import { resolveEffectiveRodMin } from "@/lib/schedule";
+import { minutosEmPlanosSemParte, origemRodDaParte, resolveRodDaParte } from "@/lib/scene-parts-shared";
 import { computeCortaveisMin, computeSceneShotTotals, resolveRodDaCena } from "@/lib/shots-shared";
 import { avaliarTempoAlvo, mensagemMedia, mensagemSaldo, mensagemSetupAcimaDaMedia } from "@/lib/tempo-alvo";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ export function SceneTempoAlvo({
   tempoEstimadoMin,
   onSaved,
   mostrarRod = true,
+  divisao = null,
 }: {
   projectId: string;
   sceneId: string;
@@ -39,6 +41,8 @@ export function SceneTempoAlvo({
   /** false no stripboard: a tira da cena, logo acima, já diz de onde o Rod vem — repetir no mesmo
    *  card só polui. No Breakdown não há tira, então a linha fica. */
   mostrarRod?: boolean;
+  /** Cena dividida entre diárias: o Rod é por parte e a duração alvo vira só referência do total. */
+  divisao?: { partes: { id: string; rotulo: string; oitavos: number }[]; oitavosCena: number } | null;
 }) {
   const [alvo, setAlvo] = useState<number | null>(initialDuracaoAlvoMin);
   const [draft, setDraft] = useState(initialDuracaoAlvoMin?.toString() ?? "");
@@ -98,15 +102,66 @@ export function SceneTempoAlvo({
         ? `Rod: ${formatTempoEstimado(tempoEstimadoMin)} (estimado pelos oitavos — defina a duração alvo pra fixar)`
         : "Rod: sem estimativa — defina a duração alvo ou cadastre planos";
 
+  // Cena dividida (decisão A): cada parte tem o Rod dela — planos atribuídos, ou estimado pelos
+  // oitavos. Plano sem parte não entra em nenhuma, e a duração alvo só é comparada com a soma.
+  const rodsDasPartes = divisao
+    ? divisao.partes.map((p) => ({
+        rotulo: p.rotulo,
+        ...resolveRodDaParte({
+          parteId: p.id,
+          oitavosParte: p.oitavos,
+          oitavosCena: divisao.oitavosCena,
+          tempoEstimadoCenaMin: tempoEstimadoMin,
+          planos: shots,
+        }),
+      }))
+    : null;
+  const somaDasPartes = rodsDasPartes?.reduce((s, p) => s + p.rodMin, 0) ?? 0;
+  const semParteMin = divisao ? minutosEmPlanosSemParte(shots) : 0;
+
   // "Cena 19 · 90min · 40min em planos cortáveis" — o que a AD procura quando a diária estoura.
-  const rodCena = resolveEffectiveRodMin(
-    resolveRodDaCena({ duracaoAlvoMin: alvo, planos: shots }).rodMin,
-    tempoEstimadoMin
-  );
-  const cortaveisMin = computeCortaveisMin(shots);
+  const rodCena = rodsDasPartes
+    ? somaDasPartes
+    : resolveEffectiveRodMin(resolveRodDaCena({ duracaoAlvoMin: alvo, planos: shots }).rodMin, tempoEstimadoMin);
+  // Dividida: plano sem parte não está no Rod de parte nenhuma, então cortá-lo não economiza nada.
+  const cortaveisMin = computeCortaveisMin(divisao ? shots.filter((s) => s.scenePartId !== null) : shots);
 
   return (
     <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+      {rodsDasPartes && (
+        <div className="space-y-0.5">
+          <p className="font-medium text-foreground">
+            Cena {sceneNumero} dividida ·{" "}
+            {rodsDasPartes
+              .map((p) => `${p.rotulo} ${formatTempoEstimado(p.rodMin)} (${origemRodDaParte(p.fonte)})`)
+              .join(" · ")}
+          </p>
+          {rodsDasPartes.some((p) => p.fonte === "MINIMO") && (
+            <p className="flex items-center gap-1 font-medium text-alerta-fg">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {rodsDasPartes
+                .filter((p) => p.fonte === "MINIMO")
+                .map((p) => p.rotulo)
+                .join(", ")}
+              : Rod de {formatTempoEstimado(rodsDasPartes.find((p) => p.fonte === "MINIMO")!.rodMin)} é o mínimo, não um
+              tempo real — atribua planos ou digite o Rod na diária.
+            </p>
+          )}
+          {semParteMin > 0 && (
+            <p className="flex items-center gap-1 font-medium text-alerta-fg">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {formatTempoEstimado(semParteMin)} em planos sem parte — não contam no Rod de nenhuma parte
+            </p>
+          )}
+          {alvo !== null && somaDasPartes > alvo && (
+            <p className="flex items-center gap-1 font-medium text-erro-fg">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              As partes somam {formatTempoEstimado(somaDasPartes)} e passam da duração alvo em{" "}
+              {formatTempoEstimado(somaDasPartes - alvo)}.
+            </p>
+          )}
+        </div>
+      )}
       {ativos.length > 0 && (
         <p className="font-medium text-foreground">
           Cena {sceneNumero} · {formatTempoEstimado(rodCena)} ·{" "}
@@ -116,7 +171,13 @@ export function SceneTempoAlvo({
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={`duracao-alvo-${sceneId}`} className="flex items-center gap-1 font-medium text-foreground">
           Duração alvo
-          <TermTooltip content="Quanto tempo a cena tem. Preenchido, vira o Rod da cena no cronograma e mostra quanto cabe por plano. Vazio, o Rod vem da soma dos planos, como sempre, ou do tempo estimado pelos oitavos se a cena não tem planos. Nunca altera os tempos dos planos." />
+          <TermTooltip
+            content={
+              divisao
+                ? "Cena dividida entre diárias: a duração alvo é só referência do total. O Rod de cada parte vem dos planos atribuídos a ela (ou do estimado pelos oitavos dela), e aqui aparece um aviso se a soma das partes passar do alvo."
+                : "Quanto tempo a cena tem. Preenchido, vira o Rod da cena no cronograma e mostra quanto cabe por plano. Vazio, o Rod vem da soma dos planos, como sempre, ou do tempo estimado pelos oitavos se a cena não tem planos. Nunca altera os tempos dos planos."
+            }
+          />
         </label>
         <Input
           id={`duracao-alvo-${sceneId}`}
@@ -132,11 +193,11 @@ export function SceneTempoAlvo({
             if (e.key === "Enter") e.currentTarget.blur();
           }}
         />
-        <span className="text-muted-foreground">min</span>
-        {avaliacao && <span className="text-muted-foreground">· {mensagemMedia(avaliacao, "plano", "planos")}</span>}
+        <span className="text-muted-foreground">min{divisao ? " · referência do total" : ""}</span>
+        {avaliacao && !divisao && <span className="text-muted-foreground">· {mensagemMedia(avaliacao, "plano", "planos")}</span>}
       </div>
 
-      {avaliacao ? (
+      {divisao ? null : avaliacao ? (
         <>
           {mostrarRod && (
             <p className="text-muted-foreground">

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { gerarNomeArquivo } from "@/lib/filename";
 import { computeAutoFillPrepMin, computeAutoFillRodMin, minutesToTime, timeToMinutes } from "@/lib/schedule";
+import { planosDaParte } from "@/lib/scene-parts-shared";
 import { computeSceneShotTotals } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
 
@@ -158,8 +159,12 @@ export function OrdemDoDiaWizard({
     setSceneTimeRows((prev) =>
       prev.map((row) => {
         if (row.sceneId !== sceneId) return row;
-        const shotsTotal = shots.length > 0 ? computeSceneShotTotals(shots) : null;
-        return { ...row, shots, shotsTotal, rodMin: shotsTotal ? shotsTotal.totalMin : row.rodMin };
+        // Parte de cena dividida: a lista mostra os planos dela + os sem parte; o Rod é só dos
+        // atribuídos a ela (mesma regra de resolveRodDaParte).
+        const visiveis = planosDaParte(shots, row.parte?.id ?? null);
+        const doRod = row.parte ? shots.filter((s) => s.scenePartId === row.parte!.id) : shots;
+        const shotsTotal = doRod.length > 0 ? computeSceneShotTotals(doRod) : null;
+        return { ...row, shots: visiveis, shotsTotal, rodMin: shotsTotal ? shotsTotal.totalMin : row.rodMin };
       })
     );
   }

@@ -10,6 +10,7 @@ import { ShotListDrawer } from "@/components/stripboard/shot-list-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
+import { formatOitavos, numeroComParte, origemRodDaParte, vinculoDaParte } from "@/lib/scene-parts-shared";
 import { DEFAULT_PREP_MIN, formatHHh, MIN_ROD_MIN } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 
@@ -60,7 +61,7 @@ export function StripCard({
   fatorResetPercent?: number;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.sceneId,
+    id: item.itemId,
   });
   const [prepDraft, setPrepDraft] = useState(item.prepMin?.toString() ?? "");
   const [rodDraft, setRodDraft] = useState(item.rodMin?.toString() ?? "");
@@ -87,9 +88,15 @@ export function StripCard({
   const showTempoBadge = !neutral && Boolean(onUpdateTimes) && (item.prepMin ?? 0) === 0 && (item.rodMin ?? 0) === 0;
   // De onde o Rod desta cena deveria vir: a duração alvo da AD, se ela definiu; senão a soma dos
   // planos. Os dois sincronizam sozinhos (syncSceneRodMin) — o selo só aparece se alguém digitou o
-  // Rod à mão nesta diária e ele ficou diferente da fonte.
-  const duracaoAlvo = item.scene.duracaoAlvoMin;
-  const rodEsperado = duracaoAlvo ?? (hasShots ? item.shotsSummary!.totalMin : null);
+  // Rod à mão nesta diária e ele ficou diferente da fonte. Parte de cena dividida: a soma dos planos
+  // atribuídos a ELA; a duração alvo é do total e não define Rod de parte.
+  const parte = item.parte;
+  const duracaoAlvo = parte ? null : item.scene.duracaoAlvoMin;
+  const rodEsperado = parte
+    ? parte.fonteRod === "PLANOS"
+      ? parte.rodMin
+      : null
+    : (duracaoAlvo ?? (hasShots ? item.shotsSummary!.totalMin : null));
   const showTempoManualBadge =
     !neutral && Boolean(onUpdateTimes) && rodEsperado !== null && item.rodMin !== rodEsperado;
 
@@ -100,6 +107,8 @@ export function StripCard({
   }
 
   const canExpand = Boolean(projectId);
+  const divisaoNaoFecha = item.scene.divisaoNaoFecha;
+  const tempoEstimadoDaTira = parte ? parte.tempoEstimadoMin : item.scene.tempoEstimadoMin;
   const classeLuz = item.scene.classeLuz;
   const borderGradient = !neutral && classeLuz === "TRANSICAO" ? gradientFor(item.scene.classeLuzFim) : undefined;
   const borderColor =
@@ -142,8 +151,16 @@ export function StripCard({
         </button>
 
         <span className="w-7 shrink-0 text-center font-bold">{item.scene.numero}</span>
+        {parte && (
+          <span
+            className="max-w-24 shrink-0 truncate rounded border border-scheduling-fg/40 bg-scheduling-bg px-1 py-0.5 text-[10px] font-semibold text-scheduling-fg"
+            title={vinculoDaParte(item.scene.numero, parte, parte.outras)}
+          >
+            {parte.rotulo}
+          </span>
+        )}
 
-        {(isOmitida || hasConflict) && (
+        {(isOmitida || hasConflict || divisaoNaoFecha) && (
           <span className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
             {isOmitida && (
               <Tooltip>
@@ -162,6 +179,14 @@ export function StripCard({
                   <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" />
                 </TooltipTrigger>
                 <TooltipContent>{conflicts!.join("\n")}</TooltipContent>
+              </Tooltip>
+            )}
+            {divisaoNaoFecha && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-alerta-fg" />
+                </TooltipTrigger>
+                <TooltipContent>{divisaoNaoFecha}</TooltipContent>
               </Tooltip>
             )}
           </span>
@@ -188,7 +213,9 @@ export function StripCard({
           )}
         </span>
 
-        <span className="w-10 shrink-0 text-right text-xs">{formatPaginas(item.scene.paginas)}</span>
+        <span className="w-10 shrink-0 text-right text-xs">
+          {parte ? formatOitavos(parte.oitavos) : formatPaginas(item.scene.paginas)}
+        </span>
 
         <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">
           {schedule ? formatHHh(schedule.rodStart) : "—"}
@@ -208,6 +235,10 @@ export function StripCard({
 
       {expanded && canExpand && (
         <div className="space-y-2.5 border-t px-3 py-2.5 text-xs" onClick={(e) => e.stopPropagation()}>
+          {parte && (
+            <p className="font-medium text-scheduling-fg">{vinculoDaParte(item.scene.numero, parte, parte.outras)}</p>
+          )}
+          {divisaoNaoFecha && <p className="font-semibold text-alerta-fg">{divisaoNaoFecha}</p>}
           {item.scene.sinopse && <p className="text-muted-foreground">{item.scene.sinopse}</p>}
 
           <div className="flex flex-wrap items-center gap-3">
@@ -245,8 +276,8 @@ export function StripCard({
           {showTempoBadge && (
             <p className="font-semibold text-alerta-fg">
               ! Tempo não definido nesta diária —{" "}
-              {item.scene.tempoEstimadoMin
-                ? `o Rod usa o tempo estimado pelos oitavos (${formatTempoEstimado(item.scene.tempoEstimadoMin)})`
+              {tempoEstimadoDaTira
+                ? `o Rod usa o tempo estimado pelos oitavos${parte ? " da parte" : ""} (${formatTempoEstimado(tempoEstimadoDaTira)})`
                 : `o Rod usa o mínimo de ${MIN_ROD_MIN}min`}
               {item.prepMin === null && `; o Prep usa o padrão de ${DEFAULT_PREP_MIN}min`}.
             </p>
@@ -260,11 +291,18 @@ export function StripCard({
             </p>
           )}
 
+          {parte && (
+            <p className={parte.fonteRod === "MINIMO" ? "font-semibold text-alerta-fg" : "text-muted-foreground"}>
+              Rod da parte: {formatTempoEstimado(parte.rodMin)} ({origemRodDaParte(parte.fonteRod)})
+              {parte.minSemParte > 0 && ` · ${formatTempoEstimado(parte.minSemParte)} em planos sem parte`}
+            </p>
+          )}
+
           {showTempoManualBadge && rodEsperado !== null && (
             <p className="flex flex-wrap items-center gap-2 font-semibold text-alerta-fg">
               {duracaoAlvo != null
                 ? `Tempo manual — duração alvo é ${formatTempoEstimado(duracaoAlvo)}`
-                : `Tempo manual — planos somam ${item.shotsSummary!.totalMin}min`}
+                : `Tempo manual — planos ${parte ? "da parte " : ""}somam ${rodEsperado}min`}
               <button
                 type="button"
                 className="rounded border border-alerta-accent/60 bg-alerta-bg px-1.5 py-0.5 font-semibold hover:bg-alerta-bg/70"
@@ -285,7 +323,7 @@ export function StripCard({
                 {item.shotsSummary!.count} planos · {item.shotsSummary!.takesTotal} takes
               </button>
             ) : null}
-            <span hidden={duracaoAlvo != null}>
+            <span hidden={duracaoAlvo != null || Boolean(parte)}>
               {hasShots
                 ? `${formatTempoEstimado(item.shotsSummary!.totalMin)} estimado`
                 : item.scene.tempoEstimadoMin != null
@@ -319,8 +357,9 @@ export function StripCard({
               initialObservacoes={item.observacoes}
               initialObservacoesAutoGeradas={item.observacoesAutoGeradas}
               fatorResetPercent={fatorResetPercent}
-              initialDuracaoAlvoMin={duracaoAlvo}
+              initialDuracaoAlvoMin={item.scene.duracaoAlvoMin}
               tempoEstimadoMin={item.scene.tempoEstimadoMin}
+              parte={parte}
             />
           )}
         </div>
@@ -332,8 +371,9 @@ export function StripCard({
           onOpenChange={setDrawerOpen}
           projectId={projectId}
           sceneId={item.sceneId}
-          sceneNumero={item.scene.numero}
+          sceneNumero={numeroComParte(item.scene.numero, parte)}
           shootDayId={shootDayId}
+          parteId={item.scenePartId}
         />
       )}
     </div>

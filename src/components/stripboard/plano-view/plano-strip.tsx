@@ -125,11 +125,14 @@ export function ResetDivider({
 
 export function PlanoStrip({
   entry,
+  sceneLabel,
   colorHex,
   onBlocoChange,
   savingBloco,
 }: {
   entry: PlanoScheduleEntry;
+  /** "19 · Voice off" quando a cena é dividida — sem ele, o número da cena. */
+  sceneLabel?: string;
   colorHex: string;
   onBlocoChange: (scheduleId: string, bloco: "MANHA" | "TARDE" | null) => void;
   savingBloco: boolean;
@@ -156,8 +159,8 @@ export function PlanoStrip({
       {...attributes}
       {...listeners}
     >
-      <span className="w-16 shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
-        C{shot.scene.numero}·P{shot.numero}
+      <span className="min-w-[4rem] shrink-0 font-mono text-xs font-semibold" title="Cena · Plano">
+        C{sceneLabel ?? shot.scene.numero}·P{shot.numero}
       </span>
       <PrioridadeTag prioridade={shot.prioridade} className="w-[72px] justify-center" />
       <span className="w-24 shrink-0 truncate text-xs text-muted-foreground" title={shot.tamanho ?? undefined}>

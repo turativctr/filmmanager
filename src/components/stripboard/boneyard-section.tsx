@@ -22,7 +22,7 @@ export function BoneyardSection({
   items: StripItem[];
   characterMap: Record<string, { idCurto: string; numeroElenco: number | null; personagem: string }>;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
-  onUpdateTimes: (sceneId: string, prepMin: number | null, rodMin: number | null) => void;
+  onUpdateTimes: (itemId: string, prepMin: number | null, rodMin: number | null) => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -35,7 +35,7 @@ export function BoneyardSection({
         <CardTitle className="flex items-center gap-1.5 text-base">
           Boneyard ({items.length})
           <span onClick={(e) => e.stopPropagation()}>
-            <TermTooltip content="Área do Stripboard onde ficam as cenas ainda não agendadas em nenhum dia de filmagem." />
+            <TermTooltip content="Área do Stripboard onde ficam as cenas ainda não agendadas em nenhum dia de filmagem — e, de cena dividida entre diárias, cada parte ainda sem diária." />
           </span>
         </CardTitle>
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -44,19 +44,19 @@ export function BoneyardSection({
         <CardContent>
           <StripDropZone
             id="boneyard"
-            itemIds={items.map((i) => i.sceneId)}
+            itemIds={items.map((i) => i.itemId)}
             emptyLabel="Nenhuma cena não agendada."
           >
             {items.map((item) => (
               <StripCard
-                key={item.sceneId}
+                key={item.itemId}
                 item={item}
                 neutral
                 characterLabels={item.scene.characterIds.map((id) => {
                   const c = characterMap[id];
                   return c ? getCharacterId(c, { sistemaIdElenco }) : id;
                 })}
-                onUpdateTimes={(prep, rod) => onUpdateTimes(item.sceneId, prep, rod)}
+                onUpdateTimes={(prep, rod) => onUpdateTimes(item.itemId, prep, rod)}
                 projectId={projectId}
               />
             ))}

@@ -27,6 +27,8 @@ export type ShotData = {
   ehMaster: boolean;
   /** O que pode cair quando a diária estoura. Coverage não herda do pai. */
   prioridade: ShotPrioridade;
+  /** Parte da cena dividida em que o plano é filmado; null = sem parte (aparece em todas). */
+  scenePartId: string | null;
   /** Plano do qual este é coverage — null = plano solto. Um nível só. */
   planoPaiId: string | null;
 };

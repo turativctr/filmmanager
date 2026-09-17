@@ -63,6 +63,9 @@ export type StripItem = {
    *  quando a cena está de fato agendada num dia (undefined no Boneyard, onde não há SceneShootDay). */
   observacoes?: string | null;
   observacoesAutoGeradas?: boolean;
+  /** Registro do que aconteceu com esta cena NESTA diária. Tirar a tira da diária apaga isto — a
+   *  tela confirma antes (ver StripboardBoard). undefined no Boneyard. */
+  execucao?: { status: "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA" | "ADIADA"; horaInicioReal: string | null; horaFimReal: string | null };
 };
 
 export type DayState = {

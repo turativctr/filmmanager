@@ -20,6 +20,7 @@
     "verify:divisao": "tsx scripts/verify-divisao-cena.ts",
     "verify:boneyard": "tsx scripts/verify-boneyard-filtro.ts",
     "verify:timeline": "tsx scripts/verify-timeline-dia.ts",
+    "verify:execucao": "tsx scripts/verify-execucao-preservada.ts",
     "verify:pdf": "tsx --tsconfig scripts/tsconfig.pdf.json scripts/verify-pdf-colisoes.tsx"
   },
   "prisma": {

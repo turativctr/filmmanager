@@ -31,9 +31,12 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  // Evento automático que a AD editou passa a ser dela: "Regenerar automáticos" apaga e refaz os
+  // automáticos, e sem isto a edição sumiria no próximo regenerar (mesma regra de
+  // SceneShootDay.observacoesAutoGeradas).
   const updated = await prisma.horaAHoraEvent.update({
     where: { id: event.id },
-    data: parsed.data,
+    data: { ...parsed.data, geradoAutomaticamente: false },
   });
 
   return NextResponse.json(updated);

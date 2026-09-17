@@ -213,6 +213,11 @@ export default async function StripboardPage({ params }: { params: { id: string 
               rodMin: t.cena.rodMin,
               observacoes: t.cena.observacoes,
               observacoesAutoGeradas: t.cena.observacoesAutoGeradas,
+              execucao: {
+                status: t.cena.status,
+                horaInicioReal: t.cena.horaInicioReal,
+                horaFimReal: t.cena.horaFimReal,
+              },
             },
           }
     );

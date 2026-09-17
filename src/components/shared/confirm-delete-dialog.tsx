@@ -22,10 +22,14 @@ export function ConfirmDeleteDialog({
   onConfirm,
   open,
   onOpenChange,
+  confirmLabel,
 }: {
   title: string;
   description: string;
   onConfirm: () => Promise<void> | void;
+  /** Rótulo do botão de confirmação; padrão "Excluir". Usado quando a ação não é exclusão (ex.:
+   *  mover uma cena de diária, que apaga o registro de execução). */
+  confirmLabel?: string;
   /** Modo controlado — quando informado, não renderiza o trigger padrão (ícone de lixeira); quem
    *  chama controla a abertura por fora (ex.: um item de DropdownMenuItem). Necessário porque
    *  aninhar um AlertDialogTrigger dentro de um DropdownMenuItem quebra o fechamento do menu. */
@@ -60,7 +64,7 @@ export function ConfirmDeleteDialog({
               setLoading(false);
             }}
           >
-            {loading ? "Excluindo..." : "Excluir"}
+            {loading ? (confirmLabel ? "Salvando..." : "Excluindo...") : (confirmLabel ?? "Excluir")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -808,6 +808,11 @@ model SceneShootDay {
   bloco          SceneBlock          @default(MANHA)
   prepMin        Int?
   rodMin         Int?
+  // REGISTRO DE EXECUÇÃO — o que de fato aconteceu nesta diária. Vira relatório de progresso,
+  // prestação de contas e justificativa de hora extra. Reordenar a diária ou salvar a OD NUNCA pode
+  // reescrever estes três: a rota de reordenação atualiza a linha no lugar (nada de apagar e
+  // recriar) e só mexe em ordem/bloco/prep/Rod. Mudar a cena de diária é o único caso em que
+  // zeram, porque a execução pertence à diária em que aconteceu — e a tela confirma antes.
   status         SceneShootDayStatus @default(PENDENTE)
   horaInicioReal String?
   horaFimReal    String?
@@ -816,8 +821,7 @@ model SceneShootDay {
   // e do BreakdownSheet, que é técnico) — pré-preenchidas automaticamente na primeira vez que a
   // cena é agendada num dia (ver stripboard/reorder route), editáveis livremente depois.
   // observacoesAutoGeradas vira false assim que o AD edita o campo (controla o badge "Gerado
-  // automaticamente" na UI) e precisa ser preservado através do delete+recreate do reorder route,
-  // igual a `observacoes`.
+  // automaticamente" na UI).
   observacoes            String?  @db.Text
   observacoesAutoGeradas Boolean  @default(false)
 

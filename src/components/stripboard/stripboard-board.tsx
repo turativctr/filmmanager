@@ -14,12 +14,16 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { AlmocoMarker } from "@/components/stripboard/almoco-marker";
 import { BoneyardSection } from "@/components/stripboard/boneyard-section";
 import { DaySidebar } from "@/components/stripboard/day-sidebar";
 import { ShootDayColumn } from "@/components/stripboard/shoot-day-column";
 import { StripCard } from "@/components/stripboard/strip-card";
 import { getCharacterId } from "@/lib/character-id";
+import { numeroComParte } from "@/lib/scene-parts-shared";
+import { temExecucao } from "@/lib/scene-shoot-day-fields";
+import { STATUS_LABEL } from "@/lib/scene-progress";
 import {
   computeAutoFillPrepMin,
   computeAutoFillRodMin,
@@ -38,6 +42,17 @@ import {
 } from "./board-state";
 import { almocoMarkerDayId, cenasDoDia, dayContainerId, isAlmocoMarkerId, isBlocoItemId } from "./types";
 import type { BoardState, ContainerId, DayState, StripItem } from "./types";
+
+/** Registro do que já aconteceu com a cena NESTA diária. Tirar a tira daqui apaga isso, então o
+ *  quadro pergunta antes — reordenar dentro do mesmo dia nunca passa por aqui. */
+function descreverExecucao(item: StripItem): string | null {
+  const e = item.execucao;
+  if (!e || !temExecucao(e)) return null;
+  const horas = [e.horaInicioReal, e.horaFimReal].filter(Boolean).join(" às ");
+  const partes = [STATUS_LABEL[e.status]];
+  if (horas) partes.push(horas);
+  return partes.join(" · ");
+}
 
 function setBoneyard(board: BoardState, boneyard: StripItem[]): BoardState {
   return { ...board, boneyard };
@@ -71,6 +86,11 @@ export function StripboardBoard({
   const [board, setBoard] = useState(initialBoard);
   const [activeItem, setActiveItem] = useState<StripItem | null>(null);
   const [activeMarkerDay, setActiveMarkerDay] = useState<DayState | null>(null);
+  /** Movimento que apaga registro de execução, esperando confirmação da AD. */
+  const [movimentoARevisar, setMovimentoARevisar] = useState<{
+    aviso: string;
+    aplicar: () => void;
+  } | null>(null);
   const initialBoardRef = useRef(initialBoard);
 
   // dnd-kit gera ids de acessibilidade (aria-describedby) sequenciais que divergem
@@ -248,8 +268,30 @@ export function StripboardBoard({
     }
 
     const previousBoard = board;
-    setBoard(nextBoard);
-    persistChanges(nextBoard, Array.from(touched), previousBoard);
+    const aplicar = () => {
+      setBoard(nextBoard);
+      persistChanges(nextBoard, Array.from(touched), previousBoard);
+    };
+
+    // Mudar de diária (ou voltar pro Boneyard) descarta status e horas reais daquela diária — é
+    // registro do que aconteceu, não planejamento. Confirma antes, nomeando o que se perde.
+    const execucao = sourceContainer !== destContainer ? descreverExecucaoDoMovimento(board, sourceContainer, activeId) : null;
+    if (execucao) {
+      setMovimentoARevisar({ aviso: execucao, aplicar });
+      return;
+    }
+    aplicar();
+  }
+
+  function descreverExecucaoDoMovimento(b: BoardState, container: ContainerId, itemId: string): string | null {
+    const item = getItems(b, container).find((i) => i.itemId === itemId);
+    if (!item) return null;
+    const registro = descreverExecucao(item);
+    if (!registro) return null;
+    const dia = b.days.find((d) => `day:${d.id}` === container);
+    return `A cena ${numeroComParte(item.scene.numero, item.parte)} está marcada como ${registro}${
+      dia ? ` na diária ${dia.numeroDia}` : ""
+    }. Tirar a cena daí apaga esse registro — ele é do que aconteceu naquela diária.`;
   }
 
   function handleUpdateTimes(itemId: string, prepMin: number | null, rodMin: number | null) {
@@ -321,6 +363,20 @@ export function StripboardBoard({
             />
           </div>
         </div>
+
+        <ConfirmDeleteDialog
+          open={movimentoARevisar !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setMovimentoARevisar(null);
+          }}
+          title="Mover apaga o registro de execução"
+          description={movimentoARevisar?.aviso ?? ""}
+          confirmLabel="Mover mesmo assim"
+          onConfirm={() => {
+            movimentoARevisar?.aplicar();
+            setMovimentoARevisar(null);
+          }}
+        />
 
         <DragOverlay>
           {activeItem && (

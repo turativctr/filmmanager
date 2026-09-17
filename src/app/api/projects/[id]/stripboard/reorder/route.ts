@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { parsePersonagemPrefixed, type CharacterLike } from "@/lib/ordem-do-dia";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
+import { dadosDaReordenacao } from "@/lib/scene-shoot-day-fields";
 import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 import { stripboardReorderSchema } from "@/lib/validation/stripboard";
 
@@ -130,14 +131,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     ],
   };
 
-  // Preserva observações existentes (e a flag observacoesAutoGeradas) através do delete+recreate
-  // abaixo — sem isso, qualquer drag no Stripboard apagaria as notas do AD. Só pré-preenche pra
-  // pares (tira, diária) genuinamente novos (a tira nunca esteve nesse dia antes).
-  const existing = await prisma.sceneShootDay.findMany({
-    where: tiraWhere,
-    select: { sceneId: true, scenePartId: true, shootDayId: true, observacoes: true, observacoesAutoGeradas: true },
-  });
-  const existingByPair = new Map(existing.map((e) => [`${tiraKey(e)}:${e.shootDayId}`, e]));
+  // Linhas que já existem destas tiras. A linha é ATUALIZADA no lugar, nunca apagada e recriada:
+  // status, hora de início real e hora de fim real são registro do que aconteceu na diária e não
+  // podem sumir porque a AD reordenou o dia (reordenar no meio da filmagem é rotina). Só ordem,
+  // bloco, prep e Rod — planejamento — são reescritos.
+  const existing = await prisma.sceneShootDay.findMany({ where: tiraWhere });
+  const existingByTira = new Map(existing.map((e) => [tiraKey(e), e]));
 
   // Outra parte da mesma cena, fora deste lote, já agendada no dia de destino.
   const conflitoForaDoLote = toCreate.length
@@ -156,50 +155,71 @@ export async function POST(request: Request, { params }: { params: { id: string 
     );
   }
 
-  const characters = toCreate.length
+  const novas = toCreate.filter((c) => !existingByTira.has(tiraKey(c)));
+  const characters = novas.length
     ? await prisma.character.findMany({
         where: { projectId: params.id },
         select: { id: true, idCurto: true, numeroElenco: true, personagem: true },
       })
     : [];
-
-  const observacoesByPair = new Map<string, { observacoes: string | null; observacoesAutoGeradas: boolean }>();
-  for (const change of toCreate) {
-    const key = `${tiraKey(change)}:${change.shootDayId}`;
-    const prior = existingByPair.get(key);
-    if (prior) {
-      observacoesByPair.set(key, { observacoes: prior.observacoes, observacoesAutoGeradas: prior.observacoesAutoGeradas });
-    } else {
-      const prefill = await computePrefillObservacoes(change.sceneId, characters);
-      observacoesByPair.set(key, { observacoes: prefill, observacoesAutoGeradas: prefill !== null });
-    }
+  // Pré-preenchimento só pra tira que nunca esteve em diária nenhuma.
+  const prefillPorTira = new Map<string, string | null>();
+  for (const change of novas) {
+    prefillPorTira.set(tiraKey(change), await computePrefillObservacoes(change.sceneId, characters));
   }
 
-  // Duas fases: apaga tudo primeiro, depois recria — evita colisão com a
-  // constraint única (shootDayId, ordem) ao reordenar/trocar cenas de posição.
+  const paraRemover = existing.filter((e) => !toCreate.some((c) => tiraKey(c) === tiraKey(e)));
+
   await prisma.$transaction(async (tx) => {
     for (const b of blocos) {
       await tx.shootDayBlock.update({ where: { id: b.id }, data: { ordem: b.ordem, bloco: b.bloco } });
     }
     if (changes.length === 0) return;
-    await tx.sceneShootDay.deleteMany({ where: tiraWhere });
 
-    if (toCreate.length) {
-      await tx.sceneShootDay.createMany({
-        data: toCreate.map((change) => {
-          const obs = observacoesByPair.get(`${tiraKey(change)}:${change.shootDayId}`);
-          return {
-            sceneId: change.sceneId,
-            scenePartId: change.scenePartId ?? null,
-            shootDayId: change.shootDayId!,
-            bloco: change.bloco!,
-            ordem: change.ordem,
-            prepMin: change.prepMin ?? undefined,
-            rodMin: change.rodMin ?? undefined,
-            observacoes: obs?.observacoes ?? null,
-            observacoesAutoGeradas: obs?.observacoesAutoGeradas ?? false,
-          };
+    // Tira que saiu pro Boneyard: a linha deixa de existir (não há diária pra guardar registro).
+    if (paraRemover.length > 0) {
+      await tx.sceneShootDay.deleteMany({ where: { id: { in: paraRemover.map((e) => e.id) } } });
+    }
+
+    // Duas fases na `ordem`: primeiro valores negativos temporários, depois os finais — a constraint
+    // única (shootDayId, ordem) barraria a troca direta de duas cenas de posição.
+    const atualizar = toCreate.flatMap((change) => {
+      const atual = existingByTira.get(tiraKey(change));
+      return atual ? [{ change, atual }] : [];
+    });
+    for (const [i, { atual }] of atualizar.entries()) {
+      await tx.sceneShootDay.update({ where: { id: atual.id }, data: { ordem: -(i + 1) } });
+    }
+
+    for (const { change, atual } of atualizar) {
+      // dadosDaReordenacao decide o que é planejamento (sempre reescrito) e o que é execução (só
+      // zera ao mudar de diária) — ver src/lib/scene-shoot-day-fields.ts.
+      await tx.sceneShootDay.update({
+        where: { id: atual.id },
+        data: dadosDaReordenacao(atual, {
+          shootDayId: change.shootDayId!,
+          bloco: change.bloco!,
+          ordem: change.ordem,
+          prepMin: change.prepMin ?? null,
+          rodMin: change.rodMin ?? null,
         }),
+      });
+    }
+
+    for (const change of novas) {
+      const prefill = prefillPorTira.get(tiraKey(change)) ?? null;
+      await tx.sceneShootDay.create({
+        data: {
+          sceneId: change.sceneId,
+          scenePartId: change.scenePartId ?? null,
+          shootDayId: change.shootDayId!,
+          bloco: change.bloco!,
+          ordem: change.ordem,
+          prepMin: change.prepMin ?? undefined,
+          rodMin: change.rodMin ?? undefined,
+          observacoes: prefill,
+          observacoesAutoGeradas: prefill !== null,
+        },
       });
     }
   });

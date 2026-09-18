@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { DailyProgressReportDialog } from "@/components/ad-documents/daily-progress-report-dialog";
+import { JornadaSimplificada } from "@/components/ordem-do-dia/jornada-simplificada";
 import { SceneProgressPanel } from "@/components/ordem-do-dia/scene-progress-panel";
 import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
@@ -42,6 +43,8 @@ async function downloadOrdemDoDiaPdf(
   URL.revokeObjectURL(objectUrl);
 }
 
+type ModoPlanejamento = "DETALHADO" | "SIMPLIFICADO";
+
 type TimelineBlock = { label: string; startMin: number; durationMin: number; kind: "scene" | "pause" | "bloco" };
 
 type ChecklistItem = {
@@ -69,6 +72,8 @@ export function ShootDayDashboard({
   scheduledScenes,
   initialDailyProgressReport,
   sceneProgress,
+  modoPlanejamento: modoInicial,
+  simplificado,
 }: {
   projectId: string;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
@@ -117,11 +122,28 @@ export function ShootDayDashboard({
     horaInicioReal: string | null;
     horaFimReal: string | null;
   }[];
+  modoPlanejamento: ModoPlanejamento;
+  /** Dados do modo simplificado (orçamento de tempo) — os mesmos da OD, sem planos. */
+  simplificado: Omit<Parameters<typeof JornadaSimplificada>[0], "projectId" | "shootDayId" | "cortaveisMin">;
 }) {
   const router = useRouter();
   const [checklist, setChecklist] = useState(initialChecklist);
   const [regenerating, setRegenerating] = useState(false);
   const [newItem, setNewItem] = useState("");
+  const [modo, setModo] = useState<ModoPlanejamento>(modoInicial);
+
+  // Preferência desta diária (não do projeto): só troca a tela — prep/Rod, OD e PDFs são os mesmos.
+  async function trocarModo(novo: ModoPlanejamento) {
+    if (novo === modo) return;
+    const anterior = modo;
+    setModo(novo);
+    const res = await fetch(`/api/projects/${projectId}/shoot-days/${shootDay.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modoPlanejamento: novo }),
+    });
+    if (!res.ok) setModo(anterior);
+  }
 
   const timelineStart = Math.min(...timelineBlocks.map((b) => b.startMin), 0);
   const timelineEnd = Math.max(...timelineBlocks.map((b) => b.startMin + b.durationMin), timelineStart + 1);
@@ -239,6 +261,36 @@ export function ShootDayDashboard({
         </Card>
       </div>
 
+      <div className="flex items-center gap-2 text-sm" role="radiogroup" aria-label="Modo de planejamento da diária">
+        <span className="text-muted-foreground">Planejamento:</span>
+        {(
+          [
+            ["DETALHADO", "Detalhado"],
+            ["SIMPLIFICADO", "Simplificado"],
+          ] as const
+        ).map(([valor, rotulo]) => (
+          <button
+            key={valor}
+            type="button"
+            role="radio"
+            aria-checked={modo === valor}
+            onClick={() => trocarModo(valor)}
+            className={cn(
+              "rounded-md border px-2.5 py-1",
+              modo === valor
+                ? "border-scheduling-accent bg-scheduling-bg font-medium text-scheduling-fg"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {rotulo}
+          </button>
+        ))}
+        <TermTooltip content="Detalhado: a diária montada a partir das cenas e planos decupados. Simplificado: você define o teto (12h de jornada, ou acaba às 18h) e distribui prep e rodagem por cena — sem planos. Os dois editam os mesmos números; trocar de modo não muda nada nem recalcula nada." />
+      </div>
+
+      {modo === "SIMPLIFICADO" ? (
+        <JornadaSimplificada {...simplificado} projectId={projectId} shootDayId={shootDay.id} cortaveisMin={cortaveisMin} />
+      ) : (
       <Card>
         <CardContent className="p-4">
           <p className="mb-2 text-sm font-semibold">Timeline do dia</p>
@@ -263,6 +315,7 @@ export function ShootDayDashboard({
           </div>
         </CardContent>
       </Card>
+      )}
 
       <SceneProgressPanel
         projectId={projectId}

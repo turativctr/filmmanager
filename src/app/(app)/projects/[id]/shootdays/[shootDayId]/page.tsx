@@ -61,6 +61,19 @@ export default async function ShootDayPage({
     where: { shootDayId: params.shootDayId },
   });
 
+  // Modo simplificado: teto e modo da diária + a Jornada do projeto (preparação inicial e almoço),
+  // que entram na conta do fim previsto igual ao que recalculateDayBlocks grava.
+  const [planejamento, jornadaProjeto] = await Promise.all([
+    prisma.shootDay.findUniqueOrThrow({
+      where: { id: params.shootDayId },
+      select: { jornadaMin: true, horaFimAlvo: true, modoPlanejamento: true },
+    }),
+    prisma.project.findUniqueOrThrow({
+      where: { id: params.id },
+      select: { limiteAlmocoMin: true, duracaoAlmocoMin: true, preparacaoInicialMin: true },
+    }),
+  ]);
+
   const conflictInputs = data.scenes
     .filter((s) => s.schedule)
     .map((s) => ({
@@ -158,6 +171,32 @@ export default async function ShootDayPage({
         horaInicioReal: s.horaInicioReal,
         horaFimReal: s.horaFimReal,
       }))}
+      modoPlanejamento={planejamento.modoPlanejamento}
+      simplificado={{
+        chamadaGeral: data.shootDay.chamadaGeral,
+        desprodInicio: data.shootDay.desprodInicio,
+        config: jornadaProjeto,
+        teto: { jornadaMin: planejamento.jornadaMin, horaFimAlvo: planejamento.horaFimAlvo },
+        // prep/Rod CRUS de SceneShootDay — a tela aplica o mesmo fallback da OD na conta.
+        cenas: data.scenes.map((s) => ({
+          sceneId: s.sceneId,
+          scenePartId: s.parte?.id ?? null,
+          ordem: s.ordem,
+          bloco: s.bloco,
+          numero: s.numero,
+          local: s.setLocacaoDisplay,
+          prepMin: s.prepMin,
+          rodMin: s.rodMin,
+          tempoEstimadoMin: s.tempoEstimadoMin,
+        })),
+        blocos: data.blocosDeTempo.map((b) => ({
+          id: b.id,
+          rotulo: b.rotulo,
+          duracaoMin: b.duracaoMin,
+          ordem: b.ordem,
+          bloco: b.bloco,
+        })),
+      }}
       initialDailyProgressReport={
         dailyProgressReport
           ? {

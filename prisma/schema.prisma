@@ -652,6 +652,11 @@ model SceneCast {
   @@map("scene_cast")
 }
 
+enum ModoPlanejamentoDiaria {
+  DETALHADO
+  SIMPLIFICADO
+}
+
 model ShootDay {
   id               String   @id @default(cuid())
   projectId        String
@@ -691,6 +696,17 @@ model ShootDay {
   // leitura, nos lugares com esta diária em escopo (Stripboard, wizard da OD, PDFs) — nunca é
   // gravado em Shot/ShotSchedule nem entra no cálculo de Rod/blocoManha/almoço.
   fatorResetPercent Int @default(100)
+
+  // Teto da diária — orçamento de tempo do modo simplificado. Um OU outro, nunca os dois (a rota da
+  // diária limpa o outro ao gravar um): jornadaMin = duração máxima contada da chamada geral (720 =
+  // 12h); horaFimAlvo = "18:00", e aí a jornada é que sai da chamada. O teto só AVISA: nunca
+  // redistribui prep/Rod nem bloqueia nada (ver src/lib/jornada-diaria.ts).
+  jornadaMin  Int?
+  horaFimAlvo String?
+  // Como a AD planeja ESTA diária — só muda a tela, nunca o dado: prep/Rod são os mesmos campos de
+  // SceneShootDay nos dois modos, e a OD/PDFs saem iguais. Por diária porque a mesma produção tem
+  // diária decupada e diária corrida.
+  modoPlanejamento ModoPlanejamentoDiaria @default(DETALHADO)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

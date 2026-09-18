@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { JORNADA_MAX_MIN, JORNADA_MIN_MIN } from "@/lib/jornada-diaria";
+
 const timeField = z
   .string()
   .regex(/^\d{2}:\d{2}$/)
@@ -51,3 +53,23 @@ export type ShootDayInput = z.infer<typeof shootDaySchema>;
 export const resetFatorSchema = z.object({
   fatorResetPercent: z.coerce.number().int().min(1).max(500),
 });
+
+// Teto e modo de planejamento da diária (modo simplificado). Mesma rota da diária (PATCH
+// shoot-days/[shootDayId]), mas payload próprio e parcial: o formulário completo acima exige
+// numeroDia/data e nunca manda estes campos, então editar a diária não mexe no teto e vice-versa.
+// `.strict()` recusa qualquer outro campo — é o que separa os dois payloads na rota.
+export const shootDayPlanejamentoSchema = z
+  .object({
+    jornadaMin: z.number().int().min(JORNADA_MIN_MIN).max(JORNADA_MAX_MIN).nullable().optional(),
+    horaFimAlvo: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .nullable()
+      .optional(),
+    modoPlanejamento: z.enum(["DETALHADO", "SIMPLIFICADO"]).optional(),
+  })
+  .strict()
+  .refine((d) => Object.keys(d).length > 0, { message: "Nada pra gravar." })
+  .refine((d) => !(d.jornadaMin != null && d.horaFimAlvo != null), {
+    message: "Defina a jornada OU a hora de fim, não as duas.",
+  });

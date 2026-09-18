@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "postinstall": "prisma generate && node scripts/copy-pdfjs-assets.mjs",
-    "build": "next build",
+    "build": "node scripts/migrate-producao.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",

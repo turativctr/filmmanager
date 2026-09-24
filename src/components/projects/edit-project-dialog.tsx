@@ -165,7 +165,10 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      {/* Painel OPACO e não o vidro padrão dos modais: esta tela é formulário denso, e o conteúdo
+          atrás (Stripboard) atravessava o texto. Largura em min(92vw, 56rem) pra caber os pares de
+          campos sem barra horizontal em 1280, 1024 e 768; a rolagem é vertical, dentro do painel. */}
+      <DialogContent className="max-h-[88vh] w-[min(92vw,56rem)] max-w-none overflow-y-auto bg-surface backdrop-blur-none">
         <DialogHeader>
           <DialogTitle>Editar projeto</DialogTitle>
           <DialogDescription>Dados básicos e configurações do projeto.</DialogDescription>
@@ -307,7 +310,7 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
             </TabsContent>
 
             <TabsContent value="jornada" forceMount className={TAB_CONTENT_CLASS}>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="limiteAlmocoMin" className="inline-flex items-center gap-1.5">
                     Limite para o almoço
@@ -362,8 +365,9 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                   {CLASSIFICACOES.filter((c) => c !== "NAO_CLASSIFICADO").map((classe) => {
                     const f = faixas[classe as keyof typeof faixas];
                     return (
-                      <div key={classe} className="grid grid-cols-[1fr_auto_auto] items-center gap-3">
+                      <div key={classe} className="space-y-1 rounded-md border p-2">
                         <span className="text-sm">{CLASSIFICACAO_LABEL[classe]}</span>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           por plano
                           <Input
@@ -406,6 +410,7 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                           />
                           min
                         </span>
+                        </div>
                       </div>
                     );
                   })}
@@ -420,7 +425,7 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                     ritmo da sua equipe — você ainda pode ajustar plano a plano depois.
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="resetAjusteMin">Ajuste</Label>
                     <Input

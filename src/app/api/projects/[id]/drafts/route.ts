@@ -244,7 +244,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
             linhas: scene.linhas,
-            tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+            // Cena importada nasce SEM tempo: a convenção de 5min por oitavo é referência, não
+            // medição, e gravá-la aqui fazia o app sugerir tempo "sem base nenhuma" (ver
+            // src/lib/estimativa.ts). A tela do import mostra a convenção como referência.
+            tempoEstimadoMin: null,
             omitida: false,
           };
         });
@@ -272,7 +275,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
               : {
                   paginas: scene.paginas.toString(),
                   linhas: scene.linhas,
-                  tempoEstimadoMin: scene.tempoEstimadoMinSugerido,
+                  // Reimportada, nasce sem tempo, como no import novo (ver src/lib/estimativa.ts).
+                  tempoEstimadoMin: null,
                 }),
             omitida: false,
           },

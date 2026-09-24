@@ -25,6 +25,11 @@ export const sceneSchema = z.object({
   }),
   diaNarrativo: z.coerce.number().int().optional().nullable(),
   tempoEstimadoMin: z.coerce.number().int().optional().nullable(),
+  // Escolha da AD, nunca inferida do texto da cena — só serve pro ponto de partida por tipo de
+  // cena (estágio 3 da estimativa, ver src/lib/estimativa.ts).
+  classificacaoTempo: z
+    .enum(["NAO_CLASSIFICADO", "DIALOGO_ESTATICO", "COM_MOVIMENTO", "EFEITO_VFX", "EXTERIOR"])
+    .optional(),
   notasAD: z.string().optional().nullable(),
   characterIds: z.array(z.string()).optional(),
 });

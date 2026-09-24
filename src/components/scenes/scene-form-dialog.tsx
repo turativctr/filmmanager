@@ -26,6 +26,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCharacterId } from "@/lib/character-id";
+import {
+  CLASSIFICACAO_LABEL,
+  CLASSIFICACOES,
+  CONVENCAO_MIN_POR_OITAVO,
+  FAIXAS_PADRAO,
+  textoDeOrientacao,
+  type ClassificacaoCena,
+} from "@/lib/estimativa";
 import { formatPaginas, parsePaginas, suggestTempoEstimadoMin } from "@/lib/paginas";
 
 type CharacterOption = {
@@ -68,6 +76,7 @@ type SceneDefaults = {
   paginas: unknown;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
+  classificacaoTempo?: ClassificacaoCena;
   notasAD: string | null;
   cast: { characterId: string }[];
 };
@@ -98,6 +107,9 @@ export function SceneFormDialog({
   const [novaLocacaoNome, setNovaLocacaoNome] = useState("");
   const [selectedCast, setSelectedCast] = useState<Set<string>>(
     new Set(scene?.cast.map((c) => c.characterId) ?? [])
+  );
+  const [classificacao, setClassificacao] = useState<ClassificacaoCena>(
+    scene?.classificacaoTempo ?? "NAO_CLASSIFICADO"
   );
   const [tempoSugerido, setTempoSugerido] = useState<number | null>(() => {
     if (!scene) return null;
@@ -309,6 +321,26 @@ export function SceneFormDialog({
               />
             </div>
             <div className="space-y-1.5">
+              <Label htmlFor="classificacaoTempo">Tipo de cena (ponto de partida)</Label>
+              <select
+                id="classificacaoTempo"
+                name="classificacaoTempo"
+                defaultValue={scene?.classificacaoTempo ?? "NAO_CLASSIFICADO"}
+                onChange={(e) => setClassificacao(e.target.value as ClassificacaoCena)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                {CLASSIFICACOES.map((c) => (
+                  <option key={c} value={c}>
+                    {CLASSIFICACAO_LABEL[c]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {textoDeOrientacao(classificacao, FAIXAS_PADRAO) ??
+                  "Classifique pra ver um ponto de partida por plano e por oitavo."}
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="tempoEstimadoMin">Tempo estimado (min)</Label>
               <Input
                 id="tempoEstimadoMin"
@@ -318,7 +350,8 @@ export function SceneFormDialog({
               />
               {tempoSugerido != null && (
                 <p className="text-xs text-muted-foreground">
-                  Sugestão baseada nas oitavas: ~{tempoSugerido} min
+                  ~{tempoSugerido} min pela convenção: {CONVENCAO_MIN_POR_OITAVO}min por oitavo. É convenção de
+                  mercado, não medição — deixe vazio se não tiver base.
                 </p>
               )}
             </div>

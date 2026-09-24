@@ -2,9 +2,17 @@ import type { CharacterCategoria, SistemaIdElenco } from "@prisma/client";
 
 import { CHARACTER_CATEGORIA_ORDER } from "@/lib/character-categoria";
 import { getCharacterId } from "@/lib/character-id";
+import { tempoDeReferenciaMin } from "@/lib/estimativa";
 import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
+import {
+  compararLinha,
+  duracaoRealizadaMin,
+  totalDoDia,
+  type LinhaComparada,
+  type TotalDoDia,
+} from "@/lib/realizado";
 import { formatSetLocacao, getShootDayReportData } from "@/lib/report-data";
 import { numeroComParte, paginasDaEntrada, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
@@ -101,7 +109,7 @@ export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanDa
       sinopse: s.scene.sinopse,
       paginas: paginasDaEntrada(Number(s.scene.paginas), s.scenePart),
       tempoEstimadoMin: tempoEstimadoDaEntrada(
-        s.scene.tempoEstimadoMin,
+        tempoDeReferenciaMin(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas)),
         paginasParaOitavos(s.scene.paginas),
         s.scenePart
       ),
@@ -320,6 +328,9 @@ export async function getCrewContactListData(projectId: string): Promise<CrewCon
 
 export type DailyProgressReportData = ProjectHeader & {
   shootDay: { numeroDia: number; data: Date };
+  /** Planejado × realizado desta diária, a partir do que a AD lançou (ver src/lib/realizado.ts).
+   *  Linhas sem realizado lançado ficam de fora: comparar contra o que não existe inventa desvio. */
+  comparacao: { linhas: LinhaComparada[]; total: TotalDoDia };
   report: {
     cenasConcluidas: string[];
     cenasNaoConcluidas: string[];
@@ -343,11 +354,42 @@ export async function getDailyProgressReportData(
   if (!shootDay) return null;
 
   const project = await getProjectHeader(projectId);
-  const report = await prisma.dailyProgressReport.findUnique({ where: { shootDayId } });
+  const [report, dia, blocos] = await Promise.all([
+    prisma.dailyProgressReport.findUnique({ where: { shootDayId } }),
+    getShootDayReportData(projectId, shootDayId),
+    prisma.shootDayBlock.findMany({ where: { shootDayId }, orderBy: { ordem: "asc" } }),
+  ]);
+
+  // Previsto de cada linha = a janela inteira dela (prep + Rod da cena; a duração do bloco).
+  const janelaMin = (inicio: string | null, fim: string | null) =>
+    duracaoRealizadaMin(inicio, fim);
+  const linhasComparadas = [
+    ...(dia?.scenes ?? []).map((cena) =>
+      compararLinha({
+        rotulo: `Cena ${cena.numero}`,
+        previstoMin: janelaMin(cena.schedule?.prepStart ?? null, cena.schedule?.rodEnd ?? null),
+        horaInicioReal: cena.horaInicioReal,
+        horaFimReal: cena.horaFimReal,
+        naoRealizada: cena.status === "ADIADA",
+      })
+    ),
+    ...blocos.map((bloco) =>
+      compararLinha({
+        rotulo: bloco.rotulo,
+        previstoMin: bloco.duracaoMin,
+        horaInicioReal: bloco.horaInicioReal,
+        horaFimReal: bloco.horaFimReal,
+      })
+    ),
+  ];
 
   return {
     ...project,
     shootDay,
+    comparacao: {
+      linhas: linhasComparadas.filter((l) => l.realizadoMin != null || l.naoRealizada),
+      total: totalDoDia(linhasComparadas),
+    },
     report: report
       ? {
           cenasConcluidas: report.cenasConcluidas,

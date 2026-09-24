@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { DailyProgressReportDialog } from "@/components/ad-documents/daily-progress-report-dialog";
 import { JornadaSimplificada } from "@/components/ordem-do-dia/jornada-simplificada";
+import { LancarRealizadoDialog, type LinhaRealizado } from "@/components/ordem-do-dia/lancar-realizado-dialog";
 import { SceneProgressPanel } from "@/components/ordem-do-dia/scene-progress-panel";
 import { NextStepFooter } from "@/components/shared/next-step-footer";
 import { PageHeader } from "@/components/shared/page-header";
@@ -21,6 +22,7 @@ import { gerarNomeArquivo } from "@/lib/filename";
 import type { MakeEntry, QuickChangeAlert } from "@/lib/ordem-do-dia";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import type { SceneShootDayStatusValue } from "@/lib/scene-progress";
+import { compararLinha, fraseComparacao, fraseTotalDoDia, totalDoDia } from "@/lib/realizado";
 import { minutesToTime } from "@/lib/schedule";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +76,8 @@ export function ShootDayDashboard({
   sceneProgress,
   modoPlanejamento: modoInicial,
   simplificado,
+  linhasRealizado,
+  notaDoTotalDoDia,
 }: {
   projectId: string;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
@@ -123,6 +127,11 @@ export function ShootDayDashboard({
     horaFimReal: string | null;
   }[];
   modoPlanejamento: ModoPlanejamento;
+  /** Linhas da diária pra lançar e comparar o realizado (cenas, partes e blocos de tempo). */
+  linhasRealizado: LinhaRealizado[];
+  /** "inclui tempo de convenção (5min por oitavo)" — de onde vem a soma do dia, quando não é tudo
+   *  decisão da AD (ver notaDoTotal em src/lib/estimativa.ts). */
+  notaDoTotalDoDia: string | null;
   /** Dados do modo simplificado (orçamento de tempo) — os mesmos da OD, sem planos. */
   simplificado: Omit<Parameters<typeof JornadaSimplificada>[0], "projectId" | "shootDayId" | "cortaveisMin">;
 }) {
@@ -201,6 +210,13 @@ export function ShootDayDashboard({
         title={`Diária ${shootDay.numeroDia} — ${new Date(shootDay.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}`}
         actions={
           <>
+            <LancarRealizadoDialog
+              projectId={projectId}
+              shootDayId={shootDay.id}
+              numeroDia={shootDay.numeroDia}
+              data={shootDay.data}
+              linhas={linhasRealizado}
+            />
             <DailyProgressReportDialog
               projectId={projectId}
               shootDayId={shootDay.id}
@@ -245,6 +261,7 @@ export function ShootDayDashboard({
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Filmagem estimada</p>
             <p className="text-2xl font-semibold">{formatTempoEstimado(totalMinutos)}</p>
+            {notaDoTotalDoDia && <p className="text-xs text-muted-foreground">{notaDoTotalDoDia}</p>}
             {cortaveisMin > 0 && (
               <p className="text-xs text-muted-foreground">{formatTempoEstimado(cortaveisMin)} cortáveis</p>
             )}
@@ -316,6 +333,8 @@ export function ShootDayDashboard({
         </CardContent>
       </Card>
       )}
+
+      <ComparacaoPlanejadoRealizado linhas={linhasRealizado} />
 
       <SceneProgressPanel
         projectId={projectId}
@@ -437,5 +456,44 @@ export function ShootDayDashboard({
         </NextStepFooter>
       )}
     </div>
+  );
+}
+
+/** Planejado × realizado desta diária — aparece assim que houver qualquer linha lançada. É o retorno
+ *  que faz valer a pena lançar: sem ele, lançar é trabalho sem recompensa. */
+function ComparacaoPlanejadoRealizado({ linhas }: { linhas: LinhaRealizado[] }) {
+  const comparadas = linhas.map((l) =>
+    compararLinha({
+      rotulo: l.rotulo,
+      previstoMin: l.previstoMin,
+      horaInicioReal: l.horaInicioReal,
+      horaFimReal: l.horaFimReal,
+      naoRealizada: l.naoRealizada,
+    })
+  );
+  const lancadas = comparadas.filter((c) => c.realizadoMin != null || c.naoRealizada);
+  if (lancadas.length === 0) return null;
+  const total = totalDoDia(comparadas);
+
+  return (
+    <Card>
+      <CardContent className="space-y-1.5 p-4" data-comparacao-realizado>
+        <p className="text-sm font-semibold">Planejado × realizado</p>
+        {lancadas.map((c, i) => (
+          <p
+            key={i}
+            className={cn(
+              "text-sm",
+              c.desvioMin != null && c.desvioMin > 0 && "text-alerta-fg",
+              c.desvioMin != null && c.desvioMin < 0 && "text-sucesso-fg",
+              c.naoRealizada && "text-muted-foreground"
+            )}
+          >
+            {fraseComparacao(c)}
+          </p>
+        ))}
+        <p className="pt-1 text-sm font-semibold">{fraseTotalDoDia(total)}</p>
+      </CardContent>
+    </Card>
   );
 }

@@ -2,6 +2,7 @@ import { CalendarBoard } from "@/components/calendar/calendar-board";
 import type { CalendarDayData, CalendarMonthSummary } from "@/components/calendar/types";
 import { PageHeader } from "@/components/shared/page-header";
 import { getMonthGrid, toDateKey } from "@/lib/calendar-grid";
+import { tempoDeReferenciaMin } from "@/lib/estimativa";
 import { prisma } from "@/lib/prisma";
 import { numeroComParte, paginasDaEntrada, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
@@ -58,7 +59,12 @@ export default async function CalendarPage({
       const totalPaginas = day.scenes.reduce((sum, s) => sum + paginasDaEntrada(Number(s.scene.paginas), s.scenePart), 0);
       const totalMinutos = day.scenes.reduce(
         (sum, s) =>
-          sum + (tempoEstimadoDaEntrada(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas), s.scenePart) ?? 0),
+          sum +
+          (tempoEstimadoDaEntrada(
+            tempoDeReferenciaMin(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas)),
+            paginasParaOitavos(s.scene.paginas),
+            s.scenePart
+          ) ?? 0),
         0
       );
 
@@ -153,7 +159,12 @@ export default async function CalendarPage({
       .reduce((sum, day) => sum + day.scenes.reduce((s, sd) => s + Number(sd.scene.paginas), 0), 0)
       .toString(),
     totalMinutos: shootDaysInMonth.reduce(
-      (sum, day) => sum + day.scenes.reduce((s, sd) => s + (sd.scene.tempoEstimadoMin ?? 0), 0),
+      (sum, day) =>
+        sum +
+        day.scenes.reduce(
+          (s, sd) => s + (tempoDeReferenciaMin(sd.scene.tempoEstimadoMin, paginasParaOitavos(sd.scene.paginas)) ?? 0),
+          0
+        ),
       0
     ),
     totalCenas: shootDaysInMonth.reduce((sum, day) => sum + day.scenes.length, 0),

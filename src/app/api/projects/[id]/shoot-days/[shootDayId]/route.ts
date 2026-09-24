@@ -31,7 +31,7 @@ export async function PATCH(
     if (!plano.success) {
       return NextResponse.json({ error: plano.error.flatten() }, { status: 400 });
     }
-    const { jornadaMin, horaFimAlvo, modoPlanejamento } = plano.data;
+    const { jornadaMin, horaFimAlvo, modoPlanejamento, reservaMin } = plano.data;
     // Um OU outro: gravar um teto limpa o outro, senão sobraria um teto antigo escondido.
     const teto =
       jornadaMin != null
@@ -42,8 +42,12 @@ export async function PATCH(
     // Sem recalculateDayBlocks: o teto só avisa e o modo só muda a tela — nenhum horário depende deles.
     const updated = await prisma.shootDay.update({
       where: { id: shootDay.id },
-      data: { ...teto, ...(modoPlanejamento ? { modoPlanejamento } : {}) },
-      select: { jornadaMin: true, horaFimAlvo: true, modoPlanejamento: true },
+      data: {
+        ...teto,
+        ...(modoPlanejamento ? { modoPlanejamento } : {}),
+        ...(reservaMin !== undefined ? { reservaMin } : {}),
+      },
+      select: { jornadaMin: true, horaFimAlvo: true, modoPlanejamento: true, reservaMin: true },
     });
     return NextResponse.json(updated);
   }

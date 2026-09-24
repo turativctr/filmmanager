@@ -280,6 +280,11 @@ model Project {
   // Configuração da "Jornada" do dia de filmagem — usada por recalculateDayBlocks (src/lib/shootday-blocks.ts)
   // pra derivar blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de cada ShootDay. O almoço nunca é
   // definido diretamente pelo AD: ele é consequência de onde o marcador fica no Stripboard (ver ShootDay).
+  // Faixas de ponto de partida por tipo de cena (estágio 3 da estimativa), ajustáveis uma vez por
+  // produção — o padrão é chute de gente de set, e editar aqui faz o chute passar a ser da equipe.
+  // Formato e validação em src/lib/estimativa.ts; null = usa o padrão.
+  faixasTempo          Json?
+
   limiteAlmocoMin      Int @default(360) // praxe de mercado: 5 a 6h após a chamada geral
   duracaoAlmocoMin     Int @default(60)
   preparacaoInicialMin Int @default(60) // chamada geral -> início da 1ª cena
@@ -337,6 +342,14 @@ model ProjectStepOverride {
   @@map("project_step_overrides")
 }
 
+enum ClassificacaoTempoCena {
+  NAO_CLASSIFICADO
+  DIALOGO_ESTATICO
+  COM_MOVIMENTO
+  EFEITO_VFX
+  EXTERIOR
+}
+
 model Scene {
   id                String           @id @default(cuid())
   projectId         String
@@ -376,6 +389,11 @@ model Scene {
   // estouro. null = comportamento de sempre, Rod vem da soma dos planos. Nunca redistribui os tempos
   // dos planos — a média por plano é só exibida (ver src/lib/tempo-alvo.ts).
   duracaoAlvoMin    Int?
+  // Classificação ESCOLHIDA pela AD (nunca inferida do texto) — só serve pro estágio 3 da
+  // estimativa, a faixa de ponto de partida por plano quando o projeto ainda não tem realizado
+  // lançado. NAO_CLASSIFICADO é o padrão e é um estado legítimo: sem ela o app diz "sem base pra
+  // estimar" em vez de inventar número.
+  classificacaoTempo ClassificacaoTempoCena @default(NAO_CLASSIFICADO)
   // Vira true assim que o AD edita `paginas` ou `tempoEstimadoMin` diretamente (formulário de
   // cena ou de breakdown) — a reimportação de um novo draft (import/fdx/confirm, drafts) passa a
   // preservar os três campos (paginas/tempoEstimadoMin/linhas) em vez de recalcular por cima,
@@ -697,6 +715,11 @@ model ShootDay {
   // gravado em Shot/ShotSchedule nem entra no cálculo de Rod/blocoManha/almoço.
   fatorResetPercent Int @default(100)
 
+  // Margem que a AD guarda pra atraso, do DIA (não da cena: colchão por cena somado em silêncio faz
+  // perder a noção do total). NUNCA sai em PDF nem em tela compartilhada — se vazar num documento, a
+  // equipe gasta a margem e a produção corta. Coberto por verify:pdf.
+  reservaMin Int?
+
   // Teto da diária — orçamento de tempo do modo simplificado. Um OU outro, nunca os dois (a rota da
   // diária limpa o outro ao gravar um): jornadaMin = duração máxima contada da chamada geral (720 =
   // 12h); horaFimAlvo = "18:00", e aí a jornada é que sai da chamada. O teto só AVISA: nunca
@@ -741,6 +764,10 @@ model ShootDayBlock {
   duracaoMin Int
   ordem      Int
   bloco      SceneBlock @default(MANHA)
+  // Realizado do bloco, lançado depois da diária na mesma tela das cenas (ver a rota realizado).
+  // Bloco não tem status: em branco = não lançado.
+  horaInicioReal String?
+  horaFimReal    String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -824,6 +851,11 @@ model SceneShootDay {
   bloco          SceneBlock          @default(MANHA)
   prepMin        Int?
   rodMin         Int?
+  // A AD DIGITOU este Rod (na tira, no assistente da OD ou no modo simplificado). Valor digitado
+  // manda sobre tudo: syncSceneRodMin não reescreve — a tela mostra "os planos somam 52min, você
+  // definiu 40min" e ela decide. Sem esta marca não dava pra separar o que a AD escolheu do que o
+  // app derivou, e a decupagem apagava a escolha dela em silêncio.
+  rodDigitado    Boolean             @default(false)
   // REGISTRO DE EXECUÇÃO — o que de fato aconteceu nesta diária. Vira relatório de progresso,
   // prestação de contas e justificativa de hora extra. Reordenar a diária ou salvar a OD NUNCA pode
   // reescrever estes três: a rota de reordenação atualiza a linha no lugar (nada de apagar e

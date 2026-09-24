@@ -162,7 +162,8 @@ export function FdxScenePreview({
               <TableHead>Personagens</TableHead>
               <TableHead>Oitavas</TableHead>
               <TableHead>
-                Filmagem <TermTooltip content="Estimativa: 5 min por oitavo (convenção, não uma medição)." />
+                Convenção{" "}
+                <TermTooltip content="5min por oitavo — convenção de mercado, não uma medição. Serve de referência aqui: a cena é importada SEM tempo, e você define o tempo depois, na cena ou na diária." />
               </TableHead>
             </TableRow>
           </TableHeader>

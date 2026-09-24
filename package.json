@@ -22,6 +22,8 @@
     "verify:timeline": "tsx scripts/verify-timeline-dia.ts",
     "verify:execucao": "tsx scripts/verify-execucao-preservada.ts",
     "verify:jornada": "tsx scripts/verify-jornada-diaria.ts",
+    "verify:realizado": "tsx scripts/verify-realizado.ts",
+    "verify:estimativa": "tsx scripts/verify-estimativa.ts",
     "verify:pdf": "tsx --tsconfig scripts/tsconfig.pdf.json scripts/verify-pdf-colisoes.tsx"
   },
   "prisma": {

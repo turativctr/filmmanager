@@ -73,3 +73,17 @@ export async function encontrarColisoes(buffer: Buffer): Promise<{ colisoes: Col
 
   return { colisoes, paginas: doc.numPages };
 }
+
+/** Todo o texto de um PDF, numa string só — usado pra provar que um valor NÃO aparece em documento
+ *  nenhum (a reserva de tempo da AD, ver verify:pdf). Junta os trechos com espaço porque react-pdf
+ *  quebra frases em vários trechos; quem procura por um horário ("20h37") acha do mesmo jeito. */
+export async function textoDoPdf(buffer: Buffer): Promise<string> {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), verbosity: 0 }).promise;
+  const partes: string[] = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const content = await (await doc.getPage(n)).getTextContent();
+    for (const raw of content.items) if ("str" in raw) partes.push(raw.str);
+  }
+  return partes.join(" ");
+}

@@ -21,6 +21,9 @@ import { avaliarTempoAlvo, type AvaliacaoTempoAlvo } from "@/lib/tempo-alvo";
 /** Faixa aceita pro teto em minutos: de 1h a 24h. */
 export const JORNADA_MIN_MIN = 60;
 export const JORNADA_MAX_MIN = 24 * 60;
+/** Reserva: margem do DIA que a AD guarda pra atraso. Máximo de 8h — acima disso não é margem, é
+ *  outro planejamento. */
+export const RESERVA_MAX_MIN = 8 * 60;
 
 export type TetoDiaria = { jornadaMin: number | null; horaFimAlvo: string | null };
 
@@ -127,21 +130,30 @@ export type AvaliacaoJornada =
       /** Limite no relógio (chamada + jornada) e fim previsto — null sem chamada (teto em jornada). */
       limiteMin: number | null;
       fimMin: number | null;
+      /** Margem da AD já considerada na conta. 0 = sem reserva. NUNCA vai pra documento. */
+      reservaMin: number;
+      /** Fim previsto + reserva: o segundo horário, só das telas de planejamento da AD. */
+      fimComReservaMin: number | null;
     };
 
+/** `reservaMin` entra na SOMA: a pergunta da AD é "cabe, já guardando uma hora de margem?". */
 export function avaliarJornada(
   teto: TetoDiaria,
   chamadaGeral: string | null,
-  montada: Pick<JornadaMontada<unknown>, "totalMin" | "fimMin" | "chamadaMin">
+  montada: Pick<JornadaMontada<unknown>, "totalMin" | "fimMin" | "chamadaMin">,
+  reservaMin: number | null = 0
 ): AvaliacaoJornada {
   if (teto.jornadaMin == null && teto.horaFimAlvo == null) return { estado: "SEM_TETO" };
   const alvoMin = jornadaDoTeto(teto, chamadaGeral);
   if (alvoMin === null) return { estado: "TETO_SEM_CHAMADA", horaFimAlvo: teto.horaFimAlvo! };
+  const reserva = reservaMin ?? 0;
   return {
     estado: "AVALIADA",
-    avaliacao: avaliarTempoAlvo({ alvoMin, somaMin: montada.totalMin, partes: [] }),
+    avaliacao: avaliarTempoAlvo({ alvoMin, somaMin: montada.totalMin + reserva, partes: [] }),
     limiteMin: montada.chamadaMin === null ? null : montada.chamadaMin + alvoMin,
     fimMin: montada.fimMin,
+    reservaMin: reserva,
+    fimComReservaMin: montada.fimMin === null ? null : montada.fimMin + reserva,
   };
 }
 
@@ -166,19 +178,25 @@ export function mensagemJornada(
       linhas: [`Defina a chamada geral pra comparar com o fim às ${formatHHh(av.horaFimAlvo)}.`],
     };
   }
-  const { avaliacao, limiteMin, fimMin } = av;
+  const { avaliacao, limiteMin, fimMin, reservaMin, fimComReservaMin } = av;
+  // "Com a reserva de 1h, ..." — a margem é da AD e aparece só aqui; nenhum documento a conhece.
+  const comReserva = reservaMin > 0 ? `Com a reserva de ${formatTempoEstimado(reservaMin)}, ` : "";
   if (!avaliacao.estourou) {
-    return { tom: "coube", linhas: [`Sobram ${formatTempoEstimado(avaliacao.saldoMin)} na jornada.`] };
+    return {
+      tom: "coube",
+      linhas: [`${comReserva}${comReserva ? "sobram" : "Sobram"} ${formatTempoEstimado(avaliacao.saldoMin)} na jornada.`],
+    };
   }
   const excesso = formatTempoEstimado(-avaliacao.saldoMin);
+  const margem = reservaMin > 0 && fimComReservaMin !== null ? `, com reserva ${formatHoraDoDia(fimComReservaMin)}` : "";
   const onde =
     limiteMin !== null && fimMin !== null
-      ? `Fim previsto ${formatHoraDoDia(fimMin)}, limite ${formatHoraDoDia(limiteMin)}.`
+      ? `Fim previsto ${formatHoraDoDia(fimMin)}${margem}, limite ${formatHoraDoDia(limiteMin)}.`
       : `A diária soma ${formatTempoEstimado(avaliacao.somaMin)} e a jornada é de ${formatTempoEstimado(avaliacao.alvoMin)}.`;
   return {
     tom: "estourou",
     linhas: [
-      `Excedeu em ${excesso}. ${onde}`,
+      `${comReserva}${comReserva ? "excede" : "Excedeu"} em ${excesso}. ${onde}`,
       ...(cortaveisMin > 0 ? [`Há ${formatTempoEstimado(cortaveisMin)} em planos cortáveis.`] : []),
       `Corte ${excesso} de prep ou rodagem, ou empurre uma cena pra outra diária.`,
     ],

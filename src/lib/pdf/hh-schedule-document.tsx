@@ -2,6 +2,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
+import { LEGENDA_ORIGEM, rotuloOrigemCurto } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { intercalar } from "@/lib/day-timeline";
 import {
@@ -49,7 +50,8 @@ const COL = {
   elenco: 68, // 3 IDs por linha
   paginas: 34, // "12 7/8" = 24pt
   diaNarrativo: 34, // "Dia 88" = 24pt; cabeçalho "Dia Narr." quebra em duas linhas
-  filmagem: 50, // cabeçalho "Filmagem" em negrito 8.5 = 40pt
+  // "3h20 planos" = 46pt no pior caso (a forma curta da origem entra junto do número).
+  filmagem: 62,
 } as const;
 
 /** Correção 1: NENHUM/AJUSTE não têm divisória; TROCA_LENTE/TROCA_CAMERA usam cinza neutro;
@@ -92,8 +94,12 @@ function SceneRow({
       <Td width={COL.diaNarrativo} align="center">
         {scene.diaNarrativo != null ? `Dia ${scene.diaNarrativo}` : "—"}
       </Td>
+      {/* Forma curta da origem ao lado do tempo; a legenda vai no rodapé do documento. Número sem
+          origem foi o que fez a AD desconfiar do app. */}
       <Td width={COL.filmagem} align="center">
-        {scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}
+        {scene.tempoEstimadoMin != null
+          ? `${formatTempoEstimado(scene.tempoEstimadoMin)} ${rotuloOrigemCurto(scene.origemTempo)}`
+          : "—"}
       </Td>
     </Tr>
   );
@@ -256,6 +262,9 @@ export function HHScheduleDocument({ data }: { data: ShootDayReportData }) {
             {shootDay.desprodInicio && <SeparatorRow label={`DESPRODUÇÃO — ${formatHHh(shootDay.desprodInicio)}`} />}
           </Table>
         </View>
+
+        {/* Legenda da coluna Filmagem: o documento tem que dizer de onde veio cada tempo. */}
+        <Text style={styles.footer}>{LEGENDA_ORIGEM}</Text>
 
         <Text style={styles.footer}>
           End of Shooting Day {shootDay.numeroDia} — {weekdayNameFull(shootDay.data)},{" "}

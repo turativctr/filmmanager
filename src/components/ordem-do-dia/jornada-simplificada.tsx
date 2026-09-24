@@ -15,6 +15,7 @@ import {
   JORNADA_MIN_MIN,
   mensagemJornada,
   montarJornada,
+  RESERVA_MAX_MIN,
   type TetoDiaria,
 } from "@/lib/jornada-diaria";
 import { formatTempoEstimado } from "@/lib/paginas";
@@ -71,6 +72,7 @@ export function JornadaSimplificada({
   desprodInicio,
   config,
   teto: tetoInicial,
+  reservaMin: reservaInicial,
   cenas,
   blocos,
   cortaveisMin,
@@ -81,6 +83,8 @@ export function JornadaSimplificada({
   desprodInicio: string | null;
   config: JornadaConfig;
   teto: TetoDiaria;
+  /** Margem que a AD guarda pro dia. Só aparece aqui; nenhum documento a conhece. */
+  reservaMin: number | null;
   cenas: CenaSimplificada[];
   blocos: BlocoDeTempo[];
   cortaveisMin: number;
@@ -92,6 +96,7 @@ export function JornadaSimplificada({
   const [modoTeto, setModoTeto] = useState<ModoTeto>(
     tetoInicial.jornadaMin != null ? "JORNADA" : tetoInicial.horaFimAlvo != null ? "FIM" : "SEM"
   );
+  const [reserva, setReserva] = useState<number | null>(reservaInicial);
   const [erro, setErro] = useState<string | null>(null);
   // Uma gravação por vez: a rota de reordenação usa `ordem` negativa temporária, e duas transações
   // simultâneas na mesma diária brigariam por ela.
@@ -106,6 +111,7 @@ export function JornadaSimplificada({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assinatura]);
   useEffect(() => setTeto(tetoInicial), [tetoInicial.jornadaMin, tetoInicial.horaFimAlvo]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => setReserva(reservaInicial), [reservaInicial]);
 
   // Recalcula a cada tecla — "mudou um número, tudo abaixo recalcula na hora". Número inválido no
   // rascunho usa o valor gravado até ser corrigido.
@@ -134,7 +140,8 @@ export function JornadaSimplificada({
   );
 
   const montada = montarJornada({ chamadaGeral, config, cenas: cenasEfetivas, blocos: blocosEfetivos });
-  const avaliacao = avaliarJornada(teto, chamadaGeral, montada);
+  const avaliacao = avaliarJornada(teto, chamadaGeral, montada, reserva);
+  const fimComReserva = montada.fimMin !== null && reserva ? montada.fimMin + reserva : null;
   const aviso = mensagemJornada(avaliacao, { cortaveisMin });
   const jornadaMin = jornadaDoTeto(teto, chamadaGeral);
 
@@ -232,6 +239,24 @@ export function JornadaSimplificada({
     });
   }
 
+  function gravarReserva(novo: number | null) {
+    const anterior = reserva;
+    setReserva(novo);
+    setErro(null);
+    enfileirar(async () => {
+      const res = await fetch(`/api/projects/${projectId}/shoot-days/${shootDayId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reservaMin: novo }),
+      });
+      if (!res.ok) {
+        setErro("Não foi possível gravar a reserva.");
+        setReserva(anterior);
+      }
+      return res.ok;
+    });
+  }
+
   function trocarModoTeto(modo: ModoTeto) {
     setModoTeto(modo);
     // Trocar o tipo não inventa número: "Sem teto" limpa; os outros só gravam quando a AD digitar.
@@ -299,6 +324,19 @@ export function JornadaSimplificada({
                 }}
               />
             </label>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <label className="flex items-center gap-1">
+            <span className="text-muted-foreground">Reserva do dia</span>
+            <ReservaInput valorMin={reserva} onCommit={gravarReserva} />
+          </label>
+          {fimComReserva !== null && (
+            <span className="rounded-md bg-scheduling-bg px-2 py-0.5 text-scheduling-fg" data-com-reserva>
+              Com reserva {formatHoraDoDia(fimComReserva)}
+              <span className="ml-1 text-xs text-muted-foreground">só você vê — não sai em documento</span>
+            </span>
           )}
         </div>
 
@@ -484,5 +522,43 @@ function JornadaInput({ valorMin, onCommit }: { valorMin: number | null; onCommi
       <input type="number" min={0} max={59} step={5} aria-label="Minutos de jornada" className={campo} value={m} onChange={(e) => setM(e.target.value)} onKeyDown={(e) => e.key === "Enter" && commit()} />
       <span className="text-muted-foreground">min</span>
     </span>
+  );
+}
+
+/** Reserva do dia em horas e minutos. Campo vazio = sem reserva (grava null). */
+function ReservaInput({ valorMin, onCommit }: { valorMin: number | null; onCommit: (min: number | null) => void }) {
+  const [texto, setTexto] = useState(valorMin != null ? String(valorMin) : "");
+  useEffect(() => setTexto(valorMin != null ? String(valorMin) : ""), [valorMin]);
+
+  function commit() {
+    const limpo = texto.trim();
+    if (limpo === "") {
+      if (valorMin != null) onCommit(null);
+      return;
+    }
+    const n = Number(limpo);
+    if (!Number.isInteger(n) || n < 1 || n > RESERVA_MAX_MIN) {
+      setTexto(valorMin != null ? String(valorMin) : "");
+      return;
+    }
+    if (n !== valorMin) onCommit(n);
+  }
+
+  return (
+    <>
+      <input
+        type="number"
+        min={0}
+        max={RESERVA_MAX_MIN}
+        aria-label="Reserva do dia em minutos"
+        className="w-16 rounded border bg-background px-1 py-0.5 text-right tabular-nums"
+        value={texto}
+        placeholder="0"
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      <span className="text-muted-foreground">min</span>
+    </>
   );
 }

@@ -152,7 +152,18 @@ export function OrdemDoDiaWizard({
   }
 
   function updateSceneTime(sceneId: string, patch: Partial<Pick<SceneTimeRow, "prepMin" | "rodMin">>) {
-    setSceneTimeRows((prev) => prev.map((row) => (row.sceneId === sceneId ? { ...row, ...patch } : row)));
+    setSceneTimeRows((prev) =>
+      prev.map((row) =>
+        row.sceneId === sceneId
+          ? {
+              ...row,
+              ...patch,
+              // Mexer no campo de Rod aqui é a AD decidindo — apagar o campo desfaz a marca.
+              ...("rodMin" in patch ? { rodDigitado: patch.rodMin != null } : {}),
+            }
+          : row
+      )
+    );
   }
 
   // Chamado após editar um plano inline no Passo 2 — a rota PATCH de Shot já recalcula e
@@ -181,8 +192,11 @@ export function OrdemDoDiaWizard({
       function recomputeBloco(rows: SceneTimeRow[]): SceneTimeRow[] {
         return rows.map((row, index) => ({
           ...row,
-          // Duração alvo da AD manda no Rod; sem ela, o tempo estimado por oitavos.
-          rodMin: computeAutoFillRodMin(row.duracaoAlvoMin ?? row.tempoEstimadoMin),
+          // Só o PREP é distribuído. O Rod fica vazio: preencher com o tempo estimado por oitavos
+          // fazia a convenção virar número com cara de decisão da AD (ver src/lib/estimativa.ts).
+          // A duração alvo, quando existe, já manda no Rod pelo próprio fallback.
+          rodMin: null,
+          rodDigitado: false,
           prepMin: computeAutoFillPrepMin(rows[index - 1], row, 90),
         }));
       }
@@ -260,6 +274,7 @@ export function OrdemDoDiaWizard({
           bloco: row.bloco,
           ordem: row.ordem,
           prepMin: row.prepMin,
+          rodDigitado: row.rodDigitado,
           rodMin: row.rodMin,
         })),
       }),

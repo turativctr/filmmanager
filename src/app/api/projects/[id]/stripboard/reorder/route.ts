@@ -202,6 +202,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
           ordem: change.ordem,
           prepMin: change.prepMin ?? null,
           rodMin: change.rodMin ?? null,
+          // Ausente = a linha continua com a marca que tinha (arrastar não desmarca um Rod digitado).
+          rodDigitado: change.rodDigitado ?? atual.rodDigitado,
         }),
       });
     }
@@ -217,6 +219,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
           ordem: change.ordem,
           prepMin: change.prepMin ?? undefined,
           rodMin: change.rodMin ?? undefined,
+          rodDigitado: change.rodDigitado ?? false,
           observacoes: prefill,
           observacoesAutoGeradas: prefill !== null,
         },

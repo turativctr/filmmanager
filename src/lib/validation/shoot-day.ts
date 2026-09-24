@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { JORNADA_MAX_MIN, JORNADA_MIN_MIN } from "@/lib/jornada-diaria";
+import { JORNADA_MAX_MIN, JORNADA_MIN_MIN, RESERVA_MAX_MIN } from "@/lib/jornada-diaria";
 
 const timeField = z
   .string()
@@ -67,6 +67,9 @@ export const shootDayPlanejamentoSchema = z
       .nullable()
       .optional(),
     modoPlanejamento: z.enum(["DETALHADO", "SIMPLIFICADO"]).optional(),
+    // Margem do dia (só a AD vê; nunca sai em documento). 0 e null são a mesma coisa na prática, mas
+    // null é o "nunca definiu" e é o que a tela manda ao limpar o campo.
+    reservaMin: z.number().int().min(1).max(RESERVA_MAX_MIN).nullable().optional(),
   })
   .strict()
   .refine((d) => Object.keys(d).length > 0, { message: "Nada pra gravar." })

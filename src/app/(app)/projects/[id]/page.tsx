@@ -180,7 +180,10 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
             <Card>
               <CardContent className="p-4">
                 <p className="text-2xl font-semibold">{formatTempoEstimado(state.totalTempoMin)}</p>
-                <p className="text-xs text-muted-foreground">de filmagem estimada</p>
+                <p className="text-xs text-muted-foreground">
+                  de filmagem estimada
+                  {state.totalTempoTemConvencao && " · inclui tempo de convenção (5min por oitavo)"}
+                </p>
               </CardContent>
             </Card>
             <Card>

@@ -24,6 +24,7 @@ import { detectSceneConflicts } from "@/lib/conflicts";
 import { minutosEmBlocos, scheduleDoBloco } from "@/lib/day-timeline";
 import { gerarNomeArquivo } from "@/lib/filename";
 import { numeroComParte, paginasDaEntrada } from "@/lib/scene-parts-shared";
+import { notaDoTotal } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import {
   computeBlockSchedule,
@@ -229,6 +230,7 @@ export function ShootDayColumn({
             <p className="text-sm text-muted-foreground">
               {day.chamadaGeral && `Chamada geral: ${formatHHh(day.chamadaGeral)} · `}
               {formatPaginas(totalPaginas)} páginas · {formatTempoEstimado(totalMinutos)} de filmagem estimada
+              {notaDoTotal(allItems.map((i) => i.origemTempo)) && ` (${notaDoTotal(allItems.map((i) => i.origemTempo))})`}
               {cortaveisMin > 0 && ` · ${formatTempoEstimado(cortaveisMin)} cortáveis`}
               {blocosMin > 0 && ` · ${formatTempoEstimado(blocosMin)} em blocos de tempo`}
             </p>

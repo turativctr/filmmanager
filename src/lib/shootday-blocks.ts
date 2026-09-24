@@ -8,6 +8,7 @@ import {
   timeToMinutes,
 } from "@/lib/schedule";
 import { intercalar, scheduleDoBloco } from "@/lib/day-timeline";
+import { tempoDeReferenciaMin } from "@/lib/estimativa";
 import { paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
 /** Recalcula e persiste blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de uma diária a
@@ -41,9 +42,15 @@ export async function recalculateDayBlocks(shootDayId: string) {
   if (!shootDay) return null;
 
   const allScenes = shootDay.scenes;
-  // Parte de cena dividida: fallback do Rod é o estimado da parte, não o da cena inteira.
+  // Parte de cena dividida: fallback do Rod é o estimado da parte, não o da cena inteira. Cena sem
+  // tempo próprio usa a convenção calculada na leitura (tempoDeReferenciaMin) — o almoço precisa de
+  // algum número pra ter onde cair.
   const tempoEstimado = (e: (typeof allScenes)[number]) =>
-    tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), e.scenePart);
+    tempoEstimadoDaEntrada(
+      tempoDeReferenciaMin(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas)),
+      paginasParaOitavos(e.scene.paginas),
+      e.scenePart
+    );
   const scheduleDaCena = (e: (typeof allScenes)[number]) => ({
     prepMin: resolveEffectivePrepMin(e.prepMin),
     rodMin: resolveEffectiveRodMin(e.rodMin, tempoEstimado(e)),

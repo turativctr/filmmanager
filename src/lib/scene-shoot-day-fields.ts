@@ -2,13 +2,14 @@
  * Quais campos da ligação cena–diária (SceneShootDay) são REGISTRO DE EXECUÇÃO e quais são
  * planejamento. Puro, pra regra ficar testável (npm run verify:execucao).
  *
- * Planejamento é a intenção da AD e pode ser reescrito a cada arrasto: ordem, bloco, prep, Rod.
+ * Planejamento é a intenção da AD e pode ser reescrito a cada arrasto: ordem, bloco, prep, Rod — e
+ * rodDigitado, que é a marca de "este Rod a AD digitou" e por isso anda junto do Rod.
  * Execução é o que de fato aconteceu naquela diária — status, hora de início real e hora de fim
  * real. Vira relatório de progresso, prestação de contas e justificativa de hora extra: reordenar a
  * diária (rotina quando o dia atrasa) ou salvar a Ordem do Dia NUNCA pode apagar.
  */
 export const CAMPOS_DE_EXECUCAO = ["status", "horaInicioReal", "horaFimReal"] as const;
-export const CAMPOS_DE_PLANEJAMENTO = ["ordem", "bloco", "prepMin", "rodMin"] as const;
+export const CAMPOS_DE_PLANEJAMENTO = ["ordem", "bloco", "prepMin", "rodMin", "rodDigitado"] as const;
 
 export type LinhaDaDiaria = {
   shootDayId: string;
@@ -16,6 +17,7 @@ export type LinhaDaDiaria = {
   bloco: "MANHA" | "TARDE";
   prepMin: number | null;
   rodMin: number | null;
+  rodDigitado: boolean;
   status: "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDA" | "ADIADA";
   horaInicioReal: string | null;
   horaFimReal: string | null;
@@ -27,6 +29,7 @@ export type PosicaoDesejada = {
   bloco: "MANHA" | "TARDE";
   prepMin: number | null;
   rodMin: number | null;
+  rodDigitado: boolean;
 };
 
 /** O que gravar numa linha que já existe. Mesma diária: só planejamento — a execução fica intacta.

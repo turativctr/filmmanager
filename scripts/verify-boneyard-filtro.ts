@@ -30,6 +30,8 @@ function tira(
     scenePartId: parte,
     parte: parte ? ({ rotulo: parte } as StripItem["parte"]) : null,
     prepMin: null,
+    rodDigitado: false,
+    origemTempo: { kind: "SEM_BASE", min: null, orientacao: null },
     rodMin: null,
     shotsSummary: null,
     scene: {

@@ -2,7 +2,8 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import type { DailyProgressReportData } from "@/lib/ad-documents-data";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
-import { colors, kit, KeyValue, SectionTitle, StandardFooter, StandardHeader } from "@/lib/pdf/kit";
+import { colors, kit, KeyValue, SectionTitle, StandardFooter, StandardHeader, Table, Td, Tr } from "@/lib/pdf/kit";
+import { formatDesvio, formatTempoEstimadoOuTraco } from "@/lib/realizado";
 
 const styles = StyleSheet.create({
   dateLine: { fontSize: 9, color: colors.medGray, marginBottom: 12 },
@@ -23,7 +24,7 @@ const styles = StyleSheet.create({
 });
 
 export function DailyProgressReportDocument({ data }: { data: DailyProgressReportData }) {
-  const { shootDay, report } = data;
+  const { shootDay, report, comparacao } = data;
 
   return (
     <Document>
@@ -82,6 +83,38 @@ export function DailyProgressReportDocument({ data }: { data: DailyProgressRepor
                 ))
               )}
             </View>
+
+            {comparacao.linhas.length > 0 && (
+              <>
+                <SectionTitle>Planejado × realizado</SectionTitle>
+                <Table>
+                  <Tr header dark>
+                    <Td flex={1}>CENA</Td>
+                    <Td width={70} align="right">PREVISTO</Td>
+                    <Td width={70} align="right">REALIZADO</Td>
+                    <Td width={70} align="right">DESVIO</Td>
+                  </Tr>
+                  {comparacao.linhas.map((linha, i) => (
+                    <Tr key={i} alt={i % 2 === 1}>
+                      <Td flex={1}>{linha.rotulo}</Td>
+                      <Td width={70} align="right">{formatTempoEstimadoOuTraco(linha.previstoMin)}</Td>
+                      <Td width={70} align="right">
+                        {linha.naoRealizada ? "não realizada" : formatTempoEstimadoOuTraco(linha.realizadoMin)}
+                      </Td>
+                      <Td width={70} align="right">
+                        {linha.desvioMin != null ? formatDesvio(linha.desvioMin) : "—"}
+                      </Td>
+                    </Tr>
+                  ))}
+                  <Tr>
+                    <Td flex={1} bold>Diária</Td>
+                    <Td width={70} align="right" bold>{formatTempoEstimadoOuTraco(comparacao.total.previstoMin)}</Td>
+                    <Td width={70} align="right" bold>{formatTempoEstimadoOuTraco(comparacao.total.realizadoMin)}</Td>
+                    <Td width={70} align="right" bold>{formatDesvio(comparacao.total.desvioMin)}</Td>
+                  </Tr>
+                </Table>
+              </>
+            )}
 
             <SectionTitle>Horários e atraso</SectionTitle>
             <KeyValue label="Início real" value={report.horaInicioReal} />

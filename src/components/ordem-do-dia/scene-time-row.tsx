@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { rotuloOrigem } from "@/lib/estimativa";
 import { formatHHh, type ComputedSchedule } from "@/lib/schedule";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
 import { RESET_LABEL } from "@/lib/shots-shared";
@@ -187,6 +188,11 @@ export function SceneTimeRowItem({
         <TableCell>
           <div className="flex items-center gap-1.5">
             <MinutesCell value={row.rodMin} onChange={(v) => onRowChange(row.sceneId, { rodMin: v })} />
+            {/* O número do Rod nunca fica sem origem: "você definiu", "soma dos planos", "média deste
+                projeto", "convenção" ou "sem base pra estimar". */}
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {row.rodDigitado ? "você definiu" : rotuloOrigem(row.origemTempo)}
+            </span>
             {row.shotsTotal && (
               <Tooltip>
                 <TooltipTrigger

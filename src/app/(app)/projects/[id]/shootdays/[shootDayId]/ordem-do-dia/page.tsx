@@ -89,6 +89,8 @@ export default async function OrdemDoDiaPage({
     duracaoAlvoMin: s.duracaoAlvoMin,
     prepMin: s.prepMin,
     rodMin: s.rodMin,
+    rodDigitado: s.rodDigitado,
+    origemTempo: s.origemTempo,
     shots: s.shots,
     shotsTotal: s.shotsTotal,
   }));

@@ -9,6 +9,7 @@ import { ScenePlanosPanel } from "@/components/stripboard/scene-planos-panel";
 import { ShotListDrawer } from "@/components/stripboard/shot-list-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { avisoDigitadoVsPlanos, textoComOrigem } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { formatOitavos, numeroComParte, origemRodDaParte, vinculoDaParte } from "@/lib/scene-parts-shared";
 import { DEFAULT_PREP_MIN, formatHHh, MIN_ROD_MIN } from "@/lib/schedule";
@@ -300,9 +301,13 @@ export function StripCard({
 
           {showTempoManualBadge && rodEsperado !== null && (
             <p className="flex flex-wrap items-center gap-2 font-semibold text-alerta-fg">
-              {duracaoAlvo != null
-                ? `Tempo manual — duração alvo é ${formatTempoEstimado(duracaoAlvo)}`
-                : `Tempo manual — planos ${parte ? "da parte " : ""}somam ${rodEsperado}min`}
+              {/* Rod digitado não é sobrescrito por decupagem: o app mostra os dois números e a AD
+                  decide (ver syncSceneRodMin, que pula linha com rodDigitado). */}
+              {item.rodDigitado && item.rodMin != null
+                ? avisoDigitadoVsPlanos(item.rodMin, rodEsperado)
+                : duracaoAlvo != null
+                  ? `Tempo manual — duração alvo é ${formatTempoEstimado(duracaoAlvo)}`
+                  : `Tempo manual — planos ${parte ? "da parte " : ""}somam ${rodEsperado}min`}
               <button
                 type="button"
                 className="rounded border border-alerta-accent/60 bg-alerta-bg px-1.5 py-0.5 font-semibold hover:bg-alerta-bg/70"
@@ -323,13 +328,10 @@ export function StripCard({
                 {item.shotsSummary!.count} planos · {item.shotsSummary!.takesTotal} takes
               </button>
             ) : null}
-            <span hidden={duracaoAlvo != null || Boolean(parte)}>
-              {hasShots
-                ? `${formatTempoEstimado(item.shotsSummary!.totalMin)} estimado`
-                : item.scene.tempoEstimadoMin != null
-                  ? `${formatTempoEstimado(item.scene.tempoEstimadoMin)} estimado`
-                  : "Tempo estimado não definido"}
-            </span>
+            {/* O número NUNCA aparece sozinho: vem com a origem ("você definiu", "soma dos planos",
+                "média deste projeto", "convenção: 5min por oitavo") ou com "sem base pra estimar".
+                Era o número sem origem que fazia a convenção passar por cálculo. */}
+            <span hidden={Boolean(parte)}>{textoComOrigem(item.origemTempo)}</span>
             {item.scene.diaNarrativo != null && <Badge variant="outline">Dia {item.scene.diaNarrativo}</Badge>}
             {item.scene.notasAD && (
               <span className="flex items-center gap-1 text-amber-700">

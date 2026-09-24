@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
+import { CONVENCAO_MIN_POR_OITAVO, tempoDeReferenciaMin } from "@/lib/estimativa";
 import { gerarNomeArquivo } from "@/lib/filename";
 import { naturalCompare } from "@/lib/natural-sort";
 import { formatPaginas } from "@/lib/paginas";
@@ -70,6 +71,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     "Páginas",
     "Dia Narrativo",
     "Est. min",
+    // A coluna de tempo nunca vai sozinha: esta diz se o número é decisão da AD ou convenção.
+    "Origem do tempo",
   ];
 
   const workbook = new ExcelJS.Workbook();
@@ -111,7 +114,17 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     row.getCell(12).value = parte ? formatOitavos(parte.oitavos) : formatPaginas(scene.paginas);
     row.getCell(13).value = scene.diaNarrativo ?? "";
     row.getCell(14).value =
-      tempoEstimadoDaEntrada(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas), parte) ?? "";
+      tempoEstimadoDaEntrada(
+        tempoDeReferenciaMin(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas)),
+        paginasParaOitavos(scene.paginas),
+        parte
+      ) ?? "";
+    row.getCell(15).value =
+      scene.tempoEstimadoMin != null
+        ? "você definiu"
+        : paginasParaOitavos(scene.paginas) > 0
+          ? `convenção: ${CONVENCAO_MIN_POR_OITAVO}min por oitavo`
+          : "sem base pra estimar";
     rowIndex += 1;
   }
 

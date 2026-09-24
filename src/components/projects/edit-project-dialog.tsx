@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { Settings, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+import { CLASSIFICACAO_LABEL, CLASSIFICACOES, lerFaixas } from "@/lib/estimativa";
 import { useRef, useState } from "react";
 
 import { TermTooltip } from "@/components/shared/term-tooltip";
@@ -57,10 +59,13 @@ type ProjectDefaults = {
   resetTrocaCameraMin: number;
   resetPosicaoMin: number;
   resetCompletoMin: number;
+  /** Pontos de partida por tipo de cena; null = os padrões (ver lerFaixas). */
+  faixasTempo: unknown;
 };
 
 export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
   const router = useRouter();
+  const faixas = lerFaixas(project.faixasTempo);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +100,21 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
       resetTrocaCameraMin: form.get("resetTrocaCameraMin") || undefined,
       resetPosicaoMin: form.get("resetPosicaoMin") || undefined,
       resetCompletoMin: form.get("resetCompletoMin") || undefined,
+      faixasTempo: Object.fromEntries(
+        CLASSIFICACOES.filter((c) => c !== "NAO_CLASSIFICADO").map((classe) => [
+          classe,
+          {
+            porPlano: {
+              min: Number(form.get(`faixa_${classe}_porPlano_min`)),
+              max: Number(form.get(`faixa_${classe}_porPlano_max`)),
+            },
+            porOitavo: {
+              min: Number(form.get(`faixa_${classe}_porOitavo_min`)),
+              max: Number(form.get(`faixa_${classe}_porOitavo_max`)),
+            },
+          },
+        ])
+      ),
     };
 
     const res = await fetch(`/api/projects/${project.id}`, {
@@ -326,6 +346,69 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                     min={0}
                     defaultValue={project.preparacaoInicialMin}
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <div>
+                  <h4 className="text-sm font-semibold">Pontos de partida por tipo de cena</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Faixa de orientação usada só enquanto o projeto não tem realizado lançado em duas diárias. A
+                    partir daí vale a média do seu próprio projeto. Nunca vira número gravado nem horário: é
+                    orientação pra AD, e o padrão é chute de gente de set — ajuste pela sua equipe.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {CLASSIFICACOES.filter((c) => c !== "NAO_CLASSIFICADO").map((classe) => {
+                    const f = faixas[classe as keyof typeof faixas];
+                    return (
+                      <div key={classe} className="grid grid-cols-[1fr_auto_auto] items-center gap-3">
+                        <span className="text-sm">{CLASSIFICACAO_LABEL[classe]}</span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          por plano
+                          <Input
+                            name={`faixa_${classe}_porPlano_min`}
+                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: mínimo por plano`}
+                            type="number"
+                            min={1}
+                            className="h-8 w-16"
+                            defaultValue={f.porPlano.min}
+                          />
+                          a
+                          <Input
+                            name={`faixa_${classe}_porPlano_max`}
+                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: máximo por plano`}
+                            type="number"
+                            min={1}
+                            className="h-8 w-16"
+                            defaultValue={f.porPlano.max}
+                          />
+                          min
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          por oitavo
+                          <Input
+                            name={`faixa_${classe}_porOitavo_min`}
+                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: mínimo por oitavo`}
+                            type="number"
+                            min={1}
+                            className="h-8 w-16"
+                            defaultValue={f.porOitavo.min}
+                          />
+                          a
+                          <Input
+                            name={`faixa_${classe}_porOitavo_max`}
+                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: máximo por oitavo`}
+                            type="number"
+                            min={1}
+                            className="h-8 w-16"
+                            defaultValue={f.porOitavo.max}
+                          />
+                          min
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -25,24 +25,25 @@ const filmada = {
   bloco: "MANHA" as const,
   prepMin: 90,
   rodMin: 90,
+  rodDigitado: false,
   status: "CONCLUIDA" as const,
   horaInicioReal: "10:15",
   horaFimReal: "11:30",
 };
 
 console.log("\n=== Reordenar na mesma diária ===");
-const mesmoDia = dadosDaReordenacao(filmada, { shootDayId: "d3", ordem: 4, bloco: "TARDE", prepMin: 15, rodMin: 60 });
+const mesmoDia = dadosDaReordenacao(filmada, { shootDayId: "d3", ordem: 4, bloco: "TARDE", prepMin: 15, rodMin: 60, rodDigitado: true });
 check("planejamento é reescrito", [mesmoDia.ordem, mesmoDia.bloco, mesmoDia.prepMin, mesmoDia.rodMin], [4, "TARDE", 15, 60]);
 check("execução não é tocada (nada de status/horas no update)", CAMPOS_DE_EXECUCAO.map((c) => c in mesmoDia), [false, false, false]);
 
 console.log("\n=== Mudar de diária ===");
-const outroDia = dadosDaReordenacao(filmada, { shootDayId: "d5", ordem: 0, bloco: "MANHA", prepMin: 15, rodMin: 60 });
+const outroDia = dadosDaReordenacao(filmada, { shootDayId: "d5", ordem: 0, bloco: "MANHA", prepMin: 15, rodMin: 60, rodDigitado: true });
 check("execução recomeça na diária nova", [outroDia.status, outroDia.horaInicioReal, outroDia.horaFimReal], ["PENDENTE", null, null]);
 check("planejamento vai junto", [outroDia.shootDayId, outroDia.ordem], ["d5", 0]);
 
 console.log("\n=== Classificação dos campos ===");
 check("execução", [...CAMPOS_DE_EXECUCAO], ["status", "horaInicioReal", "horaFimReal"]);
-check("planejamento", [...CAMPOS_DE_PLANEJAMENTO], ["ordem", "bloco", "prepMin", "rodMin"]);
+check("planejamento", [...CAMPOS_DE_PLANEJAMENTO], ["ordem", "bloco", "prepMin", "rodMin", "rodDigitado"]);
 check("nenhum campo nos dois grupos", CAMPOS_DE_PLANEJAMENTO.some((c) => (CAMPOS_DE_EXECUCAO as readonly string[]).includes(c)), false);
 
 console.log("\n=== Quando a tela precisa avisar ===");

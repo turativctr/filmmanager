@@ -1,3 +1,5 @@
+import type { OrigemTempo } from "@/lib/estimativa";
+
 import type { TipoPontoApoio } from "@prisma/client";
 
 import type {
@@ -64,6 +66,11 @@ export type SceneTimeRow = Pick<
   | "prepMin"
   | "rodMin"
 > & {
+  /** A AD digitou o Rod desta linha (SceneShootDay.rodDigitado). "Distribuir tempos" nunca liga
+   *  isto — só o que ela escreve no campo. */
+  rodDigitado: boolean;
+  /** De onde vem o tempo desta linha — o rótulo ao lado do campo de Rod. */
+  origemTempo: OrigemTempo;
   /** Planos da cena (Passo 2 — expandir a linha). Ausente/undefined até a cena ter planos cadastrados. */
   shots?: ShotSummary[];
   /** Totais de Rod calculados a partir dos planos — presente quando a cena já tem planos. */

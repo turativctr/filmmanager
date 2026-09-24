@@ -1,6 +1,8 @@
 import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 import { intercalar, scheduleDaTimeline, separarTimeline, type BlocoNaTimeline } from "@/lib/day-timeline";
+import { tempoDeReferenciaMin, type ClassificacaoCena, type OrigemTempo } from "@/lib/estimativa";
+import { getFaixasDoProjeto, getMediaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
 import { prisma } from "@/lib/prisma";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import {
@@ -109,6 +111,13 @@ export type ReportSceneRow = {
   duracaoAlvoMin: number | null;
   prepMin: number | null;
   rodMin: number | null;
+  /** A AD digitou este Rod (SceneShootDay.rodDigitado) — é o que separa decisão dela de número
+   *  derivado, e é o primeiro estágio da origem do tempo (ver src/lib/estimativa.ts). */
+  rodDigitado: boolean;
+  /** De onde vem o tempo desta linha, pra tela e pro documento poderem dizer. Calculado uma vez no
+   *  servidor pra OD, Modo Set, PDFs e tela da diária responderem a mesma coisa. */
+  origemTempo: OrigemTempo;
+  classificacaoTempo: ClassificacaoCena;
   /** Notas operacionais do AD para esta cena NESTA diária (SceneShootDay.observacoes) — diferente de notasAD. */
   observacoes: string | null;
   /** Anotação geral do AD para a cena (Scene.notasAD), visível na Escaleta/Stripboard — não específica de diária. */
@@ -376,7 +385,7 @@ export function asStringRecord(value: unknown): Record<string, string> {
 }
 
 export async function getShootDayReportData(projectId: string, shootDayId: string) {
-  const [project, totalShootDays, shootDay, shotScheduleEntries] = await Promise.all([
+  const [project, totalShootDays, shootDay, shotScheduleEntries, media, faixas] = await Promise.all([
     prisma.project.findUnique({
       where: { id: projectId },
       select: { titulo: true, sigla: true, diretor: true, producao: true, logoUrl: true, sistemaIdElenco: true },
@@ -412,6 +421,8 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       orderBy: { ordem: "asc" },
       include: { shot: { include: { scene: { select: { numero: true } } } } },
     }),
+    getMediaDoProjeto(projectId),
+    getFaixasDoProjeto(projectId),
   ]);
 
   if (!project || !shootDay) return null;
@@ -425,8 +436,15 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
   const tardeEntries = sceneEntries.filter((e) => e.bloco === "TARDE");
 
   const parteDaEntrada = (e: (typeof sceneEntries)[number]) => e.scene.parts.find((p) => p.id === e.scenePartId) ?? null;
+  // Cena sem tempo próprio (o normal desde que o import parou de preencher) cai na convenção de
+  // 5min por oitavo, calculada na leitura — senão a diária não teria horário nenhum e o almoço não
+  // teria onde cair. De onde o número veio fica em `origemTempo`, linha a linha.
   const tempoEstimado = (e: (typeof sceneEntries)[number]) =>
-    tempoEstimadoDaEntrada(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), parteDaEntrada(e));
+    tempoEstimadoDaEntrada(
+      tempoDeReferenciaMin(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas)),
+      paginasParaOitavos(e.scene.paginas),
+      parteDaEntrada(e)
+    );
 
   // Blocos de tempo livres (transporte etc.) ocupam horário entre as cenas: o horário de cada cena
   // é calculado na timeline mista do bloco (manhã/tarde) e depois separado.
@@ -457,6 +475,18 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     const shots = planosDaParte(scene.shots, parte?.id ?? null);
     const planosDoRod = parte ? scene.shots.filter((s) => s.scenePartId === parte.id) : scene.shots;
     const shotsTotal = planosDoRod.length > 0 ? computeSceneShotTotals(planosDoRod) : null;
+    // Aqui a convenção É permitida: esta linha vira horário na OD, e horário precisa de número.
+    const origemTempo = origemDoTempoDaLinha({
+      rodMin: entry.rodMin,
+      rodDigitado: entry.rodDigitado,
+      duracaoAlvoMin: parte ? null : scene.duracaoAlvoMin,
+      planosMin: shotsTotal?.totalMin ?? null,
+      planos: planosDoRod.length,
+      oitavos: Math.round(paginasDaEntrada(Number(scene.paginas), parte) * 8),
+      classificacao: scene.classificacaoTempo,
+      faixas,
+      media,
+    });
     return {
       sceneId: scene.id,
       ordem: entry.ordem,
@@ -490,6 +520,9 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       duracaoAlvoMin: scene.duracaoAlvoMin,
       prepMin: entry.prepMin,
       rodMin: entry.rodMin,
+      rodDigitado: entry.rodDigitado,
+      origemTempo,
+      classificacaoTempo: scene.classificacaoTempo,
       observacoes: entry.observacoes,
       notasAD: scene.notasAD,
       status: entry.status,

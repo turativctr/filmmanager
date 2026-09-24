@@ -127,6 +127,23 @@ check("coube: cortáveis não aparecem", mensagemJornada(avFim20, { cortaveisMin
 check("sem teto: nada", mensagemJornada(avaliarJornada({ jornadaMin: null, horaFimAlvo: null }, "07:00", longa), { cortaveisMin: 0 }), null);
 check("fechou na conta exata: sobram 0min", mensagemJornada(avaliarJornada({ jornadaMin: 760, horaFimAlvo: null }, "07:00", longa), { cortaveisMin: 0 })!.linhas, ["Sobram 0min na jornada."]);
 
+console.log("\n=== Reserva de tempo (só a AD vê) ===");
+const comReserva = avaliarJornada({ jornadaMin: 720, horaFimAlvo: null }, "07:00", longa, 60);
+check("estouro conta a reserva", mensagemJornada(comReserva, { cortaveisMin: 0 })!.linhas[0], "Com a reserva de 1h, excede em 1h40. Fim previsto 19h40, com reserva 20h40, limite 19h00.");
+check("segundo horário = fim + reserva", comReserva.estado === "AVALIADA" && hhmm(comReserva.fimComReservaMin), "20:40");
+check("fim previsto (o que sai na OD) não muda", comReserva.estado === "AVALIADA" && hhmm(comReserva.fimMin), "19:40");
+check(
+  "coube já contando a reserva",
+  mensagemJornada(avaliarJornada({ jornadaMin: null, horaFimAlvo: "20:05" }, "07:00", longa, 15), { cortaveisMin: 0 })!.linhas,
+  ["Com a reserva de 15min, sobram 10min na jornada."]
+);
+check(
+  "sem reserva a frase é a de sempre",
+  mensagemJornada(avaliarJornada({ jornadaMin: 720, horaFimAlvo: null }, "07:00", longa, null), { cortaveisMin: 0 })!.linhas[0],
+  "Excedeu em 40min. Fim previsto 19h40, limite 19h00."
+);
+check("reserva sem teto continua sem aviso", mensagemJornada(avaliarJornada({ jornadaMin: null, horaFimAlvo: null }, "07:00", longa, 60), { cortaveisMin: 0 }), null);
+
 console.log("\n=== Sem chamada geral: só durações ===");
 const semChamada = montarJornada({ ...exemplo, chamadaGeral: null });
 check("nenhum horário", semChamada.linhas.every((l) => l.inicio === null), true);

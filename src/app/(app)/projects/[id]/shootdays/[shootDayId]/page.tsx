@@ -11,7 +11,9 @@ import {
 } from "@/lib/ordem-do-dia";
 import { prisma } from "@/lib/prisma";
 import { getShootDayReportData } from "@/lib/report-data";
+import type { LinhaRealizado } from "@/components/ordem-do-dia/lancar-realizado-dialog";
 import { minutosEmBlocos } from "@/lib/day-timeline";
+import { notaDoTotal } from "@/lib/estimativa";
 import { timeToMinutes } from "@/lib/schedule";
 import { computeCortaveisMin } from "@/lib/shots-shared";
 
@@ -63,16 +65,60 @@ export default async function ShootDayPage({
 
   // Modo simplificado: teto e modo da diária + a Jornada do projeto (preparação inicial e almoço),
   // que entram na conta do fim previsto igual ao que recalculateDayBlocks grava.
-  const [planejamento, jornadaProjeto] = await Promise.all([
+  const [planejamento, jornadaProjeto, blocosDaDiaria] = await Promise.all([
     prisma.shootDay.findUniqueOrThrow({
       where: { id: params.shootDayId },
-      select: { jornadaMin: true, horaFimAlvo: true, modoPlanejamento: true },
+      select: { jornadaMin: true, horaFimAlvo: true, modoPlanejamento: true, reservaMin: true },
     }),
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { limiteAlmocoMin: true, duracaoAlmocoMin: true, preparacaoInicialMin: true },
     }),
+    prisma.shootDayBlock.findMany({ where: { shootDayId: params.shootDayId } }),
   ]);
+
+  // Linhas do lançamento do realizado, na ordem em que o dia acontece (cenas e blocos compartilham
+  // a mesma sequência de `ordem`; manhã antes da tarde). O previsto de cada linha é a janela inteira
+  // dela — prep + Rod da cena, duração do bloco.
+  const janelaMin = (inicio: string | null, fim: string | null) => {
+    if (!inicio || !fim) return null;
+    const diff = timeToMinutes(fim) - timeToMinutes(inicio);
+    return diff >= 0 ? diff : diff + 1440;
+  };
+  const blocoPorId = new Map(blocosDaDiaria.map((b) => [b.id, b]));
+  const linhasRealizado: LinhaRealizado[] = [
+    ...data.scenes.map((s) => ({
+      chave: `${s.sceneId}:${s.parte?.id ?? ""}`,
+      tipo: "CENA" as const,
+      sceneId: s.sceneId,
+      scenePartId: s.parte?.id ?? null,
+      rotulo: `${s.numero}${s.setLocacaoDisplay ? ` · ${s.setLocacaoDisplay}` : ""}`,
+      previstoInicio: s.schedule?.prepStart ?? null,
+      previstoFim: s.schedule?.rodEnd ?? null,
+      previstoMin: janelaMin(s.schedule?.prepStart ?? null, s.schedule?.rodEnd ?? null),
+      horaInicioReal: s.horaInicioReal,
+      horaFimReal: s.horaFimReal,
+      naoRealizada: s.status === "ADIADA",
+      ordem: s.ordem,
+      lado: s.bloco,
+    })),
+    ...data.blocosDeTempo.map((b) => ({
+      chave: `bloco:${b.id}`,
+      tipo: "BLOCO" as const,
+      blocoId: b.id,
+      rotulo: b.rotulo,
+      previstoInicio: b.inicio,
+      previstoFim: b.fim,
+      previstoMin: b.duracaoMin,
+      horaInicioReal: blocoPorId.get(b.id)?.horaInicioReal ?? null,
+      horaFimReal: blocoPorId.get(b.id)?.horaFimReal ?? null,
+      naoRealizada: false,
+      ordem: b.ordem,
+      lado: b.bloco,
+    })),
+  ]
+    .sort((a, b) => (a.lado === b.lado ? a.ordem - b.ordem : a.lado === "MANHA" ? -1 : 1))
+    .map(({ ordem: _ordem, lado: _lado, ...linha }) => linha);
 
   const conflictInputs = data.scenes
     .filter((s) => s.schedule)
@@ -172,11 +218,14 @@ export default async function ShootDayPage({
         horaFimReal: s.horaFimReal,
       }))}
       modoPlanejamento={planejamento.modoPlanejamento}
+      linhasRealizado={linhasRealizado}
+      notaDoTotalDoDia={notaDoTotal(data.scenes.map((s) => s.origemTempo))}
       simplificado={{
         chamadaGeral: data.shootDay.chamadaGeral,
         desprodInicio: data.shootDay.desprodInicio,
         config: jornadaProjeto,
         teto: { jornadaMin: planejamento.jornadaMin, horaFimAlvo: planejamento.horaFimAlvo },
+        reservaMin: planejamento.reservaMin,
         // prep/Rod CRUS de SceneShootDay — a tela aplica o mesmo fallback da OD na conta.
         cenas: data.scenes.map((s) => ({
           sceneId: s.sceneId,

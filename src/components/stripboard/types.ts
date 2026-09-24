@@ -1,3 +1,5 @@
+import type { OrigemTempo } from "@/lib/estimativa";
+
 export type SceneSummary = {
   id: string;
   numero: string;
@@ -57,6 +59,11 @@ export type StripItem = {
   parte: StripParte | null;
   prepMin: number | null;
   rodMin: number | null;
+  /** A AD digitou este Rod. Marca que impede a decupagem de sobrescrever a escolha dela
+   *  (ver syncSceneRodMin) e que faz a tira dizer "você definiu". */
+  rodDigitado: boolean;
+  /** De onde vem o tempo desta tira — a tira mostra o rótulo ao lado do número. */
+  origemTempo: OrigemTempo;
   scene: SceneSummary;
   shotsSummary: ShotsSummary | null;
   /** Notas operacionais do AD pra esta cena NESTA diária (SceneShootDay.observacoes) — só existe

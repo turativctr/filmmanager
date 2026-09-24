@@ -3,6 +3,7 @@ import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { WeeklyPlanData } from "@/lib/ad-documents-data";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
+import { CONVENCAO_MIN_POR_OITAVO } from "@/lib/estimativa";
 import { colors, kit, StandardFooter, StandardHeader, Table, Td, Tr } from "@/lib/pdf/kit";
 
 const styles = StyleSheet.create({
@@ -91,6 +92,12 @@ export function WeeklyPlanDocument({ data }: { data: WeeklyPlanData }) {
             })}
           </View>
         ))}
+
+        {/* De onde vem o tempo somado aqui: cena sem tempo definido entra pela convenção. */}
+        <Text style={kit.muted}>
+          Filmagem estimada: soma dos tempos definidos por cena; cena sem tempo definido entra pela convenção de{" "}
+          {CONVENCAO_MIN_POR_OITAVO}min por oitavo, que é praxe de mercado, não medição.
+        </Text>
 
         <StandardFooter projectTitulo={data.titulo} documentName="Plano Semanal de Filmagem" />
       </Page>

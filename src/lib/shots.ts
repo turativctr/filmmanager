@@ -102,7 +102,7 @@ export async function syncSceneRodMin(
       duracaoAlvoMin: true,
       tempoEstimadoMin: true,
       paginas: true,
-      parts: { select: { id: true, oitavos: true, sceneShootDay: { select: { id: true } } } },
+      parts: { select: { id: true, oitavos: true, sceneShootDay: { select: { id: true, rodDigitado: true } } } },
     },
   });
   const planos = shots ?? (await prisma.shot.findMany({ where: { sceneId } }));
@@ -111,6 +111,9 @@ export async function syncSceneRodMin(
     const oitavosCena = paginasParaOitavos(scene.paginas);
     const updates = scene.parts.flatMap((parte) => {
       if (!parte.sceneShootDay) return [];
+      // Rod digitado pela AD manda sobre decupagem: a tela mostra "os planos somam X, você definiu
+      // Y" (avisoDigitadoVsPlanos) e ela decide — o app não reescreve a escolha dela em silêncio.
+      if (parte.sceneShootDay.rodDigitado) return [];
       const { rodMin, fonte } = resolveRodDaParte({
         parteId: parte.id,
         oitavosParte: parte.oitavos,
@@ -127,7 +130,7 @@ export async function syncSceneRodMin(
     const { rodMin, fonte } = resolveRodDaCena({ duracaoAlvoMin: scene.duracaoAlvoMin, planos });
     if (fonte === "ESTIMADO" && !semNadaVolta) return;
 
-    await prisma.sceneShootDay.updateMany({ where: { sceneId }, data: { rodMin } });
+    await prisma.sceneShootDay.updateMany({ where: { sceneId, rodDigitado: false }, data: { rodMin } });
   }
 
   // Rod mudou, então o cronograma daquela(s) diária(s) mudou — recalcula blocoManha/almoço de cada

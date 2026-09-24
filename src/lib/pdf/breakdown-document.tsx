@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { formatFullDate, weekdayNameFull } from "@/lib/calendar-grid";
 import { getCharacterId } from "@/lib/character-id";
 import { detectSceneConflicts } from "@/lib/conflicts";
+import { rotuloOrigem } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { colors, DocHeader, kit, KeyValue } from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
@@ -195,7 +196,9 @@ export function BreakdownDocument({ data }: { data: ShootDayReportData }) {
                   </Text>
                   <Text style={[styles.fieldText, styles.metaItem]}>
                     <Text style={kit.bold}>Tempo estimado: </Text>
-                    {scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}
+                    {scene.tempoEstimadoMin != null
+                      ? `${formatTempoEstimado(scene.tempoEstimadoMin)} (${rotuloOrigem(scene.origemTempo)})`
+                      : "sem base pra estimar"}
                   </Text>
                 </View>
               </View>

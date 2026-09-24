@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { ClassificacaoCena } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ type SceneRow = {
   paginas: unknown;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
+  classificacaoTempo?: ClassificacaoCena;
   notasAD: string | null;
   omitida: boolean;
   cast: { characterId: string }[];
@@ -107,7 +109,13 @@ export function ScenesTable({
             </TableCell>
             <TableCell>{formatPaginas(scene.paginas)}</TableCell>
             <TableCell>{scene.diaNarrativo ?? "—"}</TableCell>
-            <TableCell>{scene.tempoEstimadoMin != null ? formatTempoEstimado(scene.tempoEstimadoMin) : "—"}</TableCell>
+            <TableCell>
+              {scene.tempoEstimadoMin != null ? (
+                `${formatTempoEstimado(scene.tempoEstimadoMin)} (você definiu)`
+              ) : (
+                <span className="text-muted-foreground">sem base pra estimar</span>
+              )}
+            </TableCell>
             <TableCell>
               <div className="flex justify-end gap-1">
                 <Button variant="ghost" size="icon" asChild title="Breakdown sheet">

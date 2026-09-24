@@ -55,6 +55,7 @@ export default async function ProjectLayout({
             resetTrocaCameraMin: project.resetTrocaCameraMin,
             resetPosicaoMin: project.resetPosicaoMin,
             resetCompletoMin: project.resetCompletoMin,
+            faixasTempo: project.faixasTempo,
           }}
         />
       </div>

@@ -9,6 +9,10 @@ export const stripboardChangeSchema = z.object({
   ordem: z.number().int(),
   prepMin: z.number().int().nullable().optional(),
   rodMin: z.number().int().nullable().optional(),
+  // true só quando a AD DIGITOU o Rod nesta linha (tira, assistente da OD ou modo simplificado).
+  // Arrastar cena e "distribuir tempos" nunca mandam true: o que eles fazem é planejamento
+  // automático, não decisão dela. Ausente = mantém a marca que a linha já tem.
+  rodDigitado: z.boolean().optional(),
 });
 
 // Bloco de tempo (ShootDayBlock) só muda de posição DENTRO da própria diária — `ordem` é a posição

@@ -63,6 +63,7 @@ export type StripboardChangePayload = {
   ordem: number;
   prepMin: number | null;
   rodMin: number | null;
+  rodDigitado: boolean;
 };
 
 export type StripboardBlocoChangePayload = { id: string; shootDayId: string; ordem: number; bloco: "MANHA" | "TARDE" };
@@ -89,6 +90,7 @@ export function computeChanges(
           ordem: index,
           prepMin: null,
           rodMin: null,
+          rodDigitado: false,
         });
       });
       continue;
@@ -111,6 +113,7 @@ export function computeChanges(
         ordem: index,
         prepMin: entry.item.prepMin,
         rodMin: entry.item.rodMin,
+        rodDigitado: entry.item.rodDigitado,
       });
     });
   }

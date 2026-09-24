@@ -1,8 +1,9 @@
 import type { Task } from "@prisma/client";
 
+import { tempoDeReferenciaMin } from "./estimativa";
 import { computeTerminoForecast, type TerminoForecast } from "./project-forecast";
 import { prisma } from "./prisma";
-import { cenaConcluida, numeroComParte } from "./scene-parts-shared";
+import { cenaConcluida, numeroComParte, paginasParaOitavos } from "./scene-parts-shared";
 
 /** Meia-noite UTC de hoje — mesma convenção usada por `ShootDay.data`/`CalendarEvent.data`
  *  (strings "yyyy-mm-dd" parseadas como `new Date(...)` caem em meia-noite UTC), então comparar
@@ -41,6 +42,8 @@ export type ProjectHomeState =
       totalCenas: number;
       totalPaginas: number;
       totalTempoMin: number;
+      /** Parte da soma veio da convenção de 5min por oitavo (cena sem tempo próprio) — o card diz. */
+      totalTempoTemConvencao: boolean;
       totalLocacoes: number;
       tarefas: TaskRow[];
     }
@@ -78,7 +81,15 @@ export async function getProjectHomeState(projectId: string): Promise<ProjectHom
       kind: "B",
       totalCenas,
       totalPaginas: scenes.reduce((sum, s) => sum + Number(s.paginas), 0),
-      totalTempoMin: scenes.reduce((sum, s) => sum + (s.tempoEstimadoMin ?? 0), 0),
+      // Cena importada não tem tempo próprio: entra pela convenção calculada na leitura, e o card
+      // avisa quando há convenção na soma (ver src/lib/estimativa.ts).
+      totalTempoMin: scenes.reduce(
+        (sum, s) => sum + (tempoDeReferenciaMin(s.tempoEstimadoMin, paginasParaOitavos(s.paginas)) ?? 0),
+        0
+      ),
+      totalTempoTemConvencao: scenes.some(
+        (s) => s.tempoEstimadoMin == null && paginasParaOitavos(s.paginas) > 0
+      ),
       totalLocacoes,
       tarefas,
     };

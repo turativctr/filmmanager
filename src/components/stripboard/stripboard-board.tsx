@@ -242,8 +242,11 @@ export function StripboardBoard({
         const idx = isContainerId(overId) ? -1 : entryIds.indexOf(overId);
         const insertAt = idx === -1 ? entries.length : idx;
 
-        // Ao entrar num dia vindo do Boneyard, preenche Prep/Rod automaticamente — Rod pelo tempo estimado
-        // da cena, Prep por comparação de set/locação com a cena anterior (0min se igual, já montado).
+        // Ao entrar num dia vindo do Boneyard, preenche só o PREP (por comparação de set/locação com a
+        // cena anterior: 0min se for o mesmo set, já montado). O Rod fica vazio de propósito: gravar
+        // aqui o tempo estimado transformava a convenção de 5min por oitavo num número com cara de
+        // decisão da AD — foi isso que a fez largar a montagem da OD. Sem Rod gravado, o horário sai
+        // do fallback, que agora diz de onde veio (ver src/lib/estimativa.ts).
         const cenaAnterior = entries
           .slice(0, insertAt)
           .flatMap((e) => (e.type === "item" && e.item.tipo === "cena" ? [e.item.item] : []))
@@ -253,12 +256,8 @@ export function StripboardBoard({
             ? {
                 ...movingItem,
                 prepMin: computeAutoFillPrepMin(cenaAnterior?.scene, movingItem.scene, DEFAULT_PREP_MIN),
-                // Parte de cena dividida: o Rod da parte (planos dela, ou estimado pelos oitavos dela) — a
-                // duração alvo é do total, não da parte. Cena inteira: a duração alvo manda; sem ela, o
-                // tempo estimado por oitavos.
-                rodMin: movingItem.parte
-                  ? movingItem.parte.rodMin
-                  : computeAutoFillRodMin(movingItem.scene.duracaoAlvoMin ?? movingItem.scene.tempoEstimadoMin),
+                rodMin: null,
+                rodDigitado: false,
               }
             : movingItem;
 
@@ -298,7 +297,9 @@ export function StripboardBoard({
     const container = findContainer(board, itemId);
     if (!container) return;
 
-    const atualiza = (item: StripItem) => (item.itemId === itemId ? { ...item, prepMin, rodMin } : item);
+    // Digitar na tira é a AD decidindo: marca o Rod como digitado (apagar o campo desmarca).
+    const atualiza = (item: StripItem) =>
+      item.itemId === itemId ? { ...item, prepMin, rodMin, rodDigitado: rodMin != null } : item;
     const previousBoard = board;
     const nextBoard =
       container === "boneyard"

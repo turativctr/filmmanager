@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+const faixaSchema = z
+  .object({ min: z.coerce.number().int().min(1).max(600), max: z.coerce.number().int().min(1).max(600) })
+  .refine((f) => f.max >= f.min, { message: "O fim da faixa não pode ser menor que o começo." });
+
+export const faixasTempoSchema = z.object({
+  DIALOGO_ESTATICO: z.object({ porPlano: faixaSchema, porOitavo: faixaSchema }),
+  COM_MOVIMENTO: z.object({ porPlano: faixaSchema, porOitavo: faixaSchema }),
+  EFEITO_VFX: z.object({ porPlano: faixaSchema, porOitavo: faixaSchema }),
+  EXTERIOR: z.object({ porPlano: faixaSchema, porOitavo: faixaSchema }),
+});
+
+
 export const projectUpdateSchema = z.object({
   // Opcional pra suportar updates parciais (ex.: ProjectLifecycleMenu só manda status/arquivado) —
   // o formulário de edição completo sempre envia titulo de qualquer forma.
@@ -18,6 +30,9 @@ export const projectUpdateSchema = z.object({
   continuismoUsarLogo: z.boolean().optional(),
   continuismoLinhasPorFolha: z.coerce.number().int().min(1).optional(),
   limiteAlmocoMin: z.coerce.number().int().min(1).optional(),
+  // Pontos de partida por tipo de cena (estágio 3 da estimativa). A produção ajusta uma vez e a
+  // orientação passa a ser da equipe dela, não um chute do app. Ver src/lib/estimativa.ts.
+  faixasTempo: faixasTempoSchema.optional(),
   duracaoAlmocoMin: z.coerce.number().int().min(1).optional(),
   preparacaoInicialMin: z.coerce.number().int().min(0).optional(),
   // Tempos de reset configuráveis, nível 1 — padrão do projeto por tipo classificado (ver

@@ -16,7 +16,7 @@
  */
 import { renderToBuffer } from "@react-pdf/renderer";
 import type { ShotPrioridade, ShotTipoReset } from "@prisma/client";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { ReactElement } from "react";
 
 import type { BudgetData } from "../src/components/budget/types";
@@ -55,12 +55,31 @@ import { PlanoDiariasDocument } from "../src/lib/pdf/plano-diarias-document";
 import { ShotListDocument } from "../src/lib/pdf/shot-list-document";
 import { TopsheetDocument } from "../src/lib/pdf/topsheet-document";
 import { WeeklyPlanDocument } from "../src/lib/pdf/weekly-plan-document";
+import { formatHoraDoDia, montarJornada } from "../src/lib/jornada-diaria";
+import { formatTempoEstimado } from "../src/lib/paginas";
 import { prisma } from "../src/lib/prisma";
+import { minutesToTime, resolveEffectivePrepMin, resolveEffectiveRodMin } from "../src/lib/schedule";
 import { getShootDayReportData, type ShootDayReportData, type ShotRow } from "../src/lib/report-data";
-import { encontrarColisoes } from "./lib/pdf-colisoes";
+import { encontrarColisoes, textoDoPdf } from "./lib/pdf-colisoes";
 import { encontrarGlifosQuebrados } from "./lib/pdf-glifos";
 
 const PROJETO_DEMO = "Ressaca";
+
+/** Reserva de teste: minutagem improvável de aparecer por acaso num documento (1h37). A reserva é a
+ *  margem que a AD guarda pro dia e NUNCA pode sair em papel — se vazar, a equipe gasta a margem e a
+ *  produção corta. Ver ShootDay.reservaMin. */
+const RESERVA_TESTE_MIN = 97;
+
+/** Arquivos que montam documento não podem sequer mencionar a reserva — trava estática, antes de
+ *  qualquer render: é aqui que o erro começaria. */
+function arquivosQueVazamReserva(): string[] {
+  const suspeitos = [
+    ...readdirSync("src/lib/pdf").map((f) => `src/lib/pdf/${f}`),
+    "src/lib/report-data.ts",
+    "src/lib/ad-documents-data.ts",
+  ];
+  return suspeitos.filter((f) => /\.tsx?$/.test(f) && readFileSync(f, "utf8").includes("reservaMin"));
+}
 
 // ---------------------------------------------------------------------------
 // Pior caso
@@ -631,7 +650,33 @@ async function main() {
   const saida = process.env.VERIFY_PDF_OUT;
   if (saida) mkdirSync(saida, { recursive: true });
 
+  // Grava uma reserva na diária do demo ANTES de gerar: se algum documento a lesse, ela apareceria
+  // nos textos abaixo. Restaurada no finally — o demo tem que voltar como estava.
+  const projetoDemo = await prisma.project.findFirst({ where: { titulo: PROJETO_DEMO } });
+  if (!projetoDemo) throw new Error(`Projeto demo "${PROJETO_DEMO}" não encontrado — rode npm run db:seed`);
+  const diaDemo = await prisma.shootDay.findFirst({
+    where: { projectId: projetoDemo.id },
+    orderBy: { scenes: { _count: "desc" } },
+  });
+  if (!diaDemo) throw new Error("Demo sem diária");
+  const reservaAntes = diaDemo.reservaMin;
+  await prisma.shootDay.update({ where: { id: diaDemo.id }, data: { reservaMin: RESERVA_TESTE_MIN } });
+
+  try {
+    await rodar(saida, projetoDemo.id, diaDemo);
+  } finally {
+    await prisma.shootDay.update({ where: { id: diaDemo.id }, data: { reservaMin: reservaAntes } });
+    await prisma.$disconnect();
+  }
+}
+
+async function rodar(
+  saida: string | undefined,
+  projetoId: string,
+  diaDemo: { id: string; chamadaGeral: string | null }
+) {
   const documentos = await montarDocumentos();
+  const textos: { nome: string; texto: string }[] = [];
   let total = 0;
   console.log(`\n=== Colisão de texto nos PDFs (pior caso, ${documentos.length} documentos) ===`);
   for (const doc of documentos) {
@@ -639,6 +684,7 @@ async function main() {
     if (saida) writeFileSync(`${saida}/${doc.nome.replace(/[^\p{L}\p{N}]+/gu, "_")}.pdf`, buffer);
     const { colisoes, paginas } = await encontrarColisoes(buffer);
     total += colisoes.length;
+    textos.push({ nome: doc.nome, texto: await textoDoPdf(buffer) });
     console.log(`  ${colisoes.length === 0 ? "OK  " : "FORA"} ${doc.nome} — ${colisoes.length} colisões (${paginas} pág.)`);
     for (const c of colisoes.slice(0, 8)) {
       console.log(`         p${c.pagina} "${c.a.slice(0, 40)}" × "${c.b.slice(0, 40)}" (folga ${c.folga.toFixed(1)}pt)`);
@@ -654,9 +700,63 @@ async function main() {
   }
   total += quebrados.length;
 
+  total += await verificarReserva(textos, projetoId, diaDemo);
+
   console.log(`\n${total === 0 ? "TUDO OK" : `FALHOU (${total} problemas)`}`);
-  await prisma.$disconnect();
   process.exit(total === 0 ? 0 : 1);
+}
+
+/** A reserva de tempo é só da AD: nenhum documento pode trazer o valor dela nem um horário calculado
+ *  com ela (fim previsto + reserva). */
+async function verificarReserva(
+  textos: { nome: string; texto: string }[],
+  projetoId: string,
+  diaDemo: { id: string; chamadaGeral: string | null }
+): Promise<number> {
+  console.log(`\n=== Reserva de tempo fora dos documentos (reserva de ${RESERVA_TESTE_MIN}min na diária do demo) ===`);
+  let problemas = 0;
+
+  for (const arquivo of arquivosQueVazamReserva()) {
+    console.log(`  FORA ${arquivo} menciona reservaMin — documento não pode conhecer a reserva`);
+    problemas++;
+  }
+
+  const od = await getShootDayReportData(projetoId, diaDemo.id);
+  const config = await prisma.project.findUniqueOrThrow({
+    where: { id: projetoId },
+    select: { limiteAlmocoMin: true, duracaoAlmocoMin: true, preparacaoInicialMin: true },
+  });
+  const montada = montarJornada({
+    chamadaGeral: diaDemo.chamadaGeral,
+    config,
+    cenas: (od?.scenes ?? []).map((c) => ({
+      ordem: c.ordem,
+      bloco: c.bloco,
+      prepMin: resolveEffectivePrepMin(c.prepMin),
+      rodMin: resolveEffectiveRodMin(c.rodMin, c.tempoEstimadoMin),
+    })),
+    blocos: od?.blocosDeTempo ?? [],
+  });
+
+  const proibidos = [
+    formatTempoEstimado(RESERVA_TESTE_MIN),
+    `${RESERVA_TESTE_MIN}min`,
+    ...(montada.fimMin !== null
+      ? [formatHoraDoDia(montada.fimMin + RESERVA_TESTE_MIN), minutesToTime(montada.fimMin + RESERVA_TESTE_MIN)]
+      : []),
+  ];
+
+  for (const { nome, texto } of textos) {
+    const achados = proibidos.filter((p) => texto.includes(p));
+    if (achados.length > 0) {
+      console.log(`  FORA ${nome} contém ${achados.map((a) => `"${a}"`).join(", ")}`);
+      problemas += achados.length;
+    }
+  }
+  if (problemas === 0) {
+    console.log(`  OK   ${textos.length} documentos sem o valor da reserva e sem o horário com reserva (${proibidos.join(", ")})`);
+  }
+  return problemas;
 }
 
 if (require.main === module) void main();

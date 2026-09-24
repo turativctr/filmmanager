@@ -13,6 +13,8 @@ import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
+import { tempoDeReferenciaMin } from "@/lib/estimativa";
+import { getFaixasDoProjeto, getMediaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
 import {
   divisaoNaoFecha,
@@ -71,7 +73,7 @@ function toShotsSummary(
 
 
 export default async function StripboardPage({ params }: { params: { id: string } }) {
-  const [project, scenes, shootDays, characters, locacoes] = await Promise.all([
+  const [project, scenes, shootDays, characters, locacoes, media, faixas] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { titulo: true, sigla: true, sistemaIdElenco: true, limiteAlmocoMin: true, duracaoAlmocoMin: true },
@@ -108,6 +110,8 @@ export default async function StripboardPage({ params }: { params: { id: string 
     }),
     prisma.character.findMany({ where: { projectId: params.id } }),
     prisma.locacao.findMany({ where: { projectId: params.id }, select: { id: true, nome: true } }),
+    getMediaDoProjeto(params.id),
+    getFaixasDoProjeto(params.id),
   ]);
   locacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
@@ -136,7 +140,9 @@ export default async function StripboardPage({ params }: { params: { id: string 
       sinopse: scene.sinopse,
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,
-      tempoEstimadoMin: scene.tempoEstimadoMin,
+      // O que a tira usa como tempo da cena: o dela, ou a convenção calculada na leitura. O rótulo
+      // de origem (você definiu / planos / média / convenção) sai de origemTempo, abaixo.
+      tempoEstimadoMin: tempoDeReferenciaMin(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas)),
       duracaoAlvoMin: scene.duracaoAlvoMin,
       notasAD: scene.notasAD,
       omitida: scene.omitida,
@@ -155,14 +161,28 @@ export default async function StripboardPage({ params }: { params: { id: string 
           parteId: parte.id,
           oitavosParte: parte.oitavos,
           oitavosCena,
-          tempoEstimadoCenaMin: scene.tempoEstimadoMin,
+          tempoEstimadoCenaMin: tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena),
           planos: scene.shots,
         })
       : null;
+    // Planos que entram no Rod desta tira: os da parte, ou todos quando a cena é inteira.
+    const planosDoRod = parte ? scene.shots.filter((sh) => sh.scenePartId === parte.id) : scene.shots;
+    const origemTempo = origemDoTempoDaLinha({
+      rodMin: null,
+      rodDigitado: false,
+      duracaoAlvoMin: parte ? null : scene.duracaoAlvoMin,
+      planosMin: planosDoRod.length > 0 ? computeSceneShotTotals(planosDoRod).totalMin : null,
+      planos: planosDoRod.length,
+      oitavos: parte ? parte.oitavos : oitavosCena,
+      classificacao: scene.classificacaoTempo,
+      faixas,
+      media,
+    });
     return {
       itemId: parte?.id ?? scene.id,
       sceneId: scene.id,
       scenePartId: parte?.id ?? null,
+      origemTempo,
       parte:
         parte && rodDaParte
           ? {
@@ -175,13 +195,18 @@ export default async function StripboardPage({ params }: { params: { id: string 
               rodMin: rodDaParte.rodMin,
               fonteRod: rodDaParte.fonte,
               minSemParte: minutosEmPlanosSemParte(scene.shots),
-              tempoEstimadoMin: tempoEstimadoDaEntrada(scene.tempoEstimadoMin, oitavosCena, parte),
+              tempoEstimadoMin: tempoEstimadoDaEntrada(
+                tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena),
+                oitavosCena,
+                parte
+              ),
               todas: scene.parts.map((p) => ({ id: p.id, rotulo: p.rotulo, oitavos: p.oitavos })),
               oitavosCena,
             }
           : null,
       prepMin: null,
       rodMin: null,
+      rodDigitado: false,
       scene: toSceneSummary(scene),
       shotsSummary: toShotsSummary(
         planosDaParte(scene.shots, parte?.id ?? null),
@@ -211,6 +236,28 @@ export default async function StripboardPage({ params }: { params: { id: string 
               ...toStripItem(t.cena.scene, t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId) ?? null),
               prepMin: t.cena.prepMin,
               rodMin: t.cena.rodMin,
+              rodDigitado: t.cena.rodDigitado,
+              // Origem do número que ESTA diária usa: o Rod gravado na linha manda sobre a estimativa
+              // da cena, porque é ele que vira horário.
+              origemTempo: (() => {
+                const parteDaLinha = t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId) ?? null;
+                const planosDaLinha = parteDaLinha
+                  ? t.cena.scene.shots.filter((sh) => sh.scenePartId === parteDaLinha.id)
+                  : t.cena.scene.shots;
+                return origemDoTempoDaLinha({
+                  rodMin: t.cena.rodMin,
+                  rodDigitado: t.cena.rodDigitado,
+                  duracaoAlvoMin: parteDaLinha ? null : t.cena.scene.duracaoAlvoMin,
+                  planosMin: planosDaLinha.length > 0 ? computeSceneShotTotals(planosDaLinha).totalMin : null,
+                  planos: planosDaLinha.length,
+                  oitavos: parteDaLinha
+                    ? parteDaLinha.oitavos
+                    : paginasParaOitavos(t.cena.scene.paginas),
+                  classificacao: t.cena.scene.classificacaoTempo,
+                  faixas,
+                  media,
+                });
+              })(),
               observacoes: t.cena.observacoes,
               observacoesAutoGeradas: t.cena.observacoesAutoGeradas,
               execucao: {
@@ -241,7 +288,10 @@ export default async function StripboardPage({ params }: { params: { id: string 
                   rodMin: resolveEffectiveRodMin(
                     t.cena.rodMin,
                     tempoEstimadoDaEntrada(
-                      t.cena.scene.tempoEstimadoMin,
+                      tempoDeReferenciaMin(
+                        t.cena.scene.tempoEstimadoMin,
+                        paginasParaOitavos(t.cena.scene.paginas)
+                      ),
                       paginasParaOitavos(t.cena.scene.paginas),
                       t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId)
                     )

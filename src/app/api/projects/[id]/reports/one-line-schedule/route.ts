@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 import { authOptions } from "@/lib/auth";
-import { CONVENCAO_MIN_POR_OITAVO, tempoDeReferenciaMin } from "@/lib/estimativa";
+import { tempoDeReferenciaMin, textoDaPartida } from "@/lib/estimativa";
+import { getPartidaDoProjeto } from "@/lib/estimativa-server";
 import { gerarNomeArquivo } from "@/lib/filename";
 import { naturalCompare } from "@/lib/natural-sort";
 import { formatPaginas } from "@/lib/paginas";
@@ -55,6 +56,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   unscheduled.sort((a, b) => naturalCompare(a.scene.numero, b.scene.numero) || (a.parte?.ordem ?? 0) - (b.parte?.ordem ?? 0));
 
   const orderedLinhas = [...scheduled, ...unscheduled];
+
+  const partida = await getPartidaDoProjeto(params.id);
 
   const columns = [
     "Dia de Set",
@@ -115,7 +118,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     row.getCell(13).value = scene.diaNarrativo ?? "";
     row.getCell(14).value =
       tempoEstimadoDaEntrada(
-        tempoDeReferenciaMin(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas)),
+        tempoDeReferenciaMin(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas), partida, scene.tipo),
         paginasParaOitavos(scene.paginas),
         parte
       ) ?? "";
@@ -123,7 +126,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       scene.tempoEstimadoMin != null
         ? "você definiu"
         : paginasParaOitavos(scene.paginas) > 0
-          ? `convenção: ${CONVENCAO_MIN_POR_OITAVO}min por oitavo`
+          ? textoDaPartida(partida, scene.tipo)
           : "sem base pra estimar";
     rowIndex += 1;
   }

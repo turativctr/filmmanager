@@ -14,7 +14,13 @@ import {
   Tr,
 } from "@/lib/pdf/kit";
 import type { ShootDayReportData } from "@/lib/report-data";
-import { HEAVY_RESETS, isDetalheOuInsert, PRIORIDADE_INICIAL, RESET_LABEL } from "@/lib/shots-shared";
+import {
+  formatDuracaoTake,
+  HEAVY_RESETS,
+  isDetalheOuInsert,
+  PRIORIDADE_INICIAL,
+  RESET_LABEL,
+} from "@/lib/shots-shared";
 import type { ShotTipoReset } from "@prisma/client";
 
 /** Correção 1: NENHUM/AJUSTE não têm divisória; TROCA_LENTE/TROCA_CAMERA usam cinza neutro;
@@ -38,7 +44,7 @@ const COL = {
   movimento: 58, // cabeçalho "MOVIMENTO" = 49pt
   reset: 44, // "completo" = 35pt ("Reset completo" quebra entre palavras)
   takes: 35, // cabeçalho "TAKES" = 26pt
-  minTake: 46, // cabeçalho "MIN/TAKE" = 38pt, não quebra
+  minTake: 46, // cabeçalho "DUR/TAKE" = 38pt, não quebra
   setup: 35, // cabeçalho "SETUP" = 27pt
   total: 34, // cabeçalho "TOTAL" = 25pt
 } as const;
@@ -107,7 +113,7 @@ function ShotScheduleRows({ schedule }: { schedule: ShootDayReportData["shotSche
                 {entry.takesPrevistos}
               </Td>
               <Td width={COL.minTake} align="center">
-                {entry.duracaoTakeMin}
+                {formatDuracaoTake(entry.duracaoTakeMin)}
               </Td>
               <Td width={COL.setup} align="center">
                 {entry.tempoSetupMin}
@@ -166,7 +172,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                     TAKES
                   </Td>
                   <Td width={COL.minTake} align="center">
-                    MIN/TAKE
+                    DUR/TAKE
                   </Td>
                   <Td width={COL.setup} align="center">
                     SETUP
@@ -228,7 +234,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                               TAKES
                             </Td>
                             <Td width={COL.minTake} align="center">
-                              MIN/TAKE
+                              DUR/TAKE
                             </Td>
                             <Td width={COL.setup} align="center">
                               SETUP
@@ -286,7 +292,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                                     {shot.takesPrevistos}
                                   </Td>
                                   <Td width={COL.minTake} align="center">
-                                    {shot.duracaoTakeMin}
+                                    {formatDuracaoTake(shot.duracaoTakeMin)}
                                   </Td>
                                   <Td width={COL.setup} align="center">
                                     {shot.tempoSetupMin}

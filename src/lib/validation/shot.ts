@@ -16,7 +16,13 @@ export const shotSchema = z.object({
   angulo: z.string().trim().optional().nullable(),
   movimento: z.string().trim().optional().nullable(),
   takesPrevistos: z.coerce.number().int().min(1).optional(),
-  duracaoTakeMin: z.coerce.number().int().min(0).optional(),
+  // Minutos, fracionário (take de 7s = 7/60) — a UI digita/exibe como relógio (parseDuracaoTake/
+  // formatDuracaoTake em shots-shared.ts); aqui só quantiza no segundo inteiro.
+  duracaoTakeMin: z.coerce
+    .number()
+    .min(0)
+    .transform((v) => Math.round(v * 60) / 60)
+    .optional(),
   tempoSetupMin: z.coerce.number().int().min(0).optional(),
   tempoResetMinManual: z.coerce.number().int().min(0).optional().nullable(),
   notasDirecao: z.string().optional().nullable(),

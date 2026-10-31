@@ -280,10 +280,13 @@ model Project {
   // Configuração da "Jornada" do dia de filmagem — usada por recalculateDayBlocks (src/lib/shootday-blocks.ts)
   // pra derivar blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de cada ShootDay. O almoço nunca é
   // definido diretamente pelo AD: ele é consequência de onde o marcador fica no Stripboard (ver ShootDay).
-  // Faixas de ponto de partida por tipo de cena (estágio 3 da estimativa), ajustáveis uma vez por
-  // produção — o padrão é chute de gente de set, e editar aqui faz o chute passar a ser da equipe.
-  // Formato e validação em src/lib/estimativa.ts; null = usa o padrão.
-  faixasTempo          Json?
+  // Ponto de partida da produção pro tempo de uma cena (estágio 3 da estimativa): um número por
+  // projeto, no lugar das quatro faixas por tipo de cena que existiram por um dia. Começa na praxe
+  // de mercado (5min por oitavo) e a produção ajusta — a partir daí o rótulo na tela diz "ponto de
+  // partida do projeto", não "convenção". Exterior recebe acréscimo percentual; cena sem INT/EXT
+  // definido não recebe nada. Ver src/lib/estimativa.ts.
+  minPorOitavoPartida      Int @default(5)
+  acrescimoExteriorPercent Int @default(20)
 
   limiteAlmocoMin      Int @default(360) // praxe de mercado: 5 a 6h após a chamada geral
   duracaoAlmocoMin     Int @default(60)
@@ -342,14 +345,6 @@ model ProjectStepOverride {
   @@map("project_step_overrides")
 }
 
-enum ClassificacaoTempoCena {
-  NAO_CLASSIFICADO
-  DIALOGO_ESTATICO
-  COM_MOVIMENTO
-  EFEITO_VFX
-  EXTERIOR
-}
-
 model Scene {
   id                String           @id @default(cuid())
   projectId         String
@@ -389,11 +384,6 @@ model Scene {
   // estouro. null = comportamento de sempre, Rod vem da soma dos planos. Nunca redistribui os tempos
   // dos planos — a média por plano é só exibida (ver src/lib/tempo-alvo.ts).
   duracaoAlvoMin    Int?
-  // Classificação ESCOLHIDA pela AD (nunca inferida do texto) — só serve pro estágio 3 da
-  // estimativa, a faixa de ponto de partida por plano quando o projeto ainda não tem realizado
-  // lançado. NAO_CLASSIFICADO é o padrão e é um estado legítimo: sem ela o app diz "sem base pra
-  // estimar" em vez de inventar número.
-  classificacaoTempo ClassificacaoTempoCena @default(NAO_CLASSIFICADO)
   // Vira true assim que o AD edita `paginas` ou `tempoEstimadoMin` diretamente (formulário de
   // cena ou de breakdown) — a reimportação de um novo draft (import/fdx/confirm, drafts) passa a
   // preservar os três campos (paginas/tempoEstimadoMin/linhas) em vez de recalcular por cima,
@@ -525,7 +515,9 @@ model Shot {
   // no servidor a partir dos três (takesPrevistos × duracaoTakeMin + tempoSetupMin) — nunca aceito
   // como input direto da API, mesma convenção de tipoReset/tempoResetMin.
   takesPrevistos      Int           @default(3)
-  duracaoTakeMin      Int           @default(2)
+  // Fracionário: take de poucos segundos (7s ≈ 0.12min). tempoTotalMin continua inteiro —
+  // computeTempoTotal arredonda pra cima.
+  duracaoTakeMin      Float         @default(2)
   tempoSetupMin       Int           @default(0)
   tempoTotalMin       Int           @default(6)
   tempoResetMin       Int?

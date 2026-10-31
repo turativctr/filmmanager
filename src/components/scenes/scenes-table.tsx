@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { SceneFormDialog } from "@/components/scenes/scene-form-dialog";
+import type { PartidaDoProjeto } from "@/lib/estimativa";
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ClassificacaoCena } from "@/lib/estimativa";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,6 @@ type SceneRow = {
   paginas: unknown;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
-  classificacaoTempo?: ClassificacaoCena;
   notasAD: string | null;
   omitida: boolean;
   cast: { characterId: string }[];
@@ -52,12 +51,15 @@ export function ScenesTable({
   characters,
   sistemaIdElenco,
   locacoes,
+  partida,
 }: {
   projectId: string;
   scenes: SceneRow[];
   characters: CharacterOption[];
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   locacoes: { id: string; nome: string }[];
+  /** Ponto de partida da produção, repassado ao formulário de edição da cena. */
+  partida: PartidaDoProjeto;
 }) {
   const router = useRouter();
 
@@ -128,6 +130,7 @@ export function ScenesTable({
                   characters={characters}
                   sistemaIdElenco={sistemaIdElenco}
                   locacoes={locacoes}
+                  partida={partida}
                   scene={scene}
                   trigger={
                     <Button variant="ghost" size="icon" title="Editar cena">

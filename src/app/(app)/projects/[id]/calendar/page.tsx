@@ -3,6 +3,7 @@ import type { CalendarDayData, CalendarMonthSummary } from "@/components/calenda
 import { PageHeader } from "@/components/shared/page-header";
 import { getMonthGrid, toDateKey } from "@/lib/calendar-grid";
 import { tempoDeReferenciaMin } from "@/lib/estimativa";
+import { getPartidaDoProjeto } from "@/lib/estimativa-server";
 import { prisma } from "@/lib/prisma";
 import { numeroComParte, paginasDaEntrada, paginasParaOitavos, tempoEstimadoDaEntrada } from "@/lib/scene-parts-shared";
 
@@ -17,7 +18,7 @@ export default async function CalendarPage({
   const year = Number(searchParams.year) || now.getUTCFullYear();
   const month = Number(searchParams.month) || now.getUTCMonth() + 1;
 
-  const [project, shootDays, events, characters, tasks] = await Promise.all([
+  const [project, shootDays, events, characters, tasks, partida] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { titulo: true, sigla: true, sistemaIdElenco: true },
@@ -51,6 +52,7 @@ export default async function CalendarPage({
       select: { id: true, idCurto: true, numeroElenco: true, personagem: true },
     }),
     prisma.task.findMany({ where: { projectId: params.id } }),
+    getPartidaDoProjeto(params.id),
   ]);
 
   const shootDaysByDate = new Map(
@@ -61,7 +63,7 @@ export default async function CalendarPage({
         (sum, s) =>
           sum +
           (tempoEstimadoDaEntrada(
-            tempoDeReferenciaMin(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas)),
+            tempoDeReferenciaMin(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas), partida, s.scene.tipo),
             paginasParaOitavos(s.scene.paginas),
             s.scenePart
           ) ?? 0),
@@ -162,7 +164,14 @@ export default async function CalendarPage({
       (sum, day) =>
         sum +
         day.scenes.reduce(
-          (s, sd) => s + (tempoDeReferenciaMin(sd.scene.tempoEstimadoMin, paginasParaOitavos(sd.scene.paginas)) ?? 0),
+          (s, sd) =>
+            s +
+            (tempoDeReferenciaMin(
+              sd.scene.tempoEstimadoMin,
+              paginasParaOitavos(sd.scene.paginas),
+              partida,
+              sd.scene.tipo
+            ) ?? 0),
           0
         ),
       0

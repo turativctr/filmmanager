@@ -26,15 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCharacterId } from "@/lib/character-id";
-import {
-  CLASSIFICACAO_LABEL,
-  CLASSIFICACOES,
-  CONVENCAO_MIN_POR_OITAVO,
-  FAIXAS_PADRAO,
-  textoDeOrientacao,
-  type ClassificacaoCena,
-} from "@/lib/estimativa";
-import { formatPaginas, parsePaginas, suggestTempoEstimadoMin } from "@/lib/paginas";
+import { tempoDePartidaMin, textoDaPartida, type AmbienteCena, type PartidaDoProjeto } from "@/lib/estimativa";
+import { formatPaginas, parsePaginas } from "@/lib/paginas";
 
 type CharacterOption = {
   id: string;
@@ -76,7 +69,6 @@ type SceneDefaults = {
   paginas: unknown;
   diaNarrativo: number | null;
   tempoEstimadoMin: number | null;
-  classificacaoTempo?: ClassificacaoCena;
   notasAD: string | null;
   cast: { characterId: string }[];
 };
@@ -87,6 +79,7 @@ export function SceneFormDialog({
   sistemaIdElenco,
   locacoes,
   scene,
+  partida,
   trigger,
 }: {
   projectId: string;
@@ -94,6 +87,8 @@ export function SceneFormDialog({
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
   locacoes: { id: string; nome: string }[];
   scene?: SceneDefaults;
+  /** Ponto de partida da produção — a sugestão de tempo sai dele, não de uma convenção fixa. */
+  partida: PartidaDoProjeto;
   trigger?: ReactNode;
 }) {
   const router = useRouter();
@@ -104,22 +99,25 @@ export function SceneFormDialog({
   const [tipo, setTipo] = useState<string>(scene ? scene.tipo ?? TIPO_INDEFINIDO : "INT");
   const [periodo, setPeriodo] = useState(scene ? scene.periodo ?? "" : "DIA");
   const [locacaoId, setLocacaoId] = useState<string>(scene?.locacao?.id ?? SEM_LOCACAO);
+  const ambiente: AmbienteCena = tipo === "INT" || tipo === "EXT" ? tipo : null;
   const [novaLocacaoNome, setNovaLocacaoNome] = useState("");
   const [selectedCast, setSelectedCast] = useState<Set<string>>(
     new Set(scene?.cast.map((c) => c.characterId) ?? [])
   );
-  const [classificacao, setClassificacao] = useState<ClassificacaoCena>(
-    scene?.classificacaoTempo ?? "NAO_CLASSIFICADO"
+  // O INT/EXT já é estado desta tela (`tipo`): o acréscimo de exterior acompanha o que a AD
+  // escolhe aqui, sem campo novo.
+  // Sugestão = ponto de partida DO PROJETO (oitavos × minuto da produção, + acréscimo de exterior),
+  // não mais a convenção de mercado fixa em 5min por oitavo.
+  const sugerir = (paginas: number | null, amb: AmbienteCena) =>
+    paginas != null ? tempoDePartidaMin(Math.round(paginas * 8), amb, partida) : null;
+  const [paginasAtuais, setPaginasAtuais] = useState<number | null>(() =>
+    scene ? parsePaginas(formatPaginas(scene.paginas)) : null
   );
-  const [tempoSugerido, setTempoSugerido] = useState<number | null>(() => {
-    if (!scene) return null;
-    const paginas = parsePaginas(formatPaginas(scene.paginas));
-    return paginas != null ? suggestTempoEstimadoMin(paginas) : null;
-  });
+
+  const tempoSugerido = sugerir(paginasAtuais, ambiente);
 
   function handlePaginasChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const paginas = parsePaginas(e.target.value);
-    setTempoSugerido(paginas != null ? suggestTempoEstimadoMin(paginas) : null);
+    setPaginasAtuais(parsePaginas(e.target.value));
   }
 
   function toggleCharacter(id: string) {
@@ -321,26 +319,6 @@ export function SceneFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="classificacaoTempo">Tipo de cena (ponto de partida)</Label>
-              <select
-                id="classificacaoTempo"
-                name="classificacaoTempo"
-                defaultValue={scene?.classificacaoTempo ?? "NAO_CLASSIFICADO"}
-                onChange={(e) => setClassificacao(e.target.value as ClassificacaoCena)}
-                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-              >
-                {CLASSIFICACOES.map((c) => (
-                  <option key={c} value={c}>
-                    {CLASSIFICACAO_LABEL[c]}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-muted-foreground">
-                {textoDeOrientacao(classificacao, FAIXAS_PADRAO) ??
-                  "Classifique pra ver um ponto de partida por plano e por oitavo."}
-              </p>
-            </div>
-            <div className="space-y-1.5">
               <Label htmlFor="tempoEstimadoMin">Tempo estimado (min)</Label>
               <Input
                 id="tempoEstimadoMin"
@@ -350,8 +328,8 @@ export function SceneFormDialog({
               />
               {tempoSugerido != null && (
                 <p className="text-xs text-muted-foreground">
-                  ~{tempoSugerido} min pela convenção: {CONVENCAO_MIN_POR_OITAVO}min por oitavo. É convenção de
-                  mercado, não medição — deixe vazio se não tiver base.
+                  ~{tempoSugerido} min pelo {textoDaPartida(partida, ambiente)}. É ponto de partida da produção,
+                  não medição — deixe vazio se não tiver base.
                 </p>
               )}
             </div>

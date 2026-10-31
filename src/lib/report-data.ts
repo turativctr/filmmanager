@@ -1,8 +1,8 @@
 import type { ShotPrioridade, ShotStatus, ShotTipoReset } from "@prisma/client";
 
 import { intercalar, scheduleDaTimeline, separarTimeline, type BlocoNaTimeline } from "@/lib/day-timeline";
-import { tempoDeReferenciaMin, type ClassificacaoCena, type OrigemTempo } from "@/lib/estimativa";
-import { getFaixasDoProjeto, getMediaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
+import { tempoDeReferenciaMin, type OrigemTempo } from "@/lib/estimativa";
+import { getMediaDoProjeto, getPartidaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
 import { prisma } from "@/lib/prisma";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import {
@@ -117,7 +117,6 @@ export type ReportSceneRow = {
   /** De onde vem o tempo desta linha, pra tela e pro documento poderem dizer. Calculado uma vez no
    *  servidor pra OD, Modo Set, PDFs e tela da diária responderem a mesma coisa. */
   origemTempo: OrigemTempo;
-  classificacaoTempo: ClassificacaoCena;
   /** Notas operacionais do AD para esta cena NESTA diária (SceneShootDay.observacoes) — diferente de notasAD. */
   observacoes: string | null;
   /** Anotação geral do AD para a cena (Scene.notasAD), visível na Escaleta/Stripboard — não específica de diária. */
@@ -385,7 +384,7 @@ export function asStringRecord(value: unknown): Record<string, string> {
 }
 
 export async function getShootDayReportData(projectId: string, shootDayId: string) {
-  const [project, totalShootDays, shootDay, shotScheduleEntries, media, faixas] = await Promise.all([
+  const [project, totalShootDays, shootDay, shotScheduleEntries, media, partida] = await Promise.all([
     prisma.project.findUnique({
       where: { id: projectId },
       select: { titulo: true, sigla: true, diretor: true, producao: true, logoUrl: true, sistemaIdElenco: true },
@@ -422,7 +421,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       include: { shot: { include: { scene: { select: { numero: true } } } } },
     }),
     getMediaDoProjeto(projectId),
-    getFaixasDoProjeto(projectId),
+    getPartidaDoProjeto(projectId),
   ]);
 
   if (!project || !shootDay) return null;
@@ -441,7 +440,12 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
   // teria onde cair. De onde o número veio fica em `origemTempo`, linha a linha.
   const tempoEstimado = (e: (typeof sceneEntries)[number]) =>
     tempoEstimadoDaEntrada(
-      tempoDeReferenciaMin(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas)),
+      tempoDeReferenciaMin(
+        e.scene.tempoEstimadoMin,
+        paginasParaOitavos(e.scene.paginas),
+        partida,
+        e.scene.tipo
+      ),
       paginasParaOitavos(e.scene.paginas),
       parteDaEntrada(e)
     );
@@ -483,9 +487,13 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       planosMin: shotsTotal?.totalMin ?? null,
       planos: planosDoRod.length,
       oitavos: Math.round(paginasDaEntrada(Number(scene.paginas), parte) * 8),
-      classificacao: scene.classificacaoTempo,
-      faixas,
+      ambiente: scene.tipo,
+      partida,
       media,
+      // Esta linha vira horário na OD: um número precisa existir.
+      permitirPartida: true,
+      resetsMin: shotsTotal?.resetsMin ?? 0,
+      fatorResetPercent,
     });
     return {
       sceneId: scene.id,
@@ -522,7 +530,6 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       rodMin: entry.rodMin,
       rodDigitado: entry.rodDigitado,
       origemTempo,
-      classificacaoTempo: scene.classificacaoTempo,
       observacoes: entry.observacoes,
       notasAD: scene.notasAD,
       status: entry.status,

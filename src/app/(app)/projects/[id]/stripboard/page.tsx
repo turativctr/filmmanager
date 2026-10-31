@@ -14,7 +14,7 @@ import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
 import { tempoDeReferenciaMin } from "@/lib/estimativa";
-import { getFaixasDoProjeto, getMediaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
+import { getMediaDoProjeto, getPartidaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
 import { resolveEffectivePrepMin, resolveEffectiveRodMin, suggestAlmocoIndex } from "@/lib/schedule";
 import {
   divisaoNaoFecha,
@@ -73,7 +73,7 @@ function toShotsSummary(
 
 
 export default async function StripboardPage({ params }: { params: { id: string } }) {
-  const [project, scenes, shootDays, characters, locacoes, media, faixas] = await Promise.all([
+  const [project, scenes, shootDays, characters, locacoes, media, partida] = await Promise.all([
     prisma.project.findUniqueOrThrow({
       where: { id: params.id },
       select: { titulo: true, sigla: true, sistemaIdElenco: true, limiteAlmocoMin: true, duracaoAlmocoMin: true },
@@ -111,7 +111,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
     prisma.character.findMany({ where: { projectId: params.id } }),
     prisma.locacao.findMany({ where: { projectId: params.id }, select: { id: true, nome: true } }),
     getMediaDoProjeto(params.id),
-    getFaixasDoProjeto(params.id),
+    getPartidaDoProjeto(params.id),
   ]);
   locacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
@@ -140,9 +140,14 @@ export default async function StripboardPage({ params }: { params: { id: string 
       sinopse: scene.sinopse,
       paginas: scene.paginas.toString(),
       diaNarrativo: scene.diaNarrativo,
-      // O que a tira usa como tempo da cena: o dela, ou a convenção calculada na leitura. O rótulo
-      // de origem (você definiu / planos / média / convenção) sai de origemTempo, abaixo.
-      tempoEstimadoMin: tempoDeReferenciaMin(scene.tempoEstimadoMin, paginasParaOitavos(scene.paginas)),
+      // O que a tira usa como tempo da cena: o dela, ou o ponto de partida do projeto calculado na
+      // leitura. O rótulo de origem sai de origemTempo, abaixo.
+      tempoEstimadoMin: tempoDeReferenciaMin(
+        scene.tempoEstimadoMin,
+        paginasParaOitavos(scene.paginas),
+        partida,
+        scene.tipo
+      ),
       duracaoAlvoMin: scene.duracaoAlvoMin,
       notasAD: scene.notasAD,
       omitida: scene.omitida,
@@ -161,7 +166,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
           parteId: parte.id,
           oitavosParte: parte.oitavos,
           oitavosCena,
-          tempoEstimadoCenaMin: tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena),
+          tempoEstimadoCenaMin: tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena, partida, scene.tipo),
           planos: scene.shots,
         })
       : null;
@@ -174,9 +179,12 @@ export default async function StripboardPage({ params }: { params: { id: string 
       planosMin: planosDoRod.length > 0 ? computeSceneShotTotals(planosDoRod).totalMin : null,
       planos: planosDoRod.length,
       oitavos: parte ? parte.oitavos : oitavosCena,
-      classificacao: scene.classificacaoTempo,
-      faixas,
+      ambiente: scene.tipo,
+      partida,
       media,
+      // Tira fora de diária não sustenta horário nenhum: aqui "sem base pra estimar" é a resposta
+      // honesta, com o ponto de partida do projeto como orientação ao lado.
+      permitirPartida: false,
     });
     return {
       itemId: parte?.id ?? scene.id,
@@ -196,7 +204,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
               fonteRod: rodDaParte.fonte,
               minSemParte: minutosEmPlanosSemParte(scene.shots),
               tempoEstimadoMin: tempoEstimadoDaEntrada(
-                tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena),
+                tempoDeReferenciaMin(scene.tempoEstimadoMin, oitavosCena, partida, scene.tipo),
                 oitavosCena,
                 parte
               ),
@@ -253,9 +261,13 @@ export default async function StripboardPage({ params }: { params: { id: string 
                   oitavos: parteDaLinha
                     ? parteDaLinha.oitavos
                     : paginasParaOitavos(t.cena.scene.paginas),
-                  classificacao: t.cena.scene.classificacaoTempo,
-                  faixas,
+                  ambiente: t.cena.scene.tipo,
+                  partida,
                   media,
+                  // Esta linha vira horário na diária: um número precisa existir.
+                  permitirPartida: true,
+                  resetsMin: planosDaLinha.length > 0 ? computeSceneShotTotals(planosDaLinha).resetsMin : 0,
+                  fatorResetPercent: day.fatorResetPercent,
                 });
               })(),
               observacoes: t.cena.observacoes,
@@ -290,7 +302,9 @@ export default async function StripboardPage({ params }: { params: { id: string 
                     tempoEstimadoDaEntrada(
                       tempoDeReferenciaMin(
                         t.cena.scene.tempoEstimadoMin,
-                        paginasParaOitavos(t.cena.scene.paginas)
+                        paginasParaOitavos(t.cena.scene.paginas),
+                        partida,
+                        t.cena.scene.tipo
                       ),
                       paginasParaOitavos(t.cena.scene.paginas),
                       t.cena.scene.parts.find((p) => p.id === t.cena.scenePartId)

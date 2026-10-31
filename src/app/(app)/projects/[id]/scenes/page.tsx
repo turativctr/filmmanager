@@ -22,7 +22,10 @@ export default async function ScenesPage({
   const semLocacaoAtivo = searchParams.semLocacao === "1";
 
   const [project, scenes, characters, locacoes, naoAgendadasCount, semLocacaoCount] = await Promise.all([
-    prisma.project.findUniqueOrThrow({ where: { id: params.id }, select: { sistemaIdElenco: true } }),
+    prisma.project.findUniqueOrThrow({
+      where: { id: params.id },
+      select: { sistemaIdElenco: true, minPorOitavoPartida: true, acrescimoExteriorPercent: true },
+    }),
     prisma.scene.findMany({
       where: { projectId: params.id, ...(semLocacaoAtivo ? { locacaoId: null } : {}) },
       include: { cast: { select: { characterId: true } }, locacao: { select: { id: true, nome: true } } },
@@ -52,6 +55,11 @@ export default async function ScenesPage({
 
   locacoes.sort((a, b) => compareLocacaoNome(a.nome, b.nome));
 
+  const partida = {
+    minPorOitavo: project.minPorOitavoPartida,
+    acrescimoExteriorPercent: project.acrescimoExteriorPercent,
+  };
+
   const sortedScenes = [...scenes]
     .sort((a, b) => naturalCompare(a.numero, b.numero))
     .map((scene) => ({ ...scene, paginas: scene.paginas.toString() }));
@@ -73,6 +81,7 @@ export default async function ScenesPage({
               characters={characters}
               sistemaIdElenco={project.sistemaIdElenco}
               locacoes={locacoes}
+              partida={partida}
             />
           </>
         }
@@ -97,6 +106,7 @@ export default async function ScenesPage({
               characters={characters}
               sistemaIdElenco={project.sistemaIdElenco}
               locacoes={locacoes}
+              partida={partida}
             />
           </CardContent>
         </Card>

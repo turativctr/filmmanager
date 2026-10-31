@@ -170,9 +170,11 @@ export function recomputeResetsForOrderedShots<T extends ShotResetInput & { id: 
 }
 
 /** tempoTotalMin = (takesPrevistos × duracaoTakeMin) + tempoSetupMin — recalculado sempre que
- *  qualquer um dos três campos é salvo, nunca aceito como input direto da API. */
+ *  qualquer um dos três campos é salvo, nunca aceito como input direto da API. duracaoTakeMin pode
+ *  ser fracionário; o total arredonda pra cima pro minuto inteiro (um plano de 1 take de 7s ocupa
+ *  1min, não 0). O epsilon evita que erro de ponto flutuante (3 × 0.1) suba um minuto à toa. */
 export function computeTempoTotal(takesPrevistos: number, duracaoTakeMin: number, tempoSetupMin: number): number {
-  return takesPrevistos * duracaoTakeMin + tempoSetupMin;
+  return Math.ceil(takesPrevistos * duracaoTakeMin - 1e-9) + tempoSetupMin;
 }
 
 /** Rod = soma(Shot.tempoTotalMin) + soma(ajuste manual ?? Shot.tempoResetMin) dos planos
@@ -433,4 +435,31 @@ export function detectPendingGaps(
   }
 
   return alerts;
+}
+
+/** Duração do take: guardada em minutos (fracionário, quantizado em segundos), digitada e exibida
+ *  como relógio. Aceita "H:MM:SS", "M:SS" ou número puro — número puro é MINUTOS, que é o que o
+ *  campo sempre foi ("2" continua sendo 2 minutos). Devolve null se não der pra ler. */
+export function parseDuracaoTake(raw: string): number | null {
+  const text = raw.trim().replace(",", ".");
+  if (text === "") return null;
+  if (!text.includes(":")) {
+    const min = Number(text);
+    return Number.isFinite(min) && min >= 0 ? Math.round(min * 60) / 60 : null;
+  }
+  const parts = text.split(":");
+  if (parts.length > 3 || parts.some((p) => !/^\d+$/.test(p))) return null;
+  const nums = parts.map(Number);
+  const [h, m, s] = nums.length === 3 ? nums : [0, ...nums];
+  if (s >= 60 || (nums.length === 3 && m >= 60)) return null;
+  return (h * 3600 + m * 60 + s) / 60;
+}
+
+/** 7s → "0:07", 2min → "2:00", 75min → "1:15:00". */
+export function formatDuracaoTake(minutos: number): string {
+  const total = Math.round(minutos * 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }

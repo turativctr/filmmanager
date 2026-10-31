@@ -28,11 +28,19 @@ export async function recalculateDayBlocks(shootDayId: string) {
   const shootDay = await prisma.shootDay.findUnique({
     where: { id: shootDayId },
     include: {
-      project: { select: { limiteAlmocoMin: true, duracaoAlmocoMin: true, preparacaoInicialMin: true } },
+      project: {
+        select: {
+          limiteAlmocoMin: true,
+          duracaoAlmocoMin: true,
+          preparacaoInicialMin: true,
+          minPorOitavoPartida: true,
+          acrescimoExteriorPercent: true,
+        },
+      },
       scenes: {
         orderBy: { ordem: "asc" },
         include: {
-          scene: { select: { tempoEstimadoMin: true, paginas: true } },
+          scene: { select: { tempoEstimadoMin: true, paginas: true, tipo: true } },
           scenePart: { select: { oitavos: true } },
         },
       },
@@ -43,11 +51,15 @@ export async function recalculateDayBlocks(shootDayId: string) {
 
   const allScenes = shootDay.scenes;
   // Parte de cena dividida: fallback do Rod é o estimado da parte, não o da cena inteira. Cena sem
-  // tempo próprio usa a convenção calculada na leitura (tempoDeReferenciaMin) — o almoço precisa de
-  // algum número pra ter onde cair.
+  // tempo próprio usa o ponto de partida do projeto, calculado na leitura (tempoDeReferenciaMin) —
+  // o almoço precisa de algum número pra ter onde cair.
+  const partida = {
+    minPorOitavo: shootDay.project.minPorOitavoPartida,
+    acrescimoExteriorPercent: shootDay.project.acrescimoExteriorPercent,
+  };
   const tempoEstimado = (e: (typeof allScenes)[number]) =>
     tempoEstimadoDaEntrada(
-      tempoDeReferenciaMin(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas)),
+      tempoDeReferenciaMin(e.scene.tempoEstimadoMin, paginasParaOitavos(e.scene.paginas), partida, e.scene.tipo),
       paginasParaOitavos(e.scene.paginas),
       e.scenePart
     );

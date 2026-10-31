@@ -13,7 +13,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
-import { PRIORIDADE_DESCRICAO, PRIORIDADE_LABEL, PRIORIDADES } from "@/lib/shots-shared";
+import {
+  formatDuracaoTake,
+  parseDuracaoTake,
+  PRIORIDADE_DESCRICAO,
+  PRIORIDADE_LABEL,
+  PRIORIDADES,
+} from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
 
 import type { ShotPrioridade } from "@prisma/client";
@@ -86,7 +92,7 @@ export function SortableShotRow({
   };
 
   const [takesDraft, setTakesDraft] = useState(shot.takesPrevistos.toString());
-  const [duracaoDraft, setDuracaoDraft] = useState(shot.duracaoTakeMin.toString());
+  const [duracaoDraft, setDuracaoDraft] = useState(formatDuracaoTake(shot.duracaoTakeMin));
   const [setupDraft, setSetupDraft] = useState(shot.tempoSetupMin.toString());
   const [descricaoDraft, setDescricaoDraft] = useState(shot.descricao);
   const [lenteDraft, setLenteDraft] = useState(shot.lente ?? "");
@@ -101,7 +107,7 @@ export function SortableShotRow({
   // lente, começava a digitar, e a resposta do servidor apagava o que ela tinha digitado. Com
   // dependência por valor, só o campo que de fato mudou por fora é sobrescrito.
   useEffect(() => setTakesDraft(shot.takesPrevistos.toString()), [shot.takesPrevistos]);
-  useEffect(() => setDuracaoDraft(shot.duracaoTakeMin.toString()), [shot.duracaoTakeMin]);
+  useEffect(() => setDuracaoDraft(formatDuracaoTake(shot.duracaoTakeMin)), [shot.duracaoTakeMin]);
   useEffect(() => setSetupDraft(shot.tempoSetupMin.toString()), [shot.tempoSetupMin]);
   useEffect(() => setDescricaoDraft(shot.descricao), [shot.descricao]);
   useEffect(() => setLenteDraft(shot.lente ?? ""), [shot.lente]);
@@ -121,11 +127,12 @@ export function SortableShotRow({
   }
 
   function commitDuracao() {
-    const value = Number(duracaoDraft);
-    if (!Number.isFinite(value) || value < 0) {
-      setDuracaoDraft(shot.duracaoTakeMin.toString());
+    const value = parseDuracaoTake(duracaoDraft);
+    if (value === null) {
+      setDuracaoDraft(formatDuracaoTake(shot.duracaoTakeMin));
       return;
     }
+    setDuracaoDraft(formatDuracaoTake(value));
     if (value === shot.duracaoTakeMin) return;
     void onUpdate(shot.id, { duracaoTakeMin: value });
   }
@@ -264,14 +271,14 @@ export function SortableShotRow({
             />
             <span>×</span>
             <input
-              type="number"
-              min={0}
+              placeholder="m:ss"
+              title="Duração do take — m:ss ou h:mm:ss"
               className="h-6 w-14 rounded border bg-background px-1 py-0.5 text-xs"
               value={duracaoDraft}
               onChange={(e) => setDuracaoDraft(e.target.value)}
               onBlur={commitDuracao}
             />
-            <span>min +</span>
+            <span>+</span>
             <span className="flex items-center gap-0.5">
               Setup
               <TermTooltip content="Preparação específica deste plano (iluminação especial, rig, posicionamento). Diferente do reset entre planos." />

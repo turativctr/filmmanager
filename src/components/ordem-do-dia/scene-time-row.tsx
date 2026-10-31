@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { rotuloOrigem } from "@/lib/estimativa";
 import { formatHHh, type ComputedSchedule } from "@/lib/schedule";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
-import { RESET_LABEL } from "@/lib/shots-shared";
+import { formatDuracaoTake, parseDuracaoTake, RESET_LABEL } from "@/lib/shots-shared";
 
 import type { SceneTimeRow, ShotSummary } from "./types";
 
@@ -52,11 +52,16 @@ function ShotLine({
     if (raw === "") {
       // Campos numéricos aqui não são nullable no schema (takesPrevistos/duracaoTakeMin/
       // tempoSetupMin) — não há PATCH válido pra "vazio", só reverte o input pro valor salvo.
-      e.target.value = String(shot[field]);
+      e.target.value = field === "duracaoTakeMin" ? formatDuracaoTake(shot[field]) : String(shot[field]);
       return;
     }
-    const value = Number(raw);
-    if (Number.isNaN(value) || value === shot[field]) return;
+    const value = field === "duracaoTakeMin" ? parseDuracaoTake(raw) : Number(raw);
+    if (value === null || Number.isNaN(value)) {
+      e.target.value = field === "duracaoTakeMin" ? formatDuracaoTake(shot[field]) : String(shot[field]);
+      return;
+    }
+    if (field === "duracaoTakeMin") e.target.value = formatDuracaoTake(value);
+    if (value === shot[field]) return;
 
     try {
       const res = await fetch(`/api/projects/${projectId}/scenes/${sceneId}/shots/${shot.id}`, {
@@ -90,9 +95,10 @@ function ShotLine({
         />
         <span className="text-muted-foreground">×</span>
         <Input
-          type="number"
-          className="h-7 w-11 px-1 text-center"
-          defaultValue={shot.duracaoTakeMin}
+          placeholder="m:ss"
+          title="Duração do take — m:ss ou h:mm:ss"
+          className="h-7 w-14 px-1 text-center"
+          defaultValue={formatDuracaoTake(shot.duracaoTakeMin)}
           onBlur={(e) => handleFieldBlur("duracaoTakeMin", e)}
         />
         <span className="text-muted-foreground">+</span>

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "shots" ALTER COLUMN "duracaoTakeMin" SET DATA TYPE DOUBLE PRECISION;

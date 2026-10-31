@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { HEAVY_RESETS, RESET_LABEL, resolveEffectiveResetMin } from "@/lib/shots-shared";
+import { formatDuracaoTake, HEAVY_RESETS, RESET_LABEL, resolveEffectiveResetMin } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
 
 import type { PlanoScheduleEntry } from "./types";
@@ -174,9 +174,9 @@ export function PlanoStrip({
       </span>
       <span
         className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground"
-        title={`${shot.takesPrevistos}T × ${shot.duracaoTakeMin}min${shot.tempoSetupMin ? ` + ${shot.tempoSetupMin}min` : ""} = ${shot.tempoTotalMin}min`}
+        title={`${shot.takesPrevistos}T × ${formatDuracaoTake(shot.duracaoTakeMin)}${shot.tempoSetupMin ? ` + ${shot.tempoSetupMin}min` : ""} = ${shot.tempoTotalMin}min`}
       >
-        {shot.takesPrevistos}T×{shot.duracaoTakeMin}
+        {shot.takesPrevistos}T×{formatDuracaoTake(shot.duracaoTakeMin)}
         {shot.tempoSetupMin ? `+${shot.tempoSetupMin}` : ""} {shot.tempoTotalMin}min
       </span>
       <span

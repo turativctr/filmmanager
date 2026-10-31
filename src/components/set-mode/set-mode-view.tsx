@@ -9,6 +9,7 @@ import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Button } from "@/components/ui/button";
 import { intercalar, type BlocoNaTimeline } from "@/lib/day-timeline";
 import { formatHHh, timeToMinutes } from "@/lib/schedule";
+import { formatDuracaoTake } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
 
 import type { ShotPrioridade } from "@prisma/client";
@@ -411,7 +412,7 @@ export function SetModeView({
                               {shot.descricao}
                             </p>
                             <p className={cn("mt-0.5 text-sm text-muted-foreground", isCortado && "line-through")}>
-                              {shot.takesPrevistos}T × {shot.duracaoTakeMin}min
+                              {shot.takesPrevistos}T × {formatDuracaoTake(shot.duracaoTakeMin)}
                             </p>
 
                             <div className="mt-2 flex flex-wrap items-center gap-2">

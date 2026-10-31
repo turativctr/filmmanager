@@ -2,7 +2,8 @@ import type { CharacterCategoria, SistemaIdElenco } from "@prisma/client";
 
 import { CHARACTER_CATEGORIA_ORDER } from "@/lib/character-categoria";
 import { getCharacterId } from "@/lib/character-id";
-import { tempoDeReferenciaMin } from "@/lib/estimativa";
+import { tempoDeReferenciaMin, type PartidaDoProjeto } from "@/lib/estimativa";
+import { getPartidaDoProjeto } from "@/lib/estimativa-server";
 import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
@@ -86,10 +87,14 @@ export type WeeklyPlanDay = {
   elenco: string[];
 };
 export type WeeklyPlanWeek = { weekStart: Date; days: WeeklyPlanDay[] };
-export type WeeklyPlanData = ProjectHeader & { weeks: WeeklyPlanWeek[] };
+export type WeeklyPlanData = ProjectHeader & {
+  weeks: WeeklyPlanWeek[];
+  /** Ponto de partida da produção — o rodapé do documento diz de onde vem o tempo somado. */
+  partida: PartidaDoProjeto;
+};
 
 export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanData> {
-  const project = await getProjectHeader(projectId);
+  const [project, partida] = await Promise.all([getProjectHeader(projectId), getPartidaDoProjeto(projectId)]);
   const shootDays = await prisma.shootDay.findMany({
     where: { projectId },
     orderBy: { numeroDia: "asc" },
@@ -109,7 +114,12 @@ export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanDa
       sinopse: s.scene.sinopse,
       paginas: paginasDaEntrada(Number(s.scene.paginas), s.scenePart),
       tempoEstimadoMin: tempoEstimadoDaEntrada(
-        tempoDeReferenciaMin(s.scene.tempoEstimadoMin, paginasParaOitavos(s.scene.paginas)),
+        tempoDeReferenciaMin(
+          s.scene.tempoEstimadoMin,
+          paginasParaOitavos(s.scene.paginas),
+          partida,
+          s.scene.tipo
+        ),
         paginasParaOitavos(s.scene.paginas),
         s.scenePart
       ),
@@ -128,7 +138,7 @@ export async function getWeeklyPlanData(projectId: string): Promise<WeeklyPlanDa
   }
 
   const weeks = [...weekMap.values()].sort((a, b) => a.weekStart.getTime() - b.weekStart.getTime());
-  return { ...project, weeks };
+  return { ...project, weeks, partida };
 }
 
 // ---------------------------------------------------------------------------

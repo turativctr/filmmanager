@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Settings, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { CLASSIFICACAO_LABEL, CLASSIFICACOES, lerFaixas } from "@/lib/estimativa";
+import { ACRESCIMO_EXTERIOR_MAX, MIN_POR_OITAVO_MAX } from "@/lib/estimativa";
 import { useRef, useState } from "react";
 
 import { TermTooltip } from "@/components/shared/term-tooltip";
@@ -59,13 +59,13 @@ type ProjectDefaults = {
   resetTrocaCameraMin: number;
   resetPosicaoMin: number;
   resetCompletoMin: number;
-  /** Pontos de partida por tipo de cena; null = os padrões (ver lerFaixas). */
-  faixasTempo: unknown;
+  /** Ponto de partida do tempo de cena desta produção (ver src/lib/estimativa.ts). */
+  minPorOitavoPartida: number;
+  acrescimoExteriorPercent: number;
 };
 
 export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
   const router = useRouter();
-  const faixas = lerFaixas(project.faixasTempo);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -100,21 +100,8 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
       resetTrocaCameraMin: form.get("resetTrocaCameraMin") || undefined,
       resetPosicaoMin: form.get("resetPosicaoMin") || undefined,
       resetCompletoMin: form.get("resetCompletoMin") || undefined,
-      faixasTempo: Object.fromEntries(
-        CLASSIFICACOES.filter((c) => c !== "NAO_CLASSIFICADO").map((classe) => [
-          classe,
-          {
-            porPlano: {
-              min: Number(form.get(`faixa_${classe}_porPlano_min`)),
-              max: Number(form.get(`faixa_${classe}_porPlano_max`)),
-            },
-            porOitavo: {
-              min: Number(form.get(`faixa_${classe}_porOitavo_min`)),
-              max: Number(form.get(`faixa_${classe}_porOitavo_max`)),
-            },
-          },
-        ])
-      ),
+      minPorOitavoPartida: form.get("minPorOitavoPartida") || undefined,
+      acrescimoExteriorPercent: form.get("acrescimoExteriorPercent") || undefined,
     };
 
     const res = await fetch(`/api/projects/${project.id}`, {
@@ -354,66 +341,37 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
 
               <div className="space-y-2 border-t pt-4">
                 <div>
-                  <h4 className="text-sm font-semibold">Pontos de partida por tipo de cena</h4>
+                  <h4 className="text-sm font-semibold">Ponto de partida do tempo de cena</h4>
                   <p className="text-xs text-muted-foreground">
-                    Faixa de orientação usada só enquanto o projeto não tem realizado lançado em duas diárias. A
-                    partir daí vale a média do seu próprio projeto. Nunca vira número gravado nem horário: é
-                    orientação pra AD, e o padrão é chute de gente de set — ajuste pela sua equipe.
+                    Quanto vale um oitavo de página nesta produção, enquanto o projeto não tem realizado lançado
+                    em duas diárias — a partir daí vale a média do próprio projeto. O padrão começa na praxe de
+                    mercado (5min por oitavo); ajustando aqui, o número passa a ser da sua equipe e é isso que a
+                    tela diz. Exterior recebe o acréscimo; cena sem INT/EXT definido não recebe nada.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  {CLASSIFICACOES.filter((c) => c !== "NAO_CLASSIFICADO").map((classe) => {
-                    const f = faixas[classe as keyof typeof faixas];
-                    return (
-                      <div key={classe} className="space-y-1 rounded-md border p-2">
-                        <span className="text-sm">{CLASSIFICACAO_LABEL[classe]}</span>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          por plano
-                          <Input
-                            name={`faixa_${classe}_porPlano_min`}
-                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: mínimo por plano`}
-                            type="number"
-                            min={1}
-                            className="h-8 w-16"
-                            defaultValue={f.porPlano.min}
-                          />
-                          a
-                          <Input
-                            name={`faixa_${classe}_porPlano_max`}
-                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: máximo por plano`}
-                            type="number"
-                            min={1}
-                            className="h-8 w-16"
-                            defaultValue={f.porPlano.max}
-                          />
-                          min
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          por oitavo
-                          <Input
-                            name={`faixa_${classe}_porOitavo_min`}
-                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: mínimo por oitavo`}
-                            type="number"
-                            min={1}
-                            className="h-8 w-16"
-                            defaultValue={f.porOitavo.min}
-                          />
-                          a
-                          <Input
-                            name={`faixa_${classe}_porOitavo_max`}
-                            aria-label={`${CLASSIFICACAO_LABEL[classe]}: máximo por oitavo`}
-                            type="number"
-                            min={1}
-                            className="h-8 w-16"
-                            defaultValue={f.porOitavo.max}
-                          />
-                          min
-                        </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="minPorOitavoPartida">Minutos por oitavo</Label>
+                    <Input
+                      id="minPorOitavoPartida"
+                      name="minPorOitavoPartida"
+                      type="number"
+                      min={1}
+                      max={MIN_POR_OITAVO_MAX}
+                      defaultValue={project.minPorOitavoPartida}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="acrescimoExteriorPercent">Acréscimo em exterior (%)</Label>
+                    <Input
+                      id="acrescimoExteriorPercent"
+                      name="acrescimoExteriorPercent"
+                      type="number"
+                      min={0}
+                      max={ACRESCIMO_EXTERIOR_MAX}
+                      defaultValue={project.acrescimoExteriorPercent}
+                    />
+                  </div>
                 </div>
               </div>
 

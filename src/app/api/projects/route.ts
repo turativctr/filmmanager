@@ -152,9 +152,9 @@ export async function POST(request: Request) {
             sinopse: scene.sinopse,
             paginas: scene.paginas.toString(),
             linhas: scene.linhas,
-            // Cena importada nasce SEM tempo: a convenção de 5min por oitavo é referência, não
-            // medição, e gravá-la aqui fazia o app sugerir tempo "sem base nenhuma" (ver
-            // src/lib/estimativa.ts). A tela do import mostra a convenção como referência.
+            // Cena importada nasce SEM tempo: gravar a convenção de 5min por oitavo aqui fazia o
+            // app sugerir tempo "sem base nenhuma". O cronograma usa o ponto de partida do projeto,
+            // calculado na leitura e rotulado (ver src/lib/estimativa.ts).
             tempoEstimadoMin: null,
           };
         });

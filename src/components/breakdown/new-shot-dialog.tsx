@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { parseDuracaoTake } from "@/lib/shots-shared";
 
 import type { ShotData } from "./shot-types";
 
@@ -38,6 +39,13 @@ export function NewShotDialog({
 
     const form = e.currentTarget;
     const data = new FormData(form);
+    const duracaoRaw = String(data.get("duracaoTakeMin") ?? "");
+    const duracaoTakeMin = parseDuracaoTake(duracaoRaw);
+    if (duracaoRaw.trim() !== "" && duracaoTakeMin === null) {
+      toast.error("Duração do take inválida — use m:ss ou h:mm:ss (ex.: 0:07)");
+      setLoading(false);
+      return;
+    }
     const payload = {
       descricao: data.get("descricao"),
       tamanho: data.get("tamanho") || undefined,
@@ -45,7 +53,7 @@ export function NewShotDialog({
       angulo: data.get("angulo") || undefined,
       movimento: data.get("movimento") || undefined,
       takesPrevistos: data.get("takesPrevistos") || undefined,
-      duracaoTakeMin: data.get("duracaoTakeMin") || undefined,
+      duracaoTakeMin: duracaoTakeMin ?? undefined,
       tempoSetupMin: data.get("tempoSetupMin") || undefined,
     };
 
@@ -119,8 +127,8 @@ export function NewShotDialog({
               <Input id="takesPrevistos" name="takesPrevistos" type="number" min={1} defaultValue={3} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="duracaoTakeMin">Duração/take (min)</Label>
-              <Input id="duracaoTakeMin" name="duracaoTakeMin" type="number" min={0} defaultValue={2} />
+              <Label htmlFor="duracaoTakeMin">Duração/take</Label>
+              <Input id="duracaoTakeMin" name="duracaoTakeMin" placeholder="m:ss" defaultValue="2:00" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tempoSetupMin">Setup (min)</Label>

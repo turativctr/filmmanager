@@ -2,97 +2,77 @@
  * De onde vem o tempo sugerido — e como dizer isso na tela.
  *
  * A AD abandonou a montagem da OD quando percebeu que o app sugeria tempo "sem base nenhuma": os
- * 5min por oitavo apareciam como se fossem conta e são convenção. Ela não rejeita estimativa;
- * rejeita estimativa disfarçada de cálculo. Por isso todo número sugerido passa a declarar a origem,
- * e "sem base pra estimar" é um resultado legítimo — campo vazio honesto é melhor que número
- * inventado.
+ * 5min por oitavo apareciam como se fossem conta e são convenção de mercado. Ela não rejeita
+ * estimativa; rejeita estimativa disfarçada de cálculo. Por isso todo número sugerido declara a
+ * origem, e "sem base pra estimar" é um resultado legítimo.
  *
  * Três estágios, nesta ordem: o que a AD digitou (inclui a decupagem dela), o realizado DESTE
- * projeto, e a faixa genérica de ponto de partida. Puro, sem prisma.
+ * projeto, e o ponto de partida DA PRODUÇÃO. Puro, sem prisma.
+ *
+ * A classificação de cena em quatro tipos (diálogo estático, com movimento, VFX, exterior) foi
+ * aposentada: os tipos que mudam tempo de montagem são de PLANO, e master/estático-movimento/
+ * detalhe já existem em Shot.ehMaster, Shot.movimento e Shot.tamanho — alimentando a classificação
+ * de reset (classifyReset, src/lib/shots-shared.ts). Dar faixa própria a eles contaria o mesmo fato
+ * duas vezes, e não ajudaria no caso que derrubou a AD: a primeira OD, sem decupagem nenhuma.
  */
 import { formatTempoEstimado } from "@/lib/paginas";
 
-/** A convenção de mercado que era usada em silêncio. Continua sendo o último recurso pra montar
- *  horário (sem número nenhum a diária não tem cronograma e o almoço não tem onde cair), mas agora
- *  sempre rotulada. */
+/** Praxe de mercado — 1/8 de página ≈ 5min de filmagem. Continua sendo só o PADRÃO do campo do
+ *  projeto: o número que aparece na tela é sempre o da produção, não este. */
 export const CONVENCAO_MIN_POR_OITAVO = 5;
 
-/** O número que o CRONOGRAMA usa quando a cena não tem tempo próprio: a convenção, calculada na
- *  hora da leitura em vez de gravada no import. É a mesma conta de sempre — o que mudou é que ela
- *  deixou de virar dado com cara de decisão da AD e passou a aparecer rotulada. Sem páginas não há
- *  nem convenção: aí é "sem base pra estimar" mesmo. */
-export function tempoDeReferenciaMin(tempoEstimadoMin: number | null, oitavos: number): number | null {
-  return tempoEstimadoMin ?? (oitavos > 0 ? oitavos * CONVENCAO_MIN_POR_OITAVO : null);
+/** Ponto de partida da produção: um número por projeto, no lugar das quatro faixas por tipo de
+ *  cena. Exterior recebe acréscimo percentual (Scene.tipo já diz INT/EXT); cena sem INT/EXT
+ *  definido não recebe nada — não se cobra caro por falta de informação. */
+export type PartidaDoProjeto = { minPorOitavo: number; acrescimoExteriorPercent: number };
+
+export const MIN_POR_OITAVO_PADRAO = CONVENCAO_MIN_POR_OITAVO;
+/** Exterior custa luz, clima e logística. 20% é ponto de partida editável, não medição. */
+export const ACRESCIMO_EXTERIOR_PADRAO = 20;
+export const PARTIDA_PADRAO: PartidaDoProjeto = {
+  minPorOitavo: MIN_POR_OITAVO_PADRAO,
+  acrescimoExteriorPercent: ACRESCIMO_EXTERIOR_PADRAO,
+};
+
+export const MIN_POR_OITAVO_MAX = 120;
+export const ACRESCIMO_EXTERIOR_MAX = 200;
+
+/** Ambiente da cena como o schema guarda: null = roteiro não deixou claro. */
+export type AmbienteCena = "INT" | "EXT" | null;
+
+/** Minutos de partida de uma cena: oitavos × o número da produção, com o acréscimo de exterior
+ *  quando a cena É exterior. null quando não há nem páginas — aí é sem base mesmo. */
+export function tempoDePartidaMin(
+  oitavos: number,
+  ambiente: AmbienteCena,
+  partida: PartidaDoProjeto
+): number | null {
+  if (oitavos <= 0) return null;
+  const base = oitavos * partida.minPorOitavo;
+  if (ambiente !== "EXT" || partida.acrescimoExteriorPercent <= 0) return Math.round(base);
+  return Math.round(base * (1 + partida.acrescimoExteriorPercent / 100));
 }
 
-export type ClassificacaoCena = "NAO_CLASSIFICADO" | "DIALOGO_ESTATICO" | "COM_MOVIMENTO" | "EFEITO_VFX" | "EXTERIOR";
-
-export const CLASSIFICACAO_LABEL: Record<ClassificacaoCena, string> = {
-  NAO_CLASSIFICADO: "Não classificado",
-  DIALOGO_ESTATICO: "Diálogo estático",
-  COM_MOVIMENTO: "Cena com movimento",
-  EFEITO_VFX: "Cena com efeito ou VFX",
-  EXTERIOR: "Exterior",
-};
-
-export const CLASSIFICACOES: ClassificacaoCena[] = [
-  "NAO_CLASSIFICADO",
-  "DIALOGO_ESTATICO",
-  "COM_MOVIMENTO",
-  "EFEITO_VFX",
-  "EXTERIOR",
-];
-
-export type Faixa = { min: number; max: number };
-export type FaixasDaClasse = { porPlano: Faixa; porOitavo: Faixa };
-export type FaixasTempo = Record<Exclude<ClassificacaoCena, "NAO_CLASSIFICADO">, FaixasDaClasse>;
-
-/** Ponto de partida quando o projeto ainda não tem realizado lançado. São chute de gente de set, não
- *  pesquisa — por isso o rótulo nunca diz "estimado" e a produção pode reescrever tudo isto em
- *  Project.faixasTempo. A faixa por oitavo existe porque na PRIMEIRA OD a cena não tem plano nenhum
- *  e a faixa por plano não teria o que multiplicar. */
-export const FAIXAS_PADRAO: FaixasTempo = {
-  DIALOGO_ESTATICO: { porPlano: { min: 8, max: 12 }, porOitavo: { min: 4, max: 7 } },
-  COM_MOVIMENTO: { porPlano: { min: 15, max: 25 }, porOitavo: { min: 8, max: 14 } },
-  EFEITO_VFX: { porPlano: { min: 25, max: 40 }, porOitavo: { min: 15, max: 25 } },
-  EXTERIOR: { porPlano: { min: 20, max: 30 }, porOitavo: { min: 10, max: 18 } },
-};
-
-const ehFaixa = (v: unknown): v is Faixa =>
-  typeof v === "object" &&
-  v !== null &&
-  Number.isFinite((v as Faixa).min) &&
-  Number.isFinite((v as Faixa).max) &&
-  (v as Faixa).min > 0 &&
-  (v as Faixa).max >= (v as Faixa).min;
-
-/** Lê Project.faixasTempo com o padrão como rede: valor corrompido ou classe faltando não pode
- *  derrubar a tela de planejamento inteira — cai no padrão daquela classe e segue. */
-export function lerFaixas(json: unknown): FaixasTempo {
-  if (typeof json !== "object" || json === null) return FAIXAS_PADRAO;
-  const bruto = json as Record<string, unknown>;
-  const saida = {} as FaixasTempo;
-  for (const classe of Object.keys(FAIXAS_PADRAO) as (keyof FaixasTempo)[]) {
-    const v = bruto[classe] as FaixasDaClasse | undefined;
-    saida[classe] =
-      v && ehFaixa(v.porPlano) && ehFaixa(v.porOitavo)
-        ? { porPlano: { ...v.porPlano }, porOitavo: { ...v.porOitavo } }
-        : FAIXAS_PADRAO[classe];
+/** "ponto de partida do projeto: 5min por oitavo" (+ "· +20% em exterior" quando se aplica). É o
+ *  que substituiu "convenção: 5min por oitavo" — a diferença importa: um é escolha da produção, o
+ *  outro é regra de mercado. */
+export function textoDaPartida(partida: PartidaDoProjeto, ambiente: AmbienteCena = null): string {
+  const base = `ponto de partida do projeto: ${partida.minPorOitavo}min por oitavo`;
+  if (ambiente === "EXT" && partida.acrescimoExteriorPercent > 0) {
+    return `${base} · +${partida.acrescimoExteriorPercent}% em exterior`;
   }
-  return saida;
+  return base;
 }
 
-export function formatFaixa(f: Faixa): string {
-  return `${f.min} a ${f.max}min`;
-}
-
-/** "ponto de partida: 8 a 12min por plano · 4 a 7min por oitavo". É TEXTO DE ORIENTAÇÃO: nunca vira
- *  número gravado nem horário — na primeira OD a cena não tem plano, e chutar quantos planos ela
- *  teria recriaria o problema que fez a AD desistir. */
-export function textoDeOrientacao(classificacao: ClassificacaoCena, faixas: FaixasTempo): string | null {
-  if (classificacao === "NAO_CLASSIFICADO") return null;
-  const f = faixas[classificacao];
-  return `ponto de partida: ${formatFaixa(f.porPlano)} por plano · ${formatFaixa(f.porOitavo)} por oitavo`;
+/** O número que o CRONOGRAMA usa quando a cena não tem tempo próprio. Calculado na leitura, nunca
+ *  gravado no import. Sem páginas não há nem partida: aí é "sem base pra estimar" mesmo. */
+export function tempoDeReferenciaMin(
+  tempoEstimadoMin: number | null,
+  oitavos: number,
+  partida: PartidaDoProjeto = PARTIDA_PADRAO,
+  ambiente: AmbienteCena = null
+): number | null {
+  return tempoEstimadoMin ?? tempoDePartidaMin(oitavos, ambiente, partida);
 }
 
 // ---------------------------------------------------------------------------
@@ -137,12 +117,14 @@ export function calcularMediaDoProjeto(cenas: CenaFilmada[]): MediaDoProjeto {
 export type OrigemTempo =
   | { kind: "DIGITADO"; min: number }
   | { kind: "DURACAO_ALVO"; min: number }
-  | { kind: "PLANOS"; min: number; planos: number }
+  /** `resetsMin` e `fatorResetPercent` ficam DENTRO do total dos planos — o rótulo nomeia os dois,
+   *  senão o tempo de troca entre planos (e o ritmo do dia) mexe no número calado. */
+  | { kind: "PLANOS"; min: number; planos: number; resetsMin: number; fatorResetPercent: number }
   | { kind: "MEDIA_PROJETO"; min: number; base: "PLANO" | "OITAVO"; diarias: number }
-  | { kind: "CONVENCAO"; min: number }
+  | { kind: "PARTIDA"; min: number; partida: PartidaDoProjeto; ambiente: AmbienteCena }
   /** Rod já gravado na diária que não bate com planos nem com duração alvo e não tem marca de
-   *  digitado: veio de antes desta versão (o arraste gravava a convenção). É o número que o
-   *  cronograma usa, então tem que aparecer — com o aviso de que a origem se perdeu. */
+   *  digitado: veio de antes da marcação de origem. É o número que o cronograma usa, então
+   *  aparece — com o aviso de que a origem se perdeu. */
   | { kind: "LEGADO"; min: number }
   | { kind: "SEM_BASE"; min: null; orientacao: string | null };
 
@@ -155,21 +137,34 @@ export type EntradaDaEstimativa = {
   duracaoAlvoMin?: number | null;
   planosMin?: number | null;
   planos?: number;
+  /** Parte do total dos planos que é tempo de troca, e o ritmo do dia aplicado a ela. */
+  resetsMin?: number;
+  fatorResetPercent?: number;
   oitavos: number;
-  classificacao?: ClassificacaoCena;
-  faixas?: FaixasTempo;
+  ambiente?: AmbienteCena;
+  partida: PartidaDoProjeto;
   media?: MediaDoProjeto | null;
-  /** false nas telas que preferem "sem base" a mostrar a convenção (a estimativa da cena);
-   *  true onde é preciso um número pra existir horário (cronograma da diária). */
-  permitirConvencao?: boolean;
+  /** SEM DEFAULT, de propósito: com default `true` toda tela caía no ponto de partida e "sem base
+   *  pra estimar" nunca aparecia — a postura honesta que esta feature existe pra criar não chegava
+   *  na tela. Cada chamador decide: true onde um número PRECISA existir pra haver horário
+   *  (cronograma da diária), false onde é melhor dizer que não há base. */
+  permitirPartida: boolean;
 };
 
-/** A ordem dos três estágios: o que a AD decidiu, o realizado deste projeto, e por último a
- *  convenção — que só entra onde um número precisa existir. Sem nada disso: sem base pra estimar. */
+/** A ordem dos três estágios: o que a AD decidiu, o realizado deste projeto, e por último o ponto
+ *  de partida da produção — que só entra onde um número precisa existir. */
 export function resolverOrigemDoTempo(e: EntradaDaEstimativa): OrigemTempo {
   if (e.digitadoMin != null) return { kind: "DIGITADO", min: e.digitadoMin };
   if (e.duracaoAlvoMin != null) return { kind: "DURACAO_ALVO", min: e.duracaoAlvoMin };
-  if (e.planosMin != null && e.planosMin > 0) return { kind: "PLANOS", min: e.planosMin, planos: e.planos ?? 0 };
+  if (e.planosMin != null && e.planosMin > 0) {
+    return {
+      kind: "PLANOS",
+      min: e.planosMin,
+      planos: e.planos ?? 0,
+      resetsMin: e.resetsMin ?? 0,
+      fatorResetPercent: e.fatorResetPercent ?? 100,
+    };
+  }
   // Gravado sem origem conhecida: o horário já usa esse número, então é ele que a tela mostra.
   if (e.gravadoMin != null && e.gravadoMin > 0) return { kind: "LEGADO", min: e.gravadoMin };
 
@@ -183,13 +178,17 @@ export function resolverOrigemDoTempo(e: EntradaDaEstimativa): OrigemTempo {
     }
   }
 
-  if (e.permitirConvencao && e.oitavos > 0) {
-    return { kind: "CONVENCAO", min: e.oitavos * CONVENCAO_MIN_POR_OITAVO };
+  const ambiente = e.ambiente ?? null;
+  const partidaMin = tempoDePartidaMin(e.oitavos, ambiente, e.partida);
+  if (e.permitirPartida && partidaMin != null) {
+    return { kind: "PARTIDA", min: partidaMin, partida: e.partida, ambiente };
   }
   return {
     kind: "SEM_BASE",
     min: null,
-    orientacao: e.classificacao ? textoDeOrientacao(e.classificacao, e.faixas ?? FAIXAS_PADRAO) : null,
+    // Mesmo sem base, a tela diz de onde SAIRIA um número — é assim que o ponto de partida da
+    // produção fica visível, em vez de existir só no formulário de configuração.
+    orientacao: partidaMin != null ? textoDaPartida(e.partida, ambiente) : null,
   };
 }
 
@@ -200,14 +199,18 @@ export function rotuloOrigem(o: OrigemTempo): string {
       return "você definiu";
     case "DURACAO_ALVO":
       return "duração que você definiu";
-    case "PLANOS":
-      return o.planos > 0 ? `soma de ${o.planos} ${o.planos === 1 ? "plano" : "planos"}` : "soma dos planos";
+    case "PLANOS": {
+      const planos = `${o.planos} ${o.planos === 1 ? "plano" : "planos"}`;
+      const resets = o.resetsMin > 0 ? ` + ${formatTempoEstimado(o.resetsMin)} de resets` : "";
+      const ritmo = o.fatorResetPercent !== 100 ? ` · com ritmo de ${o.fatorResetPercent}%` : "";
+      return `${planos}${resets}${ritmo}`;
+    }
     case "MEDIA_PROJETO":
       return `média deste projeto, ${o.diarias} ${o.diarias === 1 ? "diária" : "diárias"}${
         o.base === "OITAVO" ? ", por oitavo" : ""
       }`;
-    case "CONVENCAO":
-      return `convenção: ${CONVENCAO_MIN_POR_OITAVO}min por oitavo`;
+    case "PARTIDA":
+      return textoDaPartida(o.partida, o.ambiente);
     case "LEGADO":
       return "gravado antes desta versão — confira";
     case "SEM_BASE":
@@ -216,7 +219,8 @@ export function rotuloOrigem(o: OrigemTempo): string {
 }
 
 /** Forma curta pra coluna de PDF/planilha, com a legenda no rodapé do documento. */
-export const LEGENDA_ORIGEM = "def. = você definiu · planos = soma dos planos · média = média deste projeto · conv. = convenção de 5min por oitavo";
+export const LEGENDA_ORIGEM =
+  "def. = você definiu · planos = soma dos planos (com resets) · média = média deste projeto · partida = ponto de partida do projeto";
 
 export function rotuloOrigemCurto(o: OrigemTempo): string {
   switch (o.kind) {
@@ -227,17 +231,16 @@ export function rotuloOrigemCurto(o: OrigemTempo): string {
       return "planos";
     case "MEDIA_PROJETO":
       return "média";
+    case "PARTIDA":
+      return "partida";
     case "LEGADO":
       return "gravado";
-    case "CONVENCAO":
-      return "conv.";
     case "SEM_BASE":
       return "—";
   }
 }
 
-/** "40min (você definiu)" · "8 a 12min (ponto de partida, classifique a cena pra afinar)" quando não
- *  há base; sem classificação, só "sem base pra estimar". */
+/** "40min (você definiu)" · "sem base pra estimar — ponto de partida do projeto: 5min por oitavo". */
 export function textoComOrigem(o: OrigemTempo): string {
   if (o.kind === "SEM_BASE") {
     return o.orientacao ? `sem base pra estimar — ${o.orientacao}` : "sem base pra estimar";
@@ -245,10 +248,10 @@ export function textoComOrigem(o: OrigemTempo): string {
   return `${formatTempoEstimado(o.min)} (${rotuloOrigem(o)})`;
 }
 
-/** Nota de um total: soma de números de origens diferentes não tem uma origem só, então o rótulo diz
- *  qual é a MAIS fraca que entrou na conta — é ela que a AD precisa saber que está ali. */
+/** Nota de um total: soma de números de origens diferentes não tem uma origem só, então o rótulo
+ *  diz qual é a MAIS fraca que entrou na conta — é ela que a AD precisa saber que está ali. */
 export function notaDoTotal(origens: OrigemTempo[]): string | null {
-  if (origens.some((o) => o.kind === "CONVENCAO")) return `inclui tempo de convenção (${CONVENCAO_MIN_POR_OITAVO}min por oitavo)`;
+  if (origens.some((o) => o.kind === "PARTIDA")) return "inclui ponto de partida do projeto";
   if (origens.some((o) => o.kind === "LEGADO")) return "inclui tempo gravado antes desta versão";
   if (origens.some((o) => o.kind === "MEDIA_PROJETO")) return "inclui média deste projeto";
   if (origens.some((o) => o.kind === "SEM_BASE")) return "inclui cena sem base pra estimar";

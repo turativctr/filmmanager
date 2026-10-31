@@ -182,7 +182,7 @@ export default async function ProjectOverviewPage({ params }: { params: { id: st
                 <p className="text-2xl font-semibold">{formatTempoEstimado(state.totalTempoMin)}</p>
                 <p className="text-xs text-muted-foreground">
                   de filmagem estimada
-                  {state.totalTempoTemConvencao && " · inclui tempo de convenção (5min por oitavo)"}
+                  {state.totalTempoTemPartida && " · inclui ponto de partida do projeto"}
                 </p>
               </CardContent>
             </Card>

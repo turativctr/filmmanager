@@ -152,6 +152,14 @@ export function StripCard({
         </button>
 
         <span className="w-7 shrink-0 text-center font-bold">{item.scene.numero}</span>
+        {item.scene.cobre && (
+          <span
+            className="max-w-32 shrink-0 truncate rounded border border-scheduling-fg/40 bg-scheduling-bg px-1 py-0.5 text-[10px] font-semibold text-scheduling-fg"
+            title={`Master de várias cenas — cobre ${item.scene.cobre.join(", ") || "nenhuma cena"}`}
+          >
+            MASTER · {item.scene.cobre.join(", ")}
+          </span>
+        )}
         {parte && (
           <span
             className="max-w-24 shrink-0 truncate rounded border border-scheduling-fg/40 bg-scheduling-bg px-1 py-0.5 text-[10px] font-semibold text-scheduling-fg"

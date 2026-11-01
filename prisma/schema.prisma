@@ -392,6 +392,12 @@ model Scene {
   // Convenção WGA: uma cena removida numa revisão nunca é deletada nem tem seu número reciclado —
   // fica marcada OMITIDA no lugar, preservando a numeração/continuidade entre drafts.
   omitida           Boolean          @default(false)
+  // ROTEIRO = cena do roteiro (importada ou cadastrada). MASTER_MULTICENA = cena de produção que
+  // existe só pra filmar um plano master cobrindo várias cenas do roteiro (ex.: "todas as cenas na
+  // casa"): tem elenco, locação, diária e planos como qualquer cena, mas não tem páginas (0 oitavos)
+  // e fica fora do diff de drafts — não está no roteiro, então nunca vira OMITIDA. As cenas cobertas
+  // ficam em SceneCobertura e não mudam em nada.
+  origem            SceneOrigem      @default(ROTEIRO)
   notasAD           String?          @db.Text // anotação livre do AD, visível na Escaleta e no Stripboard
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -405,9 +411,32 @@ model Scene {
   continuityNotes ContinuityNote[]
   shots           Shot[]
   parts           ScenePart[]
+  // Só em cena MASTER_MULTICENA: as cenas do roteiro que o master cobre.
+  cobre           SceneCobertura[] @relation("MasterCobre")
+  // Masters de várias cenas que cobrem esta cena.
+  cobertaPor      SceneCobertura[] @relation("CenaCoberta")
 
   @@unique([projectId, numero])
   @@map("scenes")
+}
+
+enum SceneOrigem {
+  ROTEIRO
+  MASTER_MULTICENA
+}
+
+// Vínculo "o master M1 cobre a cena 12" — informativo (tira, lista de cenas, documentos). Não
+// transfere tempo, elenco nem status entre as cenas: cada uma segue com os seus.
+model SceneCobertura {
+  masterSceneId String
+  sceneId       String
+
+  master Scene @relation("MasterCobre", fields: [masterSceneId], references: [id], onDelete: Cascade)
+  scene  Scene @relation("CenaCoberta", fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@id([masterSceneId, sceneId])
+  @@index([sceneId])
+  @@map("scene_coberturas")
 }
 
 // Divisão da MESMA cena entre diárias (ex.: a imagem numa diária, o voice off em outra). Cena sem
@@ -526,9 +555,10 @@ model Shot {
   notasDirecao      String?       @db.Text
   notasContinuidade String?       @db.Text
   status            ShotStatus    @default(PENDENTE)
-  // Plano principal da cena — no máximo um por cena (marcar outro desmarca o anterior, ver a rota
-  // PATCH do plano). Marcar sobe o plano pro topo UMA vez; depois a AD reordena à vontade, não é
-  // trava. Independente de coverage: dá pra ter master sem coverage e coverage de plano não-master.
+  // Plano master da cena — pode haver vários por cena (ex.: um master de cada eixo). Marcar sobe o
+  // plano pro topo UMA vez, logo depois dos outros masters (ver a rota PATCH do plano); depois a AD
+  // reordena à vontade, não é trava. Independente de coverage: dá pra ter master sem coverage e
+  // coverage de plano não-master.
   ehMaster          Boolean       @default(false)
   prioridade        ShotPrioridade @default(DESEJAVEL)
   // Coverage: plano pendurado em outro plano da MESMA cena, numerado com a letra do pai (6A, 6B).

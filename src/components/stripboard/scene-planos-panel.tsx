@@ -139,7 +139,10 @@ export function ScenePlanosPanel({
     try {
       const res = await fetch(`${baseUrl}/${shotId}`, { method: "DELETE" });
       if (!res.ok) {
-        toast.error("Erro ao salvar — tente novamente");
+        // Mesmo critério do PATCH: o motivo do servidor quando houver, com o status pra diagnóstico.
+        const data = await res.json().catch(() => ({}));
+        console.error("Erro ao excluir plano:", res.status, data);
+        toast.error(typeof data.error === "string" ? data.error : `Erro ao excluir plano (${res.status}) — tente novamente`);
         return;
       }
       const updated: ShotData[] = await res.json();

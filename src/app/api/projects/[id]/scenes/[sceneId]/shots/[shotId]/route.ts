@@ -102,37 +102,31 @@ export async function PATCH(
     hierarchyData.ehMaster = ehMaster;
   }
   if (tornandoMaster) {
-    // Sobe pro topo UMA vez, levando os coverages junto. Depois disso a AD arrasta à vontade: nada
-    // força o master a continuar lá.
+    // Sobe pro topo UMA vez, levando os coverages junto — logo depois dos masters que já estão lá
+    // (uma cena pode ter vários), pra não passar na frente deles. Depois disso a AD arrasta à
+    // vontade: nada força o master a continuar lá.
     const [start, end] = groupRange(sceneShots, shot.id);
     const grupo = sceneShots.slice(start, end);
-    nextOrder = [...grupo, ...sceneShots.slice(0, start), ...sceneShots.slice(end)].map((s) => s.id);
+    const resto = [...sceneShots.slice(0, start), ...sceneShots.slice(end)];
+    // Coverage sempre vem logo abaixo do pai, então um coverage nessa corrida é de um master.
+    let topo = 0;
+    while (topo < resto.length && (resto[topo].ehMaster || resto[topo].planoPaiId)) topo++;
+    nextOrder = [...resto.slice(0, topo), ...grupo, ...resto.slice(topo)].map((s) => s.id);
   }
 
   const takesPrevistos = fields.takesPrevistos ?? shot.takesPrevistos;
   const duracaoTakeMin = fields.duracaoTakeMin ?? shot.duracaoTakeMin;
   const tempoSetupMin = fields.tempoSetupMin ?? shot.tempoSetupMin;
 
-  await prisma.$transaction([
-    // Um master por cena: marcar este desmarca qualquer outro.
-    ...(tornandoMaster
-      ? [
-          prisma.shot.updateMany({
-            where: { sceneId: shot.sceneId, ehMaster: true, id: { not: shot.id } },
-            data: { ehMaster: false },
-          }),
-        ]
-      : []),
-    prisma.shot.update({
-      where: { id: shot.id },
-      data: {
-        ...fields,
-        ...hierarchyData,
-        ...(scenePartId !== undefined ? { scenePartId } : {}),
-        tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
-      },
-    }),
-  ]);
+  await prisma.shot.update({
+    where: { id: shot.id },
+    data: {
+      ...fields,
+      ...hierarchyData,
+      ...(scenePartId !== undefined ? { scenePartId } : {}),
+      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
+    },
+  });
 
   if (nextOrder) await writeShotOrder(nextOrder);
 

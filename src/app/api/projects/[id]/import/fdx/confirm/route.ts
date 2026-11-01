@@ -34,7 +34,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const result = await prisma.$transaction(
     async (tx) => {
-      const existingScenes = await tx.scene.findMany({ where: { projectId: params.id } });
+      // Master de várias cenas fica fora: não vem do roteiro, então a importação nunca o atualiza.
+      const existingScenes = await tx.scene.findMany({ where: { projectId: params.id, origem: "ROTEIRO" } });
       const sceneByNumero = new Map(existingScenes.map((s) => [s.numero, s]));
 
       const existingCharacters = await tx.character.findMany({ where: { projectId: params.id } });

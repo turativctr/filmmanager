@@ -22,6 +22,8 @@ export type SceneSummary = {
   duracaoAlvoMin: number | null;
   notasAD: string | null;
   omitida: boolean;
+  /** Master de várias cenas: números das cenas do roteiro que ele cobre. null = cena do roteiro. */
+  cobre: string[] | null;
   characterIds: string[];
   /** Mensagem "divisão não fecha" quando a cena é dividida e a soma dos oitavos das partes deixou de
    *  bater com as páginas (editadas depois). null = sem divisão ou fecha. */

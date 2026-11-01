@@ -2,6 +2,7 @@ import { Clapperboard } from "lucide-react";
 import Link from "next/link";
 
 import { FdxImportDialog } from "@/components/scenes/fdx-import-dialog";
+import { MasterMulticenaDialog } from "@/components/scenes/master-multicena-dialog";
 import { ScenesTable } from "@/components/scenes/scenes-table";
 import { SceneFormDialog } from "@/components/scenes/scene-form-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -28,7 +29,11 @@ export default async function ScenesPage({
     }),
     prisma.scene.findMany({
       where: { projectId: params.id, ...(semLocacaoAtivo ? { locacaoId: null } : {}) },
-      include: { cast: { select: { characterId: true } }, locacao: { select: { id: true, nome: true } } },
+      include: {
+        cast: { select: { characterId: true } },
+        locacao: { select: { id: true, nome: true } },
+        cobre: { select: { scene: { select: { id: true, numero: true } } } },
+      },
     }),
     prisma.character.findMany({
       where: { projectId: params.id },
@@ -62,7 +67,24 @@ export default async function ScenesPage({
 
   const sortedScenes = [...scenes]
     .sort((a, b) => naturalCompare(a.numero, b.numero))
-    .map((scene) => ({ ...scene, paginas: scene.paginas.toString() }));
+    .map(({ cobre, ...scene }) => ({
+      ...scene,
+      paginas: scene.paginas.toString(),
+      cobre: cobre.map((c) => c.scene).sort((a, b) => naturalCompare(a.numero, b.numero)),
+    }));
+
+  // Cenas que um master pode cobrir: as do roteiro, ativas. Vem da lista completa — o filtro "sem
+  // locação" da página não deve esconder cenas do diálogo.
+  const cenasCobriveis = (
+    semLocacaoAtivo
+      ? await prisma.scene.findMany({
+          where: { projectId: params.id, origem: "ROTEIRO", omitida: false },
+          include: { locacao: { select: { nome: true } } },
+        })
+      : scenes.filter((s) => s.origem === "ROTEIRO" && !s.omitida)
+  )
+    .sort((a, b) => naturalCompare(a.numero, b.numero))
+    .map((s) => ({ id: s.id, numero: s.numero, set: s.set, locacao: s.locacao?.nome ?? null }));
 
   return (
     <div className="space-y-4">
@@ -76,6 +98,7 @@ export default async function ScenesPage({
         actions={
           <>
             <FdxImportDialog projectId={params.id} />
+            <MasterMulticenaDialog projectId={params.id} cenas={cenasCobriveis} />
             <SceneFormDialog
               projectId={params.id}
               characters={characters}
@@ -107,6 +130,7 @@ export default async function ScenesPage({
               sistemaIdElenco={project.sistemaIdElenco}
               locacoes={locacoes}
               partida={partida}
+              cenasCobriveis={cenasCobriveis}
             />
           </CardContent>
         </Card>

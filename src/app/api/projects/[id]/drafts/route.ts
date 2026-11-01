@@ -66,8 +66,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // campos contra um estado que não é mais o vigente — ver comentário em computeSceneDiffs),
       // mas o loop de escrita abaixo precisa saber se já existe uma LINHA (mesmo omitida) pra
       // decidir create vs. update — antes isso era um findUnique por diff.
+      // Só cenas do roteiro: um master de várias cenas (MASTER_MULTICENA) não está em draft nenhum
+      // e seria diagnosticado como REMOVIDA — e marcado OMITIDA — a cada nova versão.
       const allScenes = await tx.scene.findMany({
-        where: { projectId: params.id },
+        where: { projectId: params.id, origem: "ROTEIRO" },
         include: { cast: { include: { character: true } } },
       });
       const existingByNumero = new Map(allScenes.map((s) => [s.numero, s]));

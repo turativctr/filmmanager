@@ -365,7 +365,7 @@ export function SortableShotRow({
                 onCheckedChange={(checked) => void onUpdate(shot.id, { ehMaster: checked === true })}
               />
               Master da cena
-              <TermTooltip content="Um master por cena: marcar este desmarca o anterior. Ao marcar, o plano sobe pro topo uma vez; depois dá pra arrastar à vontade." />
+              <TermTooltip content="Uma cena pode ter vários masters. Ao marcar, o plano sobe pro topo uma vez, logo depois dos outros masters; depois dá pra arrastar à vontade." />
             </label>
             <div className="min-w-[12rem] flex-1 space-y-1">
               <label className="flex items-center gap-1 text-xs text-muted-foreground">

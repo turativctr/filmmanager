@@ -40,3 +40,15 @@ export const sceneDuracaoAlvoSchema = z.object({
 export const sceneSinopseADSchema = z.object({
   sinopseAD: z.string().optional().nullable(),
 });
+
+// Master de várias cenas (Scene.origem = MASTER_MULTICENA): o nome vira o Set da cena de produção
+// ("Master Casa"); cenaIds são as cenas do roteiro que ele cobre — elenco e locação saem delas na
+// criação e depois são editados como em qualquer cena.
+export const masterMulticenaSchema = z.object({
+  nome: z.string().trim().min(1, "Dê um nome ao master."),
+  cenaIds: z.array(z.string().min(1)).min(1, "Escolha ao menos uma cena."),
+});
+
+export const masterCoberturaSchema = z.object({
+  cenaIds: z.array(z.string().min(1)).min(1, "Escolha ao menos uma cena."),
+});

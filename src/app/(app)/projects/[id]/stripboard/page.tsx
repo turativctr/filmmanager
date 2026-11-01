@@ -41,6 +41,9 @@ const shotsSelect = {
   },
 };
 
+// Master de várias cenas: os números das cenas que ele cobre, pro selo da tira.
+const coberturaSelect = { select: { scene: { select: { numero: true } } } } as const;
+
 const partsInclude = {
   orderBy: { ordem: "asc" as const },
   include: { sceneShootDay: { select: { shootDay: { select: { numeroDia: true } } } } },
@@ -85,6 +88,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
         shots: shotsSelect,
         locacao: { select: { nome: true } },
         parts: partsInclude,
+        cobre: coberturaSelect,
         shootDays: { select: { scenePartId: true } },
       },
     }),
@@ -101,6 +105,7 @@ export default async function StripboardPage({ params }: { params: { id: string 
                 shots: shotsSelect,
                 locacao: { select: { nome: true } },
                 parts: partsInclude,
+                cobre: coberturaSelect,
               },
             },
           },
@@ -151,6 +156,10 @@ export default async function StripboardPage({ params }: { params: { id: string 
       duracaoAlvoMin: scene.duracaoAlvoMin,
       notasAD: scene.notasAD,
       omitida: scene.omitida,
+      cobre:
+        scene.origem === "MASTER_MULTICENA"
+          ? scene.cobre.map((c) => c.scene.numero).sort(naturalCompare)
+          : null,
       characterIds: scene.cast.map((c) => c.characterId),
       divisaoNaoFecha: divisaoNaoFecha(paginasParaOitavos(scene.paginas), scene.parts)
         ? mensagemDivisaoNaoFecha(paginasParaOitavos(scene.paginas), scene.parts)

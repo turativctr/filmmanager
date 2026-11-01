@@ -57,19 +57,11 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { tempoEstimadoMin, characterIds, extraLinks, ...breakdownFields } = parsed.data;
+  // O tempo da cena não passa mais por aqui: é o "Tempo estimado para gravação" do card Planos
+  // (rota duracao-alvo).
+  const { characterIds, extraLinks, ...breakdownFields } = parsed.data;
 
   await prisma.$transaction(async (tx) => {
-    if (tempoEstimadoMin !== undefined) {
-      // Mesma marca de edição manual que a rota de edição de cena — reimportar um draft depois
-      // não pode sobrescrever um tempo estimado que o AD ajustou aqui à mão.
-      const manualEdit = tempoEstimadoMin !== scene.tempoEstimadoMin;
-      await tx.scene.update({
-        where: { id: scene.id },
-        data: { tempoEstimadoMin, ...(manualEdit ? { paginasEditadoManualmente: true, linhas: null } : {}) },
-      });
-    }
-
     if (characterIds) {
       await tx.sceneCast.deleteMany({ where: { sceneId: scene.id } });
       if (characterIds.length) {

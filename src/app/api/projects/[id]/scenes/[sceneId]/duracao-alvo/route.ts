@@ -7,8 +7,9 @@ import { findOwnedProject } from "@/lib/project-access";
 import { syncSceneRodMin } from "@/lib/shots";
 import { sceneDuracaoAlvoSchema } from "@/lib/validation/scene";
 
-/** Tempo reverso da cena. Grava Scene.duracaoAlvoMin e propaga pro Rod de toda diária onde a cena
- *  está (ver syncSceneRodMin) — nunca toca nos tempos dos planos: a média por plano é só exibida. */
+/** "Tempo estimado para gravação" da cena — o campo único. Grava Scene.duracaoAlvoMin (e a cópia em
+ *  tempoEstimadoMin, ver schema) e propaga pro Rod de toda diária onde a cena está (ver
+ *  syncSceneRodMin). Nunca toca nos tempos dos planos: a média por plano é só exibida. */
 export async function PATCH(request: Request, { params }: { params: { id: string; sceneId: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
@@ -27,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const updated = await prisma.scene.update({
     where: { id: scene.id },
-    data: { duracaoAlvoMin: parsed.data.duracaoAlvoMin },
+    data: { duracaoAlvoMin: parsed.data.duracaoAlvoMin, tempoEstimadoMin: parsed.data.duracaoAlvoMin },
     select: { id: true, duracaoAlvoMin: true },
   });
 

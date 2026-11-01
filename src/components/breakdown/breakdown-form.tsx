@@ -7,7 +7,6 @@ import { TagListInput } from "@/components/shared/tag-list-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,7 +55,6 @@ export function BreakdownForm({
   projectId,
   sceneId,
   sistemaIdElenco,
-  initialTempoEstimadoMin,
   allCharacters,
   initialCastIds,
   allExtras,
@@ -66,14 +64,12 @@ export function BreakdownForm({
   projectId: string;
   sceneId: string;
   sistemaIdElenco: "ID_CURTO" | "NUMERACAO";
-  initialTempoEstimadoMin: number | null;
   allCharacters: CharacterOption[];
   initialCastIds: string[];
   allExtras: ExtraOption[];
   initialLinkedExtraIds: string[];
   initialBreakdown: Partial<BreakdownData> | null;
 }) {
-  const [tempoEstimadoMin, setTempoEstimadoMin] = useState<number | null>(initialTempoEstimadoMin);
   const [castIds, setCastIds] = useState<Set<string>>(new Set(initialCastIds));
   const [linkedExtraIds, setLinkedExtraIds] = useState<Set<string>>(
     new Set(initialLinkedExtraIds)
@@ -137,7 +133,6 @@ export function BreakdownForm({
 
   useEffect(() => {
     const snapshot = JSON.stringify({
-      tempoEstimadoMin,
       castIds: Array.from(castIds).sort(),
       linkedExtraIds: Array.from(linkedExtraIds).sort(),
       breakdown,
@@ -159,7 +154,6 @@ export function BreakdownForm({
 
     timeoutRef.current = setTimeout(async () => {
       const payload = {
-        tempoEstimadoMin,
         characterIds: Array.from(castIds),
         extraLinks: extras.map((extra) => ({
           extraId: extra.id,
@@ -181,7 +175,7 @@ export function BreakdownForm({
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tempoEstimadoMin, castIds, linkedExtraIds, breakdown]);
+  }, [castIds, linkedExtraIds, breakdown]);
 
   return (
     <div className="space-y-4 pb-12">
@@ -196,15 +190,6 @@ export function BreakdownForm({
           <CardTitle className="text-base">Elenco</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="max-w-xs space-y-1.5">
-            <Label htmlFor="tempoEstimadoMin">Tempo estimado para gravação da cena</Label>
-            <HoraMinInput
-              id="tempoEstimadoMin"
-              vazioPermitido
-              value={tempoEstimadoMin}
-              onCommit={setTempoEstimadoMin}
-            />
-          </div>
           {allCharacters.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum personagem cadastrado no projeto ainda.

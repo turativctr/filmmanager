@@ -18,7 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
+import { formatHoraMin } from "@/lib/hora-min";
+import { formatPaginas } from "@/lib/paginas";
 import { cn } from "@/lib/utils";
 
 type CharacterOption = {
@@ -40,7 +41,9 @@ type SceneRow = {
   sinopse: string | null;
   paginas: unknown;
   diaNarrativo: number | null;
-  tempoEstimadoMin: number | null;
+  duracaoAlvoMin: number | null;
+  /** Soma dos planos (com resets), pra coluna de gravação quando a AD não definiu tempo. */
+  somaPlanosMin: number | null;
   notasAD: string | null;
   omitida: boolean;
   origem: "ROTEIRO" | "MASTER_MULTICENA";
@@ -93,7 +96,8 @@ export function ScenesTable({
           </TableHead>
           <TableHead>Dia narr.</TableHead>
           <TableHead>
-            Filmagem <TermTooltip content="Estimativa: 5 min por oitavo (convenção, não uma medição)." />
+            Gravação{" "}
+            <TermTooltip content="Tempo estimado para gravação: o que você definiu, ou a soma dos planos da cena. Edite no card Planos do breakdown ou no formulário da cena." />
           </TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
@@ -129,8 +133,10 @@ export function ScenesTable({
             <TableCell>{formatPaginas(scene.paginas)}</TableCell>
             <TableCell>{scene.diaNarrativo ?? "—"}</TableCell>
             <TableCell>
-              {scene.tempoEstimadoMin != null ? (
-                `${formatTempoEstimado(scene.tempoEstimadoMin)} (você definiu)`
+              {scene.duracaoAlvoMin != null ? (
+                `${formatHoraMin(scene.duracaoAlvoMin)} (você definiu)`
+              ) : scene.somaPlanosMin ? (
+                `${formatHoraMin(scene.somaPlanosMin)} (soma dos planos)`
               ) : (
                 <span className="text-muted-foreground">sem base pra estimar</span>
               )}

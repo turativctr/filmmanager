@@ -3,7 +3,6 @@ import { z } from "zod";
 const stringList = z.array(z.string()).optional();
 
 export const breakdownSchema = z.object({
-  tempoEstimadoMin: z.coerce.number().int().optional().nullable(),
   characterIds: z.array(z.string()).optional(),
   extraLinks: z.array(z.object({ extraId: z.string(), linked: z.boolean() })).optional(),
   figurino: stringList,

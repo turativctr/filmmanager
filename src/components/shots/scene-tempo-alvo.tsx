@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Input } from "@/components/ui/input";
-import { formatHoraMinOuVazio, parseHoraMin, TITULO_HORA_MIN } from "@/lib/hora-min";
+import { formatHoraMin, formatHoraMinOuVazio, parseHoraMin, TITULO_HORA_MIN } from "@/lib/hora-min";
 import { formatTempoEstimado } from "@/lib/paginas";
 import { resolveEffectiveRodMin } from "@/lib/schedule";
 import { minutosEmPlanosSemParte, origemRodDaParte, resolveRodDaParte } from "@/lib/scene-parts-shared";
@@ -16,9 +16,11 @@ import { cn } from "@/lib/utils";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
 
-/** Cabeçalho de tempo da cena, acima da lista de planos: a AD define quanto tempo a cena tem e vê a
- *  média por plano e o saldo contra o que os planos somam. Tudo aqui é aviso — nada bloqueia salvar
- *  e nada é escrito nos tempos dos planos. Usado no stripboard e no Breakdown. */
+/** Cabeçalho de tempo da cena, acima da lista de planos: o "Tempo estimado para gravação" — o campo
+ *  único de tempo da cena (Scene.duracaoAlvoMin). Vazio, acompanha a soma dos planos (mostrada no
+ *  campo, em cinza); digitado, manda no Rod, e a AD vê a média por plano e o saldo contra o que os
+ *  planos somam, com um atalho pra voltar à soma. Tudo aqui é aviso — nada bloqueia salvar e nada é
+ *  escrito nos tempos dos planos. Usado no stripboard e no Breakdown. */
 export function SceneTempoAlvo({
   projectId,
   sceneId,
@@ -56,11 +58,15 @@ export function SceneTempoAlvo({
   async function commit() {
     const trimmed = draft.trim();
     const value = trimmed === "" ? null : parseHoraMin(trimmed);
-    // Ilegível não pode virar "apagar o alvo" — só o campo vazio apaga.
+    // Ilegível não pode virar "apagar o tempo" — só o campo vazio apaga.
     if ((trimmed !== "" && value === null) || (value !== null && value < 1)) {
       setDraft(formatHoraMinOuVazio(alvo));
       return;
     }
+    await salvar(value);
+  }
+
+  async function salvar(value: number | null) {
     setDraft(formatHoraMinOuVazio(value));
     if (value === alvo) return;
 
@@ -75,7 +81,7 @@ export function SceneTempoAlvo({
       if (!res.ok) throw new Error(`status ${res.status}`);
       onSaved?.();
     } catch (err) {
-      console.error("Erro ao salvar duração alvo:", err);
+      console.error("Erro ao salvar tempo estimado para gravação:", err);
       toast.error("Erro ao salvar — tente novamente");
       setAlvo(previous);
       setDraft(formatHoraMinOuVazio(previous));
@@ -86,6 +92,8 @@ export function SceneTempoAlvo({
   // separado.
   const ativos = shots.filter((s) => s.status !== "DESCARTADO");
   const { totalMin: somaMin } = computeSceneShotTotals(shots);
+  // Campo vazio acompanha a soma dos planos — exceto em cena dividida, onde o Rod é por parte.
+  const ancoradoNosPlanos = ativos.length > 0 && !divisao;
 
   const avaliacao =
     alvo === null
@@ -102,8 +110,8 @@ export function SceneTempoAlvo({
     ativos.length > 0
       ? `Rod: ${formatTempoEstimado(somaMin)} (soma dos planos)`
       : tempoEstimadoMin
-        ? `Rod: ${formatTempoEstimado(tempoEstimadoMin)} (estimado pelos oitavos — defina a duração alvo pra fixar)`
-        : "Rod: sem estimativa — defina a duração alvo ou cadastre planos";
+        ? `Rod: ${formatTempoEstimado(tempoEstimadoMin)} (estimado pelos oitavos — defina o tempo estimado pra fixar)`
+        : "Rod: sem estimativa — defina o tempo estimado ou cadastre planos";
 
   // Cena dividida (decisão A): cada parte tem o Rod dela — planos atribuídos, ou estimado pelos
   // oitavos. Plano sem parte não entra em nenhuma, e a duração alvo só é comparada com a soma.
@@ -159,7 +167,7 @@ export function SceneTempoAlvo({
           {alvo !== null && somaDasPartes > alvo && (
             <p className="flex items-center gap-1 font-medium text-erro-fg">
               <AlertTriangle className="h-3 w-3 shrink-0" />
-              As partes somam {formatTempoEstimado(somaDasPartes)} e passam da duração alvo em{" "}
+              As partes somam {formatTempoEstimado(somaDasPartes)} e passam do tempo estimado em{" "}
               {formatTempoEstimado(somaDasPartes - alvo)}.
             </p>
           )}
@@ -173,19 +181,20 @@ export function SceneTempoAlvo({
       )}
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor={`duracao-alvo-${sceneId}`} className="flex items-center gap-1 font-medium text-foreground">
-          Duração alvo
+          Tempo estimado para gravação
           <TermTooltip
             content={
               divisao
-                ? "Cena dividida entre diárias: a duração alvo é só referência do total. O Rod de cada parte vem dos planos atribuídos a ela (ou do estimado pelos oitavos dela), e aqui aparece um aviso se a soma das partes passar do alvo."
-                : "Quanto tempo a cena tem. Preenchido, vira o Rod da cena no cronograma e mostra quanto cabe por plano. Vazio, o Rod vem da soma dos planos, como sempre, ou do tempo estimado pelos oitavos se a cena não tem planos. Nunca altera os tempos dos planos."
+                ? "Cena dividida entre diárias: este tempo é só referência do total. O Rod de cada parte vem dos planos atribuídos a ela (ou do estimado pelos oitavos dela), e aqui aparece um aviso se a soma das partes passar dele."
+                : "Quanto tempo a cena leva pra gravar. Vazio, acompanha a soma dos planos (o número em cinza). Digitado, vira o Rod da cena no cronograma e mostra quanto cabe por plano. Nunca altera os tempos dos planos."
             }
           />
         </label>
         <Input
           id={`duracao-alvo-${sceneId}`}
-          // Vazio = sem alvo (Rod vem dos planos); "0:00" aqui pareceria um alvo de zero minutos.
-          placeholder="—"
+          // Vazio = acompanha os planos: o placeholder É a soma deles. Sem planos, "—" (e não "0:00",
+          // que pareceria um tempo de zero minutos).
+          placeholder={ancoradoNosPlanos ? formatHoraMin(somaMin) : "—"}
           title={TITULO_HORA_MIN}
           className="h-7 w-20 text-xs"
           value={draft}
@@ -196,6 +205,16 @@ export function SceneTempoAlvo({
           }}
         />
         {divisao && <span className="text-muted-foreground">referência do total</span>}
+        {ancoradoNosPlanos && alvo === null && <span className="text-muted-foreground">soma dos planos</span>}
+        {ancoradoNosPlanos && alvo !== null && alvo !== somaMin && (
+          <button
+            type="button"
+            className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() => void salvar(null)}
+          >
+            usar a soma dos planos ({formatHoraMin(somaMin)})
+          </button>
+        )}
         {avaliacao && !divisao && <span className="text-muted-foreground">· {mensagemMedia(avaliacao, "plano", "planos")}</span>}
       </div>
 

@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { compareLocacaoNome } from "@/lib/locacao";
 import { naturalCompare } from "@/lib/natural-sort";
 import { prisma } from "@/lib/prisma";
+import { computeSceneShotTotals } from "@/lib/shots-shared";
 
 export default async function ScenesPage({
   params,
@@ -33,6 +34,9 @@ export default async function ScenesPage({
         cast: { select: { characterId: true } },
         locacao: { select: { id: true, nome: true } },
         cobre: { select: { scene: { select: { id: true, numero: true } } } },
+        shots: {
+          select: { tempoTotalMin: true, tempoResetMin: true, tempoResetMinManual: true, takesPrevistos: true, status: true },
+        },
       },
     }),
     prisma.character.findMany({
@@ -67,9 +71,10 @@ export default async function ScenesPage({
 
   const sortedScenes = [...scenes]
     .sort((a, b) => naturalCompare(a.numero, b.numero))
-    .map(({ cobre, ...scene }) => ({
+    .map(({ cobre, shots, ...scene }) => ({
       ...scene,
       paginas: scene.paginas.toString(),
+      somaPlanosMin: shots.length > 0 ? computeSceneShotTotals(shots).totalMin : null,
       cobre: cobre.map((c) => c.scene).sort((a, b) => naturalCompare(a.numero, b.numero)),
     }));
 

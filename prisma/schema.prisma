@@ -377,16 +377,18 @@ model Scene {
   // (a contagem bruta deixa de corresponder ao valor editado à mão).
   linhas            Int?
   diaNarrativo      Int?
+  // CÓPIA de duracaoAlvoMin (desde 2026-11-01, migration tempo_estimado_campo_unico): quem só LÊ o
+  // tempo da cena (tira, cronograma, PDFs, tempoDeReferenciaMin) continua lendo daqui. Só a rota
+  // duracao-alvo e a de edição de cena escrevem, sempre junto com duracaoAlvoMin.
   tempoEstimadoMin  Int?
-  // Tempo que a AD decide dar pra cena ("tempo reverso"), digitado à mão. Diferente de
-  // tempoEstimadoMin (estimativa automática por oitavos): quando preenchido, é ELE que vira o Rod da
-  // cena em toda diária (SceneShootDay.rodMin) e a soma dos planos passa a ser só a base do aviso de
-  // estouro. null = comportamento de sempre, Rod vem da soma dos planos. Nunca redistribui os tempos
-  // dos planos — a média por plano é só exibida (ver src/lib/tempo-alvo.ts).
+  // "Tempo estimado para gravação" — o campo único de tempo da cena, digitado à mão (H:MM). Vazio =
+  // segue a soma dos planos. Preenchido, é ELE que vira o Rod da cena em toda diária
+  // (SceneShootDay.rodMin) e a soma dos planos passa a ser só a base do aviso de estouro. Nunca
+  // redistribui os tempos dos planos — a média por plano é só exibida (ver src/lib/tempo-alvo.ts).
   duracaoAlvoMin    Int?
-  // Vira true assim que o AD edita `paginas` ou `tempoEstimadoMin` diretamente (formulário de
-  // cena ou de breakdown) — a reimportação de um novo draft (import/fdx/confirm, drafts) passa a
-  // preservar os três campos (paginas/tempoEstimadoMin/linhas) em vez de recalcular por cima,
+  // Vira true assim que o AD edita `paginas` diretamente (formulário de cena) — a reimportação de
+  // um novo draft (import/fdx/confirm, drafts) passa a preservar paginas/linhas em vez de
+  // recalcular por cima (o tempo da cena a reimportação nunca toca),
   // igual ao padrão já usado em SceneShootDay.observacoesAutoGeradas.
   paginasEditadoManualmente Boolean  @default(false)
   // Convenção WGA: uma cena removida numa revisão nunca é deletada nem tem seu número reciclado —

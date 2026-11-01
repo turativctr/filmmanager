@@ -270,15 +270,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
             set: scene.set,
             locacaoId: resolveLocacaoId(scene, existingLocacaoId),
             sinopse: scene.sinopse,
-            // Nunca sobrescreve oitavos/tempo/linhas de uma cena editada manualmente — a
-            // reimportação atualiza os outros campos normalmente, só esses três ficam intocados.
+            // Nunca sobrescreve oitavos/linhas de uma cena editada manualmente — a reimportação
+            // atualiza os outros campos normalmente, só esses dois ficam intocados.
             ...(paginasEditadoManualmente
               ? {}
               : {
                   paginas: scene.paginas.toString(),
                   linhas: scene.linhas,
-                  // Reimportada, nasce sem tempo, como no import novo (ver src/lib/estimativa.ts).
-                  tempoEstimadoMin: null,
+                  // O tempo da cena NÃO é tocado: é o "Tempo estimado para gravação" que a AD
+                  // definiu (duracaoAlvoMin, com cópia em tempoEstimadoMin), nunca vem do roteiro.
                 }),
             omitida: false,
           },

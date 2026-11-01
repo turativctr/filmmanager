@@ -96,7 +96,6 @@ export default async function BreakdownPage({
         projectId={params.id}
         sceneId={scene.id}
         sistemaIdElenco={project.sistemaIdElenco}
-        initialTempoEstimadoMin={scene.tempoEstimadoMin}
         allCharacters={allCharacters}
         initialCastIds={scene.cast.map((c) => c.characterId)}
         allExtras={allExtras}

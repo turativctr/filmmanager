@@ -70,7 +70,7 @@ type SceneDefaults = {
   sinopse: string | null;
   paginas: unknown;
   diaNarrativo: number | null;
-  tempoEstimadoMin: number | null;
+  duracaoAlvoMin: number | null;
   notasAD: string | null;
   cast: { characterId: string }[];
 };
@@ -168,7 +168,9 @@ export function SceneFormDialog({
       sinopse: form.get("sinopse") || undefined,
       paginas: form.get("paginas"),
       diaNarrativo: form.get("diaNarrativo") || undefined,
-      tempoEstimadoMin: form.get("tempoEstimadoMin") || undefined,
+      // Vazio = volta a acompanhar a soma dos planos (null), diferente dos campos acima, que só
+      // ignoram o vazio.
+      duracaoAlvoMin: form.get("duracaoAlvoMin") ? Number(form.get("duracaoAlvoMin")) : null,
       notasAD: form.get("notasAD") || undefined,
       characterIds: Array.from(selectedCast),
     };
@@ -299,7 +301,7 @@ export function SceneFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="paginas">Páginas</Label>
               <Input
@@ -320,21 +322,21 @@ export function SceneFormDialog({
                 defaultValue={scene?.diaNarrativo ?? ""}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tempoEstimadoMin">Tempo estimado para gravação</Label>
-              <HoraMinInput
-                id="tempoEstimadoMin"
-                name="tempoEstimadoMin"
-                vazioPermitido
-                defaultValue={scene?.tempoEstimadoMin ?? null}
-              />
-              {tempoSugerido != null && (
-                <p className="text-xs text-muted-foreground">
-                  ~{formatHoraMin(tempoSugerido)} pelo {textoDaPartida(partida, ambiente)}. É ponto de partida da produção,
-                  não medição — deixe vazio se não tiver base.
-                </p>
-              )}
-            </div>
+          </div>
+
+          <div className="max-w-xs space-y-1.5">
+            <Label htmlFor="duracaoAlvoMin">Tempo estimado para gravação</Label>
+            <HoraMinInput
+              id="duracaoAlvoMin"
+              name="duracaoAlvoMin"
+              vazioPermitido
+              defaultValue={scene?.duracaoAlvoMin ?? null}
+            />
+            <p className="text-xs text-muted-foreground">
+              Vazio, acompanha a soma dos planos da cena.
+              {tempoSugerido != null &&
+                ` Sem planos, ~${formatHoraMin(tempoSugerido)} pelo ${textoDaPartida(partida, ambiente)} — ponto de partida, não medição.`}
+            </p>
           </div>
 
           {characters.length > 0 && (

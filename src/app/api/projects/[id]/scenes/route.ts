@@ -53,6 +53,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       classeLuz,
       periodoFim,
       paginas: parsePaginas(paginas)!.toString(),
+      tempoEstimadoMin: data.duracaoAlvoMin ?? null,
       projectId: params.id,
       cast: characterIds?.length
         ? { create: characterIds.map((characterId) => ({ characterId })) }

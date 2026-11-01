@@ -198,7 +198,7 @@ export function rotuloOrigem(o: OrigemTempo): string {
     case "DIGITADO":
       return "você definiu";
     case "DURACAO_ALVO":
-      return "duração que você definiu";
+      return "tempo que você definiu";
     case "PLANOS": {
       const planos = `${o.planos} ${o.planos === 1 ? "plano" : "planos"}`;
       const resets = o.resetsMin > 0 ? ` + ${formatTempoEstimado(o.resetsMin)} de resets` : "";

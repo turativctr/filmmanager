@@ -24,7 +24,9 @@ export const sceneSchema = z.object({
     message: "Formato inválido. Use frações de oitavo, ex.: 1 2/8",
   }),
   diaNarrativo: z.coerce.number().int().optional().nullable(),
-  tempoEstimadoMin: z.coerce.number().int().optional().nullable(),
+  // "Tempo estimado para gravação" (Scene.duracaoAlvoMin). null apaga e volta a seguir os planos;
+  // ausente = não mexe. tempoEstimadoMin não é aceito: é cópia, gravada pelo servidor.
+  duracaoAlvoMin: z.number().int().min(1).max(24 * 60).nullable().optional(),
   notasAD: z.string().optional().nullable(),
   characterIds: z.array(z.string()).optional(),
 });

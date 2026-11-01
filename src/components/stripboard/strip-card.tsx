@@ -239,7 +239,7 @@ export function StripCard({
             <Tooltip>
               <TooltipTrigger className="block h-2 w-2 shrink-0 rounded-full bg-alerta-accent" />
               <TooltipContent>
-                {duracaoAlvo != null ? "Tempo manual difere da duração alvo" : "Tempo manual difere dos planos"}
+                {duracaoAlvo != null ? "Tempo manual difere do tempo estimado" : "Tempo manual difere dos planos"}
               </TooltipContent>
             </Tooltip>
           </span>
@@ -320,14 +320,14 @@ export function StripCard({
               {item.rodDigitado && item.rodMin != null
                 ? avisoDigitadoVsPlanos(item.rodMin, rodEsperado)
                 : duracaoAlvo != null
-                  ? `Tempo manual — duração alvo é ${formatTempoEstimado(duracaoAlvo)}`
+                  ? `Tempo manual — tempo estimado é ${formatTempoEstimado(duracaoAlvo)}`
                   : `Tempo manual — planos ${parte ? "da parte " : ""}somam ${rodEsperado}min`}
               <button
                 type="button"
                 className="rounded border border-alerta-accent/60 bg-alerta-bg px-1.5 py-0.5 font-semibold hover:bg-alerta-bg/70"
                 onClick={() => onUpdateTimes?.(item.prepMin, rodEsperado)}
               >
-                {duracaoAlvo != null ? "Usar duração alvo" : "Usar tempo dos planos"}
+                {duracaoAlvo != null ? "Usar tempo estimado" : "Usar tempo dos planos"}
               </button>
             </p>
           )}

@@ -6,6 +6,7 @@ import { deriveClasseLuz } from "@/lib/fdx-parser";
 import { parsePaginas } from "@/lib/paginas";
 import { prisma } from "@/lib/prisma";
 import { findOwnedProject } from "@/lib/project-access";
+import { syncSceneRodMin } from "@/lib/shots";
 import { sceneSchema } from "@/lib/validation/scene";
 
 async function loadScene(projectId: string, sceneId: string) {
@@ -61,14 +62,14 @@ export async function PATCH(
     }
   }
 
-  // Edição manual de paginas/tempoEstimadoMin — igual ao padrão de
-  // SceneShootDay.observacoesAutoGeradas: uma vez editado à mão, a reimportação de um novo draft
-  // (import/fdx/confirm, drafts) passa a preservar os três campos em vez de recalcular por cima.
+  // Edição manual de paginas — igual ao padrão de SceneShootDay.observacoesAutoGeradas: uma vez
+  // editado à mão, a reimportação de um novo draft (import/fdx/confirm, drafts) passa a preservar
+  // paginas/linhas em vez de recalcular por cima.
   // `linhas` (a contagem bruta por trás de `paginas`) vira null porque deixa de corresponder ao
   // valor editado.
   const newPaginas = parsePaginas(paginas)!;
   const paginasChanged = newPaginas !== Number(scene.paginas);
-  const tempoChanged = data.tempoEstimadoMin !== undefined && data.tempoEstimadoMin !== scene.tempoEstimadoMin;
+  const tempoChanged = data.duracaoAlvoMin !== undefined && data.duracaoAlvoMin !== scene.duracaoAlvoMin;
   // classeLuz/periodoFim são sempre re-derivados do periodo enviado — nunca aceitos direto do
   // cliente (ver comentário em validation/scene.ts). Sem contexto de cena anterior aqui (edição
   // avulsa, fora da ordem do roteiro), então sem herança: período tipo "CONTÍNUO" digitado à mão
@@ -82,7 +83,9 @@ export async function PATCH(
       classeLuz,
       periodoFim,
       paginas: newPaginas.toString(),
-      ...(paginasChanged || tempoChanged ? { paginasEditadoManualmente: true, linhas: null } : {}),
+      ...(paginasChanged ? { paginasEditadoManualmente: true, linhas: null } : {}),
+      // Campo único de tempo: tempoEstimadoMin acompanha (ver schema).
+      ...(tempoChanged ? { tempoEstimadoMin: data.duracaoAlvoMin } : {}),
       ...(characterIds
         ? {
             cast: {
@@ -94,6 +97,9 @@ export async function PATCH(
     },
     include: { cast: { include: { character: true } } },
   });
+
+  // Mesmo efeito da rota duracao-alvo: o tempo da cena vira o Rod nas diárias.
+  if (tempoChanged) await syncSceneRodMin(scene.id, undefined, { semNadaVolta: data.duracaoAlvoMin === null });
 
   return NextResponse.json(updated);
 }

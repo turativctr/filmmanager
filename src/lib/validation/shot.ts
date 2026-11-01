@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { normalizarTamanho } from "@/lib/shots-shared";
+
 // tipoReset/tempoResetMin/tempoTotalMin não entram aqui — são sempre recalculados no servidor
 // (tempoTotalMin = takesPrevistos × duracaoTakeMin + tempoSetupMin; tipoReset/tempoResetMin por
 // recalculateScene()/recalculateDaySchedule() em src/lib/shots.ts), nunca aceitos como input direto.
@@ -11,7 +13,8 @@ import { z } from "zod";
 // coverageShotNumero em src/lib/shots-shared.ts.
 export const shotSchema = z.object({
   descricao: z.string().min(1),
-  tamanho: z.string().trim().optional().nullable(),
+  // Maiúscula por palavra ao gravar — ver normalizarTamanho.
+  tamanho: z.string().trim().transform(normalizarTamanho).optional().nullable(),
   lente: z.string().trim().optional().nullable(),
   angulo: z.string().trim().optional().nullable(),
   movimento: z.string().trim().optional().nullable(),

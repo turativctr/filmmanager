@@ -321,7 +321,7 @@ export function SceneFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tempoEstimadoMin">Tempo estimado</Label>
+              <Label htmlFor="tempoEstimadoMin">Tempo estimado para gravação</Label>
               <HoraMinInput
                 id="tempoEstimadoMin"
                 name="tempoEstimadoMin"

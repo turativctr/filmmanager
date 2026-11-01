@@ -463,3 +463,24 @@ export function formatDuracaoTake(minutos: number): string {
   const s = String(total % 60).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
+
+
+const PALAVRAS_MINUSCULAS = new Set(["de", "da", "do", "das", "dos", "e", "em", "a", "o", "the", "of"]);
+
+/** Tamanho do plano com maiúscula em cada palavra ("plano americano" → "Plano Americano"), pra lista
+ *  não misturar "Plano americano" com "Plano Conjunto". Preposições ficam minúsculas ("Over the
+ *  Shoulder") e siglas curtas já em maiúscula ficam como estão ("POV", "OTS"). */
+export function normalizarTamanho(tamanho: string): string {
+  return tamanho
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((palavra, i) => {
+      const letras = palavra.replace(/[^\p{L}]/gu, "");
+      if (letras.length >= 2 && letras.length <= 4 && letras === letras.toUpperCase()) return palavra;
+      const minuscula = palavra.toLocaleLowerCase("pt-BR");
+      if (i > 0 && PALAVRAS_MINUSCULAS.has(minuscula)) return minuscula;
+      return minuscula.charAt(0).toLocaleUpperCase("pt-BR") + minuscula.slice(1);
+    })
+    .join(" ");
+}

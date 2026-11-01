@@ -197,7 +197,7 @@ export function BreakdownForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="max-w-xs space-y-1.5">
-            <Label htmlFor="tempoEstimadoMin">Tempo estimado da cena</Label>
+            <Label htmlFor="tempoEstimadoMin">Tempo estimado para gravação da cena</Label>
             <HoraMinInput
               id="tempoEstimadoMin"
               vazioPermitido

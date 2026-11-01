@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
 import {
   formatDuracaoTake,
+  normalizarTamanho,
   parseDuracaoTake,
   PRIORIDADE_DESCRICAO,
   PRIORIDADE_LABEL,
@@ -96,6 +97,7 @@ export function SortableShotRow({
   const [takesDraft, setTakesDraft] = useState(shot.takesPrevistos.toString());
   const [duracaoDraft, setDuracaoDraft] = useState(formatDuracaoTake(shot.duracaoTakeMin));
   const [descricaoDraft, setDescricaoDraft] = useState(shot.descricao);
+  const [tamanhoDraft, setTamanhoDraft] = useState(shot.tamanho ?? "");
   const [lenteDraft, setLenteDraft] = useState(shot.lente ?? "");
   const [anguloDraft, setAnguloDraft] = useState(shot.angulo ?? "");
   const [movimentoDraft, setMovimentoDraft] = useState(shot.movimento ?? "");
@@ -110,6 +112,7 @@ export function SortableShotRow({
   useEffect(() => setTakesDraft(shot.takesPrevistos.toString()), [shot.takesPrevistos]);
   useEffect(() => setDuracaoDraft(formatDuracaoTake(shot.duracaoTakeMin)), [shot.duracaoTakeMin]);
   useEffect(() => setDescricaoDraft(shot.descricao), [shot.descricao]);
+  useEffect(() => setTamanhoDraft(shot.tamanho ?? ""), [shot.tamanho]);
   useEffect(() => setLenteDraft(shot.lente ?? ""), [shot.lente]);
   useEffect(() => setAnguloDraft(shot.angulo ?? ""), [shot.angulo]);
   useEffect(() => setMovimentoDraft(shot.movimento ?? ""), [shot.movimento]);
@@ -147,6 +150,17 @@ export function SortableShotRow({
     }
     if (value === shot.descricao) return;
     void onUpdate(shot.id, { descricao: value });
+  }
+
+  function commitTamanho() {
+    // O servidor normaliza as maiúsculas; normalizar aqui também evita um PATCH quando só a caixa
+    // digitada é igual à gravada.
+    const value = tamanhoDraft.trim() === "" ? null : normalizarTamanho(tamanhoDraft);
+    if (value === shot.tamanho) {
+      setTamanhoDraft(value ?? "");
+      return;
+    }
+    void onUpdate(shot.id, { tamanho: value });
   }
 
   function commitLente() {
@@ -405,7 +419,11 @@ export function SortableShotRow({
               onBlur={commitDescricao}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Tamanho</label>
+              <Input value={tamanhoDraft} onChange={(e) => setTamanhoDraft(e.target.value)} onBlur={commitTamanho} />
+            </div>
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Lente</label>
               <Input value={lenteDraft} onChange={(e) => setLenteDraft(e.target.value)} onBlur={commitLente} />

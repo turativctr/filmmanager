@@ -102,7 +102,7 @@ export function NewShotDialog({
               posição — o número é o da claquete; ver nextFreeShotNumero). */}
           <div className="space-y-1.5">
             <Label htmlFor="tamanho">Tamanho</Label>
-            <Input id="tamanho" name="tamanho" placeholder="ex.: Close, Plano geral" />
+            <Input id="tamanho" name="tamanho" placeholder="ex.: Close, Plano Geral" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="descricao">Descrição</Label>

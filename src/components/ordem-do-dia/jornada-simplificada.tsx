@@ -18,6 +18,7 @@ import {
   RESERVA_MAX_MIN,
   type TetoDiaria,
 } from "@/lib/jornada-diaria";
+import { formatHoraMin, formatHoraMinOuVazio, parseHoraMin, PLACEHOLDER_HORA_MIN, TITULO_HORA_MIN } from "@/lib/hora-min";
 import { formatTempoEstimado } from "@/lib/paginas";
 import {
   DEFAULT_PREP_MIN,
@@ -49,13 +50,13 @@ export type CenaSimplificada = {
 type Draft = { prep: string; rod: string };
 
 const chave = (c: { sceneId: string; scenePartId: string | null }) => `${c.sceneId}:${c.scenePartId ?? ""}`;
-const paraTexto = (n: number | null) => (n == null ? "" : String(n));
+const paraTexto = formatHoraMinOuVazio;
 
-/** "" = limpar (volta ao fallback); número inteiro ≥ `minimo`; qualquer outra coisa = inválido. */
+/** "" = limpar (volta ao fallback); H:MM (ou minutos) ≥ `minimo`; qualquer outra coisa = inválido. */
 function lerMinutos(texto: string, minimo = 0): number | null | undefined {
   if (texto.trim() === "") return null;
-  const n = Number(texto);
-  return Number.isInteger(n) && n >= minimo ? n : undefined;
+  const n = parseHoraMin(texto);
+  return n !== null && n >= minimo ? n : undefined;
 }
 
 /** Rod abaixo do mínimo é recusado AQUI, na hora de digitar: a regra do app (resolveEffectiveRodMin)
@@ -107,7 +108,7 @@ export function JornadaSimplificada({
   const assinatura = JSON.stringify([cenas, blocos]);
   useEffect(() => {
     setDrafts(Object.fromEntries(cenas.map((c) => [chave(c), { prep: paraTexto(c.prepMin), rod: paraTexto(c.rodMin) }])));
-    setBlocoDrafts(Object.fromEntries(blocos.map((b) => [b.id, String(b.duracaoMin)])));
+    setBlocoDrafts(Object.fromEntries(blocos.map((b) => [b.id, formatHoraMin(b.duracaoMin)])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assinatura]);
   useEffect(() => setTeto(tetoInicial), [tetoInicial.jornadaMin, tetoInicial.horaFimAlvo]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -133,8 +134,8 @@ export function JornadaSimplificada({
   const blocosEfetivos = useMemo(
     () =>
       blocos.map((b) => {
-        const n = Number(blocoDrafts[b.id]);
-        return { ...b, duracaoMin: Number.isInteger(n) && n >= 1 ? n : b.duracaoMin };
+        const n = parseHoraMin(blocoDrafts[b.id] ?? "");
+        return { ...b, duracaoMin: n !== null && n >= 1 ? n : b.duracaoMin };
       }),
     [blocos, blocoDrafts]
   );
@@ -157,13 +158,14 @@ export function JornadaSimplificada({
     if (!d) return;
     const prep = lerMinutos(d.prep);
     const rod = lerRod(d.rod);
-    if (rod === undefined && Number.isInteger(Number(d.rod)) && Number(d.rod) < MIN_ROD_MIN) {
-      setErro(`Cena ${c.numero}: Rod mínimo ${MIN_ROD_MIN}min.`);
+    const rodDigitado = parseHoraMin(d.rod);
+    if (rod === undefined && rodDigitado !== null && rodDigitado < MIN_ROD_MIN) {
+      setErro(`Cena ${c.numero}: Rod mínimo ${formatHoraMin(MIN_ROD_MIN)}.`);
       setDrafts((prev) => ({ ...prev, [chave(c)]: { prep: paraTexto(c.prepMin), rod: paraTexto(c.rodMin) } }));
       return;
     }
     if (prep === undefined || rod === undefined) {
-      setErro(`Cena ${c.numero}: use minutos inteiros, ou deixe em branco.`);
+      setErro(`Cena ${c.numero}: use horas:minutos (ex.: 0:45), ou deixe em branco.`);
       setDrafts((prev) => ({ ...prev, [chave(c)]: { prep: paraTexto(c.prepMin), rod: paraTexto(c.rodMin) } }));
       return;
     }
@@ -199,10 +201,10 @@ export function JornadaSimplificada({
   }
 
   function gravarBloco(b: BlocoDeTempo) {
-    const n = Number(blocoDrafts[b.id]);
-    if (!Number.isInteger(n) || n < 1 || n > 24 * 60) {
-      setErro(`${b.rotulo}: duração em minutos inteiros, de 1 a 1440.`);
-      setBlocoDrafts((prev) => ({ ...prev, [b.id]: String(b.duracaoMin) }));
+    const n = parseHoraMin(blocoDrafts[b.id] ?? "");
+    if (n === null || n < 1 || n > 24 * 60) {
+      setErro(`${b.rotulo}: duração em horas:minutos, de 0:01 a 24:00.`);
+      setBlocoDrafts((prev) => ({ ...prev, [b.id]: formatHoraMin(b.duracaoMin) }));
       return;
     }
     if (n === b.duracaoMin) return;
@@ -215,7 +217,7 @@ export function JornadaSimplificada({
       });
       if (!res.ok) {
         setErro(`Não foi possível gravar ${b.rotulo}.`);
-        setBlocoDrafts((prev) => ({ ...prev, [b.id]: String(b.duracaoMin) }));
+        setBlocoDrafts((prev) => ({ ...prev, [b.id]: formatHoraMin(b.duracaoMin) }));
       }
       return res.ok;
     });
@@ -370,13 +372,10 @@ export function JornadaSimplificada({
                     <label className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">prep</span>
                       <input
-                        type="number"
-                        min={0}
-                        inputMode="numeric"
                         aria-label={`Prep da cena ${c.numero}`}
                         className={campo}
                         value={d.prep}
-                        placeholder={String(DEFAULT_PREP_MIN)}
+                        placeholder={formatHoraMin(DEFAULT_PREP_MIN)}
                         onChange={(e) => setDrafts((prev) => ({ ...prev, [chave(c)]: { ...d, prep: e.target.value } }))}
                         onBlur={() => gravarCena(c)}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
@@ -385,17 +384,14 @@ export function JornadaSimplificada({
                     <label className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">rod</span>
                       <input
-                        type="number"
-                        min={MIN_ROD_MIN}
-                        inputMode="numeric"
                         aria-label={`Rod da cena ${c.numero}`}
                         aria-invalid={d.rod !== "" && lerRod(d.rod) === undefined}
-                        title={`Rod mínimo ${MIN_ROD_MIN}min`}
+                        title={`Rod mínimo ${formatHoraMin(MIN_ROD_MIN)} — horas:minutos`}
                         className={cn(campo, d.rod !== "" && lerRod(d.rod) === undefined && "border-destructive")}
                         value={d.rod}
                         // Sem Rod gravado, a conta usa o estimado (ou o mínimo) — mostrado em cinza,
                         // igual ao que a OD usaria.
-                        placeholder={String(linha.cena.rodMin)}
+                        placeholder={formatHoraMin(linha.cena.rodMin)}
                         onChange={(e) => setDrafts((prev) => ({ ...prev, [chave(c)]: { ...d, rod: e.target.value } }))}
                         onBlur={() => gravarCena(c)}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
@@ -417,17 +413,14 @@ export function JornadaSimplificada({
                     <span className="min-w-0 flex-1 truncate">{b.rotulo}</span>
                     <label className="flex items-center gap-1">
                       <input
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
                         aria-label={`Duração de ${b.rotulo}`}
+                        title={TITULO_HORA_MIN}
                         className={campo}
-                        value={blocoDrafts[b.id] ?? String(b.duracaoMin)}
+                        value={blocoDrafts[b.id] ?? formatHoraMin(b.duracaoMin)}
                         onChange={(e) => setBlocoDrafts((prev) => ({ ...prev, [b.id]: e.target.value }))}
                         onBlur={() => gravarBloco(b)}
                         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
                       />
-                      <span className="text-xs text-muted-foreground">min</span>
                     </label>
                     <span className="w-14" />
                   </li>
@@ -490,45 +483,39 @@ export function JornadaSimplificada({
   );
 }
 
-/** Jornada em horas e minutos ("12h", "10h30"). Grava ao sair do campo. */
+/** Jornada em horas:minutos ("12:00", "10:30"). Grava ao sair do campo. */
 function JornadaInput({ valorMin, onCommit }: { valorMin: number | null; onCommit: (min: number) => void }) {
-  const [h, setH] = useState(valorMin != null ? String(Math.floor(valorMin / 60)) : "");
-  const [m, setM] = useState(valorMin != null ? String(valorMin % 60) : "");
-  useEffect(() => {
-    setH(valorMin != null ? String(Math.floor(valorMin / 60)) : "");
-    setM(valorMin != null ? String(valorMin % 60) : "");
-  }, [valorMin]);
+  const [texto, setTexto] = useState(formatHoraMinOuVazio(valorMin));
+  useEffect(() => setTexto(formatHoraMinOuVazio(valorMin)), [valorMin]);
 
   function commit() {
-    const horas = Number(h || 0);
-    const mins = Number(m || 0);
-    if (!Number.isInteger(horas) || !Number.isInteger(mins) || mins < 0 || mins > 59) return;
-    const total = horas * 60 + mins;
-    if (total < JORNADA_MIN_MIN || total > JORNADA_MAX_MIN || total === valorMin) return;
-    onCommit(total);
+    const total = parseHoraMin(texto);
+    if (total === null || total < JORNADA_MIN_MIN || total > JORNADA_MAX_MIN) {
+      setTexto(formatHoraMinOuVazio(valorMin));
+      return;
+    }
+    setTexto(formatHoraMin(total));
+    if (total !== valorMin) onCommit(total);
   }
 
-  const campo = "w-12 rounded border bg-background px-1 py-0.5 text-right tabular-nums";
   return (
-    <span
-      className="flex items-center gap-1 text-sm"
-      onBlur={(e) => {
-        // Só grava quando o foco sai do par h/min, não ao pular de um pro outro.
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) commit();
-      }}
-    >
-      <input type="number" min={1} max={24} aria-label="Horas de jornada" className={campo} value={h} onChange={(e) => setH(e.target.value)} onKeyDown={(e) => e.key === "Enter" && commit()} />
-      <span className="text-muted-foreground">h</span>
-      <input type="number" min={0} max={59} step={5} aria-label="Minutos de jornada" className={campo} value={m} onChange={(e) => setM(e.target.value)} onKeyDown={(e) => e.key === "Enter" && commit()} />
-      <span className="text-muted-foreground">min</span>
-    </span>
+    <input
+      aria-label="Jornada em horas:minutos"
+      title={TITULO_HORA_MIN}
+      placeholder="12:00"
+      className="w-16 rounded border bg-background px-1 py-0.5 text-right tabular-nums text-sm"
+      value={texto}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+    />
   );
 }
 
 /** Reserva do dia em horas e minutos. Campo vazio = sem reserva (grava null). */
 function ReservaInput({ valorMin, onCommit }: { valorMin: number | null; onCommit: (min: number | null) => void }) {
-  const [texto, setTexto] = useState(valorMin != null ? String(valorMin) : "");
-  useEffect(() => setTexto(valorMin != null ? String(valorMin) : ""), [valorMin]);
+  const [texto, setTexto] = useState(formatHoraMinOuVazio(valorMin));
+  useEffect(() => setTexto(formatHoraMinOuVazio(valorMin)), [valorMin]);
 
   function commit() {
     const limpo = texto.trim();
@@ -536,29 +523,27 @@ function ReservaInput({ valorMin, onCommit }: { valorMin: number | null; onCommi
       if (valorMin != null) onCommit(null);
       return;
     }
-    const n = Number(limpo);
-    if (!Number.isInteger(n) || n < 1 || n > RESERVA_MAX_MIN) {
-      setTexto(valorMin != null ? String(valorMin) : "");
+    const n = parseHoraMin(limpo);
+    if (n === null || n < 1 || n > RESERVA_MAX_MIN) {
+      setTexto(formatHoraMinOuVazio(valorMin));
       return;
     }
+    setTexto(formatHoraMin(n));
     if (n !== valorMin) onCommit(n);
   }
 
   return (
     <>
       <input
-        type="number"
-        min={0}
-        max={RESERVA_MAX_MIN}
-        aria-label="Reserva do dia em minutos"
+        aria-label="Reserva do dia em horas:minutos"
+        title={TITULO_HORA_MIN}
         className="w-16 rounded border bg-background px-1 py-0.5 text-right tabular-nums"
         value={texto}
-        placeholder="0"
+        placeholder={PLACEHOLDER_HORA_MIN}
         onChange={(e) => setTexto(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
-      <span className="text-muted-foreground">min</span>
     </>
   );
 }

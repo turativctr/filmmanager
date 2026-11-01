@@ -5,11 +5,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { PrioridadeTag } from "@/components/shots/prioridade-tag";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { rotuloOrigem } from "@/lib/estimativa";
+import { formatHoraMin } from "@/lib/hora-min";
 import { formatHHh, type ComputedSchedule } from "@/lib/schedule";
 import { resolveSinopseAD } from "@/lib/scene-sinopse";
 import { formatDuracaoTake, parseDuracaoTake, RESET_LABEL } from "@/lib/shots-shared";
@@ -17,14 +19,7 @@ import { formatDuracaoTake, parseDuracaoTake, RESET_LABEL } from "@/lib/shots-sh
 import type { SceneTimeRow, ShotSummary } from "./types";
 
 function MinutesCell({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
-  return (
-    <Input
-      type="number"
-      className="h-8 w-16"
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
-    />
-  );
+  return <HoraMinInput className="h-8 w-16" vazioPermitido value={value} onCommit={onChange} />;
 }
 
 function scheduleLabel(schedule: ComputedSchedule | null): string {
@@ -34,7 +29,7 @@ function scheduleLabel(schedule: ComputedSchedule | null): string {
   )} às ${formatHHh(schedule.rodEnd)}`;
 }
 
-type TakeField = "takesPrevistos" | "duracaoTakeMin" | "tempoSetupMin";
+type TakeField = "takesPrevistos" | "duracaoTakeMin";
 
 function ShotLine({
   shot,
@@ -62,7 +57,10 @@ function ShotLine({
     }
     if (field === "duracaoTakeMin") e.target.value = formatDuracaoTake(value);
     if (value === shot[field]) return;
+    await salvar(field, value);
+  }
 
+  async function salvar(field: TakeField | "tempoSetupMin", value: number) {
     try {
       const res = await fetch(`/api/projects/${projectId}/scenes/${sceneId}/shots/${shot.id}`, {
         method: "PATCH",
@@ -102,13 +100,14 @@ function ShotLine({
           onBlur={(e) => handleFieldBlur("duracaoTakeMin", e)}
         />
         <span className="text-muted-foreground">+</span>
-        <Input
-          type="number"
-          className="h-7 w-11 px-1 text-center"
-          defaultValue={shot.tempoSetupMin}
-          onBlur={(e) => handleFieldBlur("tempoSetupMin", e)}
+        <HoraMinInput
+          className="h-7 w-12 px-1 text-center"
+          value={shot.tempoSetupMin}
+          onCommit={(min) => {
+            if (min !== null && min >= 0) void salvar("tempoSetupMin", min);
+          }}
         />
-        <span className="shrink-0 text-muted-foreground">= {shot.tempoTotalMin}min</span>
+        <span className="shrink-0 text-muted-foreground">= {formatHoraMin(shot.tempoTotalMin)}</span>
       </div>
       {shot.tipoReset !== "NENHUM" && (
         <span className="shrink-0 text-amber-700">

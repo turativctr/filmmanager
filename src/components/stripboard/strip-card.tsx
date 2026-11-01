@@ -10,6 +10,7 @@ import { ShotListDrawer } from "@/components/stripboard/shot-list-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { avisoDigitadoVsPlanos, textoComOrigem } from "@/lib/estimativa";
+import { formatHoraMinOuVazio, parseHoraMin, PLACEHOLDER_HORA_MIN, TITULO_HORA_MIN } from "@/lib/hora-min";
 import { formatPaginas, formatTempoEstimado } from "@/lib/paginas";
 import { formatOitavos, numeroComParte, origemRodDaParte, vinculoDaParte } from "@/lib/scene-parts-shared";
 import { DEFAULT_PREP_MIN, formatHHh, MIN_ROD_MIN } from "@/lib/schedule";
@@ -64,16 +65,16 @@ export function StripCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.itemId,
   });
-  const [prepDraft, setPrepDraft] = useState(item.prepMin?.toString() ?? "");
-  const [rodDraft, setRodDraft] = useState(item.rodMin?.toString() ?? "");
+  const [prepDraft, setPrepDraft] = useState(formatHoraMinOuVazio(item.prepMin));
+  const [rodDraft, setRodDraft] = useState(formatHoraMinOuVazio(item.rodMin));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   // Ressincroniza os drafts quando o item muda por fora (ex.: revert otimista após falha ao salvar) —
   // sem isso o input local fica preso no valor digitado mesmo depois do board voltar ao estado anterior.
   useEffect(() => {
-    setPrepDraft(item.prepMin?.toString() ?? "");
-    setRodDraft(item.rodMin?.toString() ?? "");
+    setPrepDraft(formatHoraMinOuVazio(item.prepMin));
+    setRodDraft(formatHoraMinOuVazio(item.rodMin));
   }, [item.prepMin, item.rodMin]);
 
   const style = {
@@ -102,8 +103,11 @@ export function StripCard({
     !neutral && Boolean(onUpdateTimes) && rodEsperado !== null && item.rodMin !== rodEsperado;
 
   function commitTimes() {
-    const prep = prepDraft === "" ? null : Number(prepDraft);
-    const rod = rodDraft === "" ? null : Number(rodDraft);
+    // Ilegível ("1:7x") desfaz a edição daquele campo em vez de gravar NaN.
+    const prep = prepDraft.trim() === "" ? null : (parseHoraMin(prepDraft) ?? item.prepMin);
+    const rod = rodDraft.trim() === "" ? null : (parseHoraMin(rodDraft) ?? item.rodMin);
+    setPrepDraft(formatHoraMinOuVazio(prep));
+    setRodDraft(formatHoraMinOuVazio(rod));
     onUpdateTimes?.(prep, rod);
   }
 
@@ -255,7 +259,8 @@ export function StripCard({
               <span className="flex items-center gap-1">
                 <label className="text-muted-foreground">Prep</label>
                 <input
-                  type="number"
+                  placeholder={PLACEHOLDER_HORA_MIN}
+                  title={TITULO_HORA_MIN}
                   className="w-14 rounded border bg-background px-1 py-0.5"
                   value={prepDraft}
                   onChange={(e) => setPrepDraft(e.target.value)}
@@ -263,7 +268,8 @@ export function StripCard({
                 />
                 <label className="text-muted-foreground">Rod</label>
                 <input
-                  type="number"
+                  placeholder={PLACEHOLDER_HORA_MIN}
+                  title={TITULO_HORA_MIN}
                   className="w-14 rounded border bg-background px-1 py-0.5"
                   value={rodDraft}
                   onChange={(e) => setRodDraft(e.target.value)}

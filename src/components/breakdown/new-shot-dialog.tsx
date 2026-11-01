@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -131,8 +132,8 @@ export function NewShotDialog({
               <Input id="duracaoTakeMin" name="duracaoTakeMin" placeholder="m:ss" defaultValue="2:00" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tempoSetupMin">Setup (min)</Label>
-              <Input id="tempoSetupMin" name="tempoSetupMin" type="number" min={0} defaultValue={0} />
+              <Label htmlFor="tempoSetupMin">Setup</Label>
+              <HoraMinInput id="tempoSetupMin" name="tempoSetupMin" defaultValue={0} />
             </div>
           </div>
           <DialogFooter>

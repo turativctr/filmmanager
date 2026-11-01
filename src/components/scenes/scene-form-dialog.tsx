@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getCharacterId } from "@/lib/character-id";
 import { tempoDePartidaMin, textoDaPartida, type AmbienteCena, type PartidaDoProjeto } from "@/lib/estimativa";
+import { formatHoraMin } from "@/lib/hora-min";
 import { formatPaginas, parsePaginas } from "@/lib/paginas";
 
 type CharacterOption = {
@@ -319,16 +321,16 @@ export function SceneFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tempoEstimadoMin">Tempo estimado (min)</Label>
-              <Input
+              <Label htmlFor="tempoEstimadoMin">Tempo estimado</Label>
+              <HoraMinInput
                 id="tempoEstimadoMin"
                 name="tempoEstimadoMin"
-                type="number"
-                defaultValue={scene?.tempoEstimadoMin ?? ""}
+                vazioPermitido
+                defaultValue={scene?.tempoEstimadoMin ?? null}
               />
               {tempoSugerido != null && (
                 <p className="text-xs text-muted-foreground">
-                  ~{tempoSugerido} min pelo {textoDaPartida(partida, ambiente)}. É ponto de partida da produção,
+                  ~{formatHoraMin(tempoSugerido)} pelo {textoDaPartida(partida, ambiente)}. É ponto de partida da produção,
                   não medição — deixe vazio se não tiver base.
                 </p>
               )}

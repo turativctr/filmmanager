@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +61,7 @@ export function DailyProgressReportDialog({
   );
   const [horaInicioReal, setHoraInicioReal] = useState(initialReport?.horaInicioReal ?? "");
   const [horaTerminoReal, setHoraTerminoReal] = useState(initialReport?.horaTerminoReal ?? "");
-  const [atrasoMin, setAtrasoMin] = useState(initialReport?.atrasoMin?.toString() ?? "");
+  const [atrasoMin, setAtrasoMin] = useState<number | null>(initialReport?.atrasoMin ?? null);
   const [motivoAtraso, setMotivoAtraso] = useState(initialReport?.motivoAtraso ?? "");
   const [observacoes, setObservacoes] = useState(initialReport?.observacoes ?? "");
   const [saving, setSaving] = useState(false);
@@ -91,7 +92,7 @@ export function DailyProgressReportDialog({
         paginasFilmadas: paginasFilmadas === "" ? 0 : Number(paginasFilmadas),
         horaInicioReal: horaInicioReal || undefined,
         horaTerminoReal: horaTerminoReal || undefined,
-        atrasoMin: atrasoMin === "" ? undefined : Number(atrasoMin),
+        atrasoMin: atrasoMin ?? undefined,
         motivoAtraso: motivoAtraso || undefined,
         observacoes: observacoes || undefined,
       }),
@@ -186,8 +187,8 @@ export function DailyProgressReportDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="atrasoMin">Atraso (min, negativo = adiantado)</Label>
-            <Input id="atrasoMin" type="number" value={atrasoMin} onChange={(e) => setAtrasoMin(e.target.value)} />
+            <Label htmlFor="atrasoMin">Atraso (negativo = adiantado, ex.: -0:15)</Label>
+            <HoraMinInput id="atrasoMin" vazioPermitido negativo value={atrasoMin} onCommit={setAtrasoMin} />
           </div>
 
           <div className="space-y-1.5">

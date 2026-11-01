@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Input } from "@/components/ui/input";
+import { formatHoraMinOuVazio, parseHoraMin, TITULO_HORA_MIN } from "@/lib/hora-min";
 import { formatTempoEstimado } from "@/lib/paginas";
 import { resolveEffectiveRodMin } from "@/lib/schedule";
 import { minutosEmPlanosSemParte, origemRodDaParte, resolveRodDaParte } from "@/lib/scene-parts-shared";
@@ -45,20 +46,22 @@ export function SceneTempoAlvo({
   divisao?: { partes: { id: string; rotulo: string; oitavos: number }[]; oitavosCena: number } | null;
 }) {
   const [alvo, setAlvo] = useState<number | null>(initialDuracaoAlvoMin);
-  const [draft, setDraft] = useState(initialDuracaoAlvoMin?.toString() ?? "");
+  const [draft, setDraft] = useState(formatHoraMinOuVazio(initialDuracaoAlvoMin));
 
   useEffect(() => {
     setAlvo(initialDuracaoAlvoMin);
-    setDraft(initialDuracaoAlvoMin?.toString() ?? "");
+    setDraft(formatHoraMinOuVazio(initialDuracaoAlvoMin));
   }, [initialDuracaoAlvoMin]);
 
   async function commit() {
     const trimmed = draft.trim();
-    const value = trimmed === "" ? null : Number(trimmed);
-    if (value !== null && (!Number.isInteger(value) || value < 1)) {
-      setDraft(alvo?.toString() ?? "");
+    const value = trimmed === "" ? null : parseHoraMin(trimmed);
+    // Ilegível não pode virar "apagar o alvo" — só o campo vazio apaga.
+    if ((trimmed !== "" && value === null) || (value !== null && value < 1)) {
+      setDraft(formatHoraMinOuVazio(alvo));
       return;
     }
+    setDraft(formatHoraMinOuVazio(value));
     if (value === alvo) return;
 
     const previous = alvo;
@@ -75,7 +78,7 @@ export function SceneTempoAlvo({
       console.error("Erro ao salvar duração alvo:", err);
       toast.error("Erro ao salvar — tente novamente");
       setAlvo(previous);
-      setDraft(previous?.toString() ?? "");
+      setDraft(formatHoraMinOuVazio(previous));
     }
   }
 
@@ -181,10 +184,9 @@ export function SceneTempoAlvo({
         </label>
         <Input
           id={`duracao-alvo-${sceneId}`}
-          type="number"
-          min={1}
-          inputMode="numeric"
+          // Vazio = sem alvo (Rod vem dos planos); "0:00" aqui pareceria um alvo de zero minutos.
           placeholder="—"
+          title={TITULO_HORA_MIN}
           className="h-7 w-20 text-xs"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -193,7 +195,7 @@ export function SceneTempoAlvo({
             if (e.key === "Enter") e.currentTarget.blur();
           }}
         />
-        <span className="text-muted-foreground">min{divisao ? " · referência do total" : ""}</span>
+        {divisao && <span className="text-muted-foreground">referência do total</span>}
         {avaliacao && !divisao && <span className="text-muted-foreground">· {mensagemMedia(avaliacao, "plano", "planos")}</span>}
       </div>
 

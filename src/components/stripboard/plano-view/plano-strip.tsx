@@ -9,6 +9,7 @@ import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDuracaoTake, HEAVY_RESETS, RESET_LABEL, resolveEffectiveResetMin } from "@/lib/shots-shared";
 import { cn } from "@/lib/utils";
+import { formatHoraMin, parseHoraMin, PLACEHOLDER_HORA_MIN, TITULO_HORA_MIN } from "@/lib/hora-min";
 
 import type { PlanoScheduleEntry } from "./types";
 
@@ -46,13 +47,13 @@ export function ResetDivider({
   const fatorApplied = fatorResetPercent !== 100;
 
   function startEditing() {
-    setDraft(String(base));
+    setDraft(formatHoraMin(base));
     setEditing(true);
   }
 
   function save() {
-    const value = Number(draft);
-    if (!Number.isNaN(value) && value >= 0) onUpdateManual?.(value);
+    const value = parseHoraMin(draft);
+    if (value !== null && value >= 0) onUpdateManual?.(value);
     setEditing(false);
   }
 
@@ -61,9 +62,9 @@ export function ResetDivider({
       <div className="my-1 ml-2 flex w-fit items-center gap-1.5 rounded px-2 py-0.5 text-[11px]">
         <span className="text-muted-foreground">{RESET_LABEL[tipoReset]}</span>
         <input
-          type="number"
           autoFocus
-          min={0}
+          placeholder={PLACEHOLDER_HORA_MIN}
+          title={TITULO_HORA_MIN}
           className="h-6 w-14 rounded border bg-background px-1 text-center text-[11px]"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -73,7 +74,6 @@ export function ResetDivider({
           }}
           onBlur={save}
         />
-        <span className="text-muted-foreground">min</span>
       </div>
     );
   }

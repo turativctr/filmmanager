@@ -46,8 +46,8 @@ function BlocoTable({
             <TableHead>Set</TableHead>
             <TableHead>Sinopse</TableHead>
             <TableHead>Sinopse AD</TableHead>
-            <TableHead>Prep (min)</TableHead>
-            <TableHead>Rod (min)</TableHead>
+            <TableHead>Prep</TableHead>
+            <TableHead>Rod</TableHead>
             <TableHead>Horário calculado</TableHead>
           </TableRow>
         </TableHeader>

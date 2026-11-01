@@ -7,6 +7,7 @@ import { TagListInput } from "@/components/shared/tag-list-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,9 +73,7 @@ export function BreakdownForm({
   initialLinkedExtraIds: string[];
   initialBreakdown: Partial<BreakdownData> | null;
 }) {
-  const [tempoEstimadoMin, setTempoEstimadoMin] = useState<string>(
-    initialTempoEstimadoMin?.toString() ?? ""
-  );
+  const [tempoEstimadoMin, setTempoEstimadoMin] = useState<number | null>(initialTempoEstimadoMin);
   const [castIds, setCastIds] = useState<Set<string>>(new Set(initialCastIds));
   const [linkedExtraIds, setLinkedExtraIds] = useState<Set<string>>(
     new Set(initialLinkedExtraIds)
@@ -160,7 +159,7 @@ export function BreakdownForm({
 
     timeoutRef.current = setTimeout(async () => {
       const payload = {
-        tempoEstimadoMin: tempoEstimadoMin === "" ? null : Number(tempoEstimadoMin),
+        tempoEstimadoMin,
         characterIds: Array.from(castIds),
         extraLinks: extras.map((extra) => ({
           extraId: extra.id,
@@ -198,12 +197,12 @@ export function BreakdownForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="max-w-xs space-y-1.5">
-            <Label htmlFor="tempoEstimadoMin">Tempo estimado da cena (min)</Label>
-            <Input
+            <Label htmlFor="tempoEstimadoMin">Tempo estimado da cena</Label>
+            <HoraMinInput
               id="tempoEstimadoMin"
-              type="number"
+              vazioPermitido
               value={tempoEstimadoMin}
-              onChange={(e) => setTempoEstimadoMin(e.target.value)}
+              onCommit={setTempoEstimadoMin}
             />
           </div>
           {allCharacters.length === 0 ? (

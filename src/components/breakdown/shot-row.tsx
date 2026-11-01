@@ -10,6 +10,7 @@ import { PrioridadeTag } from "@/components/shots/prioridade-tag";
 import { TermTooltip } from "@/components/shared/term-tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AutoGrowTextarea } from "@/components/ui/auto-grow-textarea";
@@ -20,6 +21,7 @@ import {
   PRIORIDADE_LABEL,
   PRIORIDADES,
 } from "@/lib/shots-shared";
+import { formatHoraMin } from "@/lib/hora-min";
 import { cn } from "@/lib/utils";
 
 import type { ShotPrioridade } from "@prisma/client";
@@ -93,7 +95,6 @@ export function SortableShotRow({
 
   const [takesDraft, setTakesDraft] = useState(shot.takesPrevistos.toString());
   const [duracaoDraft, setDuracaoDraft] = useState(formatDuracaoTake(shot.duracaoTakeMin));
-  const [setupDraft, setSetupDraft] = useState(shot.tempoSetupMin.toString());
   const [descricaoDraft, setDescricaoDraft] = useState(shot.descricao);
   const [lenteDraft, setLenteDraft] = useState(shot.lente ?? "");
   const [anguloDraft, setAnguloDraft] = useState(shot.angulo ?? "");
@@ -108,7 +109,6 @@ export function SortableShotRow({
   // dependência por valor, só o campo que de fato mudou por fora é sobrescrito.
   useEffect(() => setTakesDraft(shot.takesPrevistos.toString()), [shot.takesPrevistos]);
   useEffect(() => setDuracaoDraft(formatDuracaoTake(shot.duracaoTakeMin)), [shot.duracaoTakeMin]);
-  useEffect(() => setSetupDraft(shot.tempoSetupMin.toString()), [shot.tempoSetupMin]);
   useEffect(() => setDescricaoDraft(shot.descricao), [shot.descricao]);
   useEffect(() => setLenteDraft(shot.lente ?? ""), [shot.lente]);
   useEffect(() => setAnguloDraft(shot.angulo ?? ""), [shot.angulo]);
@@ -135,16 +135,6 @@ export function SortableShotRow({
     setDuracaoDraft(formatDuracaoTake(value));
     if (value === shot.duracaoTakeMin) return;
     void onUpdate(shot.id, { duracaoTakeMin: value });
-  }
-
-  function commitSetup() {
-    const value = Number(setupDraft);
-    if (!Number.isFinite(value) || value < 0) {
-      setSetupDraft(shot.tempoSetupMin.toString());
-      return;
-    }
-    if (value === shot.tempoSetupMin) return;
-    void onUpdate(shot.id, { tempoSetupMin: value });
   }
 
   function commitDescricao() {
@@ -211,8 +201,15 @@ export function SortableShotRow({
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="w-6 shrink-0 text-xs text-muted-foreground">{index + 1}</span>
-            <span className="w-16 shrink-0 truncate font-medium">{shot.numero}</span>
+            <span className="w-6 shrink-0 text-xs text-muted-foreground" title="Posição na ordem de filmagem da cena">
+              {index + 1}
+            </span>
+            <span
+              className="w-16 shrink-0 truncate font-medium"
+              title={`Plano ${shot.numero} — número da claquete; não muda ao reordenar nem ao excluir outros planos`}
+            >
+              {shot.numero}
+            </span>
             {shot.ehMaster && (
               <Badge className="shrink-0 px-1.5 py-0 text-[10px]" title="Plano master da cena">
                 MASTER
@@ -283,16 +280,15 @@ export function SortableShotRow({
               Setup
               <TermTooltip content="Preparação específica deste plano (iluminação especial, rig, posicionamento). Diferente do reset entre planos." />
             </span>
-            <input
-              type="number"
-              min={0}
+            <HoraMinInput
               className="h-6 w-14 rounded border bg-background px-1 py-0.5 text-xs"
-              value={setupDraft}
-              onChange={(e) => setSetupDraft(e.target.value)}
-              onBlur={commitSetup}
+              value={shot.tempoSetupMin}
+              onCommit={(min) => {
+                if (min !== null && min >= 0) void onUpdate(shot.id, { tempoSetupMin: min });
+              }}
             />
-            <span>min =</span>
-            <span className="font-medium text-muted-foreground">{shot.tempoTotalMin}min</span>
+            <span>=</span>
+            <span className="font-medium text-muted-foreground">{formatHoraMin(shot.tempoTotalMin)}</span>
           </div>
         </div>
 

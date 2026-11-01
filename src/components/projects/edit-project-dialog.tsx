@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { HoraMinInput } from "@/components/ui/hora-min-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -303,39 +304,21 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                     Limite para o almoço
                     <TermTooltip content="Tempo máximo entre a chamada geral e o início do intervalo. Praxe do mercado: 5 a 6 horas." />
                   </Label>
-                  <Input
-                    id="limiteAlmocoMin"
-                    name="limiteAlmocoMin"
-                    type="number"
-                    min={1}
-                    defaultValue={project.limiteAlmocoMin}
-                  />
+                  <HoraMinInput id="limiteAlmocoMin" name="limiteAlmocoMin" defaultValue={project.limiteAlmocoMin} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="duracaoAlmocoMin" className="inline-flex items-center gap-1.5">
                     Duração do intervalo
                     <TermTooltip content="Tempo total que o almoço ocupa no cronograma. A praxe conta 1 hora a partir do momento em que o último da equipe se serve — se a fila costuma demorar, considere somar esse tempo aqui." />
                   </Label>
-                  <Input
-                    id="duracaoAlmocoMin"
-                    name="duracaoAlmocoMin"
-                    type="number"
-                    min={1}
-                    defaultValue={project.duracaoAlmocoMin}
-                  />
+                  <HoraMinInput id="duracaoAlmocoMin" name="duracaoAlmocoMin" defaultValue={project.duracaoAlmocoMin} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="preparacaoInicialMin" className="inline-flex items-center gap-1.5">
                     Preparação inicial
                     <TermTooltip content="Tempo entre a chamada geral e o início da primeira cena." />
                   </Label>
-                  <Input
-                    id="preparacaoInicialMin"
-                    name="preparacaoInicialMin"
-                    type="number"
-                    min={0}
-                    defaultValue={project.preparacaoInicialMin}
-                  />
+                  <HoraMinInput id="preparacaoInicialMin" name="preparacaoInicialMin" defaultValue={project.preparacaoInicialMin} />
                 </div>
               </div>
 
@@ -386,53 +369,23 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="resetAjusteMin">Ajuste</Label>
-                    <Input
-                      id="resetAjusteMin"
-                      name="resetAjusteMin"
-                      type="number"
-                      min={0}
-                      defaultValue={project.resetAjusteMin}
-                    />
+                    <HoraMinInput id="resetAjusteMin" name="resetAjusteMin" defaultValue={project.resetAjusteMin} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="resetTrocaLenteMin">Troca de lente</Label>
-                    <Input
-                      id="resetTrocaLenteMin"
-                      name="resetTrocaLenteMin"
-                      type="number"
-                      min={0}
-                      defaultValue={project.resetTrocaLenteMin}
-                    />
+                    <HoraMinInput id="resetTrocaLenteMin" name="resetTrocaLenteMin" defaultValue={project.resetTrocaLenteMin} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="resetTrocaCameraMin">Troca de câmera</Label>
-                    <Input
-                      id="resetTrocaCameraMin"
-                      name="resetTrocaCameraMin"
-                      type="number"
-                      min={0}
-                      defaultValue={project.resetTrocaCameraMin}
-                    />
+                    <HoraMinInput id="resetTrocaCameraMin" name="resetTrocaCameraMin" defaultValue={project.resetTrocaCameraMin} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="resetPosicaoMin">Reset de posição</Label>
-                    <Input
-                      id="resetPosicaoMin"
-                      name="resetPosicaoMin"
-                      type="number"
-                      min={0}
-                      defaultValue={project.resetPosicaoMin}
-                    />
+                    <HoraMinInput id="resetPosicaoMin" name="resetPosicaoMin" defaultValue={project.resetPosicaoMin} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="resetCompletoMin">Reset completo</Label>
-                    <Input
-                      id="resetCompletoMin"
-                      name="resetCompletoMin"
-                      type="number"
-                      min={0}
-                      defaultValue={project.resetCompletoMin}
-                    />
+                    <HoraMinInput id="resetCompletoMin" name="resetCompletoMin" defaultValue={project.resetCompletoMin} />
                   </div>
                 </div>
               </div>

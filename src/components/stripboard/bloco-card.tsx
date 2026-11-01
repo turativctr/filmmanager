@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BLOCO_PRESETS, ROTULO_BLOCO_MAX } from "@/lib/day-timeline";
+import { formatHoraMinOuVazio, parseHoraMin, PLACEHOLDER_HORA_MIN, TITULO_HORA_MIN } from "@/lib/hora-min";
 import { formatTempoEstimado } from "@/lib/paginas";
 import { formatHHh, type ComputedSchedule } from "@/lib/schedule";
 
@@ -52,23 +53,24 @@ export function BlocoCard({
     id: blocoItemId(bloco.id),
   });
   const [rotulo, setRotulo] = useState(bloco.rotulo);
-  const [duracao, setDuracao] = useState(String(bloco.duracaoMin));
+  const [duracao, setDuracao] = useState(formatHoraMinOuVazio(bloco.duracaoMin));
 
   useEffect(() => {
     setRotulo(bloco.rotulo);
-    setDuracao(String(bloco.duracaoMin));
+    setDuracao(formatHoraMinOuVazio(bloco.duracaoMin));
   }, [bloco.rotulo, bloco.duracaoMin]);
 
   const url = `/api/projects/${projectId}/shoot-days/${shootDayId}/blocos/${bloco.id}`;
 
   async function commit() {
     const r = rotulo.trim();
-    const d = Number(duracao);
-    if (!r || !Number.isInteger(d) || d < 1) {
+    const d = parseHoraMin(duracao);
+    if (!r || d === null || d < 1) {
       setRotulo(bloco.rotulo);
-      setDuracao(String(bloco.duracaoMin));
+      setDuracao(formatHoraMinOuVazio(bloco.duracaoMin));
       return;
     }
+    setDuracao(formatHoraMinOuVazio(d));
     if (r === bloco.rotulo && d === bloco.duracaoMin) return;
     if (await salvar(url, "PATCH", { rotulo: r, duracaoMin: d })) onChanged();
   }
@@ -101,9 +103,9 @@ export function BlocoCard({
         }}
       />
       <Input
-        aria-label="Duração do bloco em minutos"
-        type="number"
-        min={1}
+        aria-label="Duração do bloco"
+        placeholder={PLACEHOLDER_HORA_MIN}
+        title={TITULO_HORA_MIN}
         className="h-7 w-16 text-xs"
         value={duracao}
         onChange={(e) => setDuracao(e.target.value)}
@@ -112,7 +114,6 @@ export function BlocoCard({
           if (e.key === "Enter") e.currentTarget.blur();
         }}
       />
-      <span className="text-muted-foreground">min</span>
       <span className="ml-auto text-muted-foreground">
         {schedule ? `${formatHHh(schedule.rodStart)} às ${formatHHh(schedule.rodEnd)}` : formatTempoEstimado(bloco.duracaoMin)}
       </span>
@@ -144,7 +145,7 @@ export function AdicionarBlocoButton({
 }) {
   const [open, setOpen] = useState(false);
   const [rotulo, setRotulo] = useState("");
-  const [duracao, setDuracao] = useState("30");
+  const [duracao, setDuracao] = useState("0:30");
 
   async function criar(r: string, d: number) {
     if (await salvar(`/api/projects/${projectId}/shoot-days/${shootDayId}/blocos`, "POST", { rotulo: r, duracaoMin: d })) {
@@ -180,9 +181,9 @@ export function AdicionarBlocoButton({
             onChange={(e) => setRotulo(e.target.value)}
           />
           <Input
-            aria-label="Duração do novo bloco em minutos"
-            type="number"
-            min={1}
+            aria-label="Duração do novo bloco"
+            placeholder={PLACEHOLDER_HORA_MIN}
+            title={TITULO_HORA_MIN}
             className="h-8 w-16 text-xs"
             value={duracao}
             onChange={(e) => setDuracao(e.target.value)}
@@ -190,8 +191,8 @@ export function AdicionarBlocoButton({
           <Button
             size="sm"
             className="h-8"
-            disabled={!rotulo.trim() || !(Number(duracao) >= 1)}
-            onClick={() => void criar(rotulo.trim(), Number(duracao))}
+            disabled={!rotulo.trim() || !((parseHoraMin(duracao) ?? 0) >= 1)}
+            onClick={() => void criar(rotulo.trim(), parseHoraMin(duracao)!)}
           >
             Adicionar
           </Button>

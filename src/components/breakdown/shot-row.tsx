@@ -270,7 +270,7 @@ export function SortableShotRow({
           >
             <span className="flex items-center gap-0.5">
               Takes
-              <TermTooltip content="Número de takes previstos. Total = takes × duração + setup" />
+              <TermTooltip content="Número de takes previstos. Total = takes × duração + (takes − 1) × reset entre takes" />
             </span>
             <input
               type="number"
@@ -289,16 +289,16 @@ export function SortableShotRow({
               onChange={(e) => setDuracaoDraft(e.target.value)}
               onBlur={commitDuracao}
             />
-            <span>+</span>
+            <span>×</span>
             <span className="flex items-center gap-0.5">
-              Setup
-              <TermTooltip content="Preparação específica deste plano (iluminação especial, rig, posicionamento). Diferente do reset entre planos." />
+              Reset
+              <TermTooltip content="Reset entre um take e o próximo (voltar à marca, refazer a cena). Entra uma vez a menos que o número de takes: 3 takes têm 2 resets. Preparação do plano vai como bloco de tempo na diária." />
             </span>
             <HoraMinInput
               className="h-6 w-14 rounded border bg-background px-1 py-0.5 text-xs"
-              value={shot.tempoSetupMin}
+              value={shot.resetEntreTakesMin}
               onCommit={(min) => {
-                if (min !== null && min >= 0) void onUpdate(shot.id, { tempoSetupMin: min });
+                if (min !== null && min >= 0) void onUpdate(shot.id, { resetEntreTakesMin: min });
               }}
             />
             <span>=</span>

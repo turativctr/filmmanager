@@ -169,12 +169,14 @@ export function recomputeResetsForOrderedShots<T extends ShotResetInput & { id: 
   return results;
 }
 
-/** tempoTotalMin = (takesPrevistos × duracaoTakeMin) + tempoSetupMin — recalculado sempre que
- *  qualquer um dos três campos é salvo, nunca aceito como input direto da API. duracaoTakeMin pode
- *  ser fracionário; o total arredonda pra cima pro minuto inteiro (um plano de 1 take de 7s ocupa
- *  1min, não 0). O epsilon evita que erro de ponto flutuante (3 × 0.1) suba um minuto à toa. */
-export function computeTempoTotal(takesPrevistos: number, duracaoTakeMin: number, tempoSetupMin: number): number {
-  return Math.ceil(takesPrevistos * duracaoTakeMin - 1e-9) + tempoSetupMin;
+/** tempoTotalMin = takes × duração + (takes − 1) × reset entre takes — recalculado sempre que
+ *  qualquer um dos três campos é salvo, nunca aceito como input direto da API. O reset fica ENTRE
+ *  os takes: depois do último não há (3 takes de 10s com reset de 20min = 40min30s → 41min).
+ *  duracaoTakeMin pode ser fracionário; o tempo dos takes arredonda pra cima pro minuto inteiro (um
+ *  plano de 1 take de 7s ocupa 1min, não 0). O epsilon evita que erro de ponto flutuante (3 × 0.1)
+ *  suba um minuto à toa. O setup do plano foi aposentado: preparação vira bloco de tempo na diária. */
+export function computeTempoTotal(takesPrevistos: number, duracaoTakeMin: number, resetEntreTakesMin: number): number {
+  return Math.ceil(takesPrevistos * duracaoTakeMin - 1e-9) + Math.max(takesPrevistos - 1, 0) * resetEntreTakesMin;
 }
 
 /** Rod = soma(Shot.tempoTotalMin) + soma(ajuste manual ?? Shot.tempoResetMin) dos planos

@@ -195,7 +195,7 @@ type ShotSeed = {
   movimento: string;
   takesPrevistos: number;
   duracaoTakeMin: number;
-  tempoSetupMin: number;
+  resetEntreTakesMin: number;
   notasContinuidade?: string;
 };
 
@@ -214,7 +214,7 @@ const VIAGEIRO_SCENE1_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 3,
     duracaoTakeMin: 5,
-    tempoSetupMin: 8,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 2,
@@ -226,7 +226,7 @@ const VIAGEIRO_SCENE1_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 4,
     duracaoTakeMin: 3,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 3,
@@ -238,7 +238,7 @@ const VIAGEIRO_SCENE1_SHOTS: ShotSeed[] = [
     movimento: "Travelling",
     takesPrevistos: 3,
     duracaoTakeMin: 4,
-    tempoSetupMin: 5,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 4,
@@ -250,7 +250,7 @@ const VIAGEIRO_SCENE1_SHOTS: ShotSeed[] = [
     movimento: "Travelling",
     takesPrevistos: 5,
     duracaoTakeMin: 2,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 5,
@@ -262,7 +262,7 @@ const VIAGEIRO_SCENE1_SHOTS: ShotSeed[] = [
     movimento: "Travelling",
     takesPrevistos: 3,
     duracaoTakeMin: 4,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
   },
 ];
 
@@ -277,7 +277,7 @@ const VIAGEIRO_SCENE2_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 3,
     duracaoTakeMin: 5,
-    tempoSetupMin: 10,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 2,
@@ -289,7 +289,7 @@ const VIAGEIRO_SCENE2_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 4,
     duracaoTakeMin: 4,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 3,
@@ -301,7 +301,7 @@ const VIAGEIRO_SCENE2_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 3,
     duracaoTakeMin: 4,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
   },
   {
     ordem: 4,
@@ -313,7 +313,7 @@ const VIAGEIRO_SCENE2_SHOTS: ShotSeed[] = [
     movimento: "Estático",
     takesPrevistos: 5,
     duracaoTakeMin: 2,
-    tempoSetupMin: 0,
+    resetEntreTakesMin: 0,
     notasContinuidade: "Mochila deve estar na mesma posição em todos os takes",
   },
 ];
@@ -1173,8 +1173,8 @@ async function main() {
         movimento: shot.movimento,
         takesPrevistos: shot.takesPrevistos,
         duracaoTakeMin: shot.duracaoTakeMin,
-        tempoSetupMin: shot.tempoSetupMin,
-        tempoTotalMin: computeTempoTotal(shot.takesPrevistos, shot.duracaoTakeMin, shot.tempoSetupMin),
+        resetEntreTakesMin: shot.resetEntreTakesMin,
+        tempoTotalMin: computeTempoTotal(shot.takesPrevistos, shot.duracaoTakeMin, shot.resetEntreTakesMin),
         notasContinuidade: shot.notasContinuidade,
       },
     });
@@ -1193,8 +1193,8 @@ async function main() {
         movimento: shot.movimento,
         takesPrevistos: shot.takesPrevistos,
         duracaoTakeMin: shot.duracaoTakeMin,
-        tempoSetupMin: shot.tempoSetupMin,
-        tempoTotalMin: computeTempoTotal(shot.takesPrevistos, shot.duracaoTakeMin, shot.tempoSetupMin),
+        resetEntreTakesMin: shot.resetEntreTakesMin,
+        tempoTotalMin: computeTempoTotal(shot.takesPrevistos, shot.duracaoTakeMin, shot.resetEntreTakesMin),
         notasContinuidade: shot.notasContinuidade,
       },
     });

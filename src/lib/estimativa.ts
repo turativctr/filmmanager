@@ -201,7 +201,7 @@ export function rotuloOrigem(o: OrigemTempo): string {
       return "tempo que você definiu";
     case "PLANOS": {
       const planos = `${o.planos} ${o.planos === 1 ? "plano" : "planos"}`;
-      const resets = o.resetsMin > 0 ? ` + ${formatTempoEstimado(o.resetsMin)} de resets` : "";
+      const resets = o.resetsMin > 0 ? ` + ${formatTempoEstimado(o.resetsMin)} de resets entre planos` : "";
       const ritmo = o.fatorResetPercent !== 100 ? ` · com ritmo de ${o.fatorResetPercent}%` : "";
       return `${planos}${resets}${ritmo}`;
     }

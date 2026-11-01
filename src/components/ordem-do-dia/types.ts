@@ -40,7 +40,7 @@ export type ShotSummary = Pick<
   | "lente"
   | "takesPrevistos"
   | "duracaoTakeMin"
-  | "tempoSetupMin"
+  | "resetEntreTakesMin"
   | "tempoTotalMin"
   | "tipoReset"
   | "tempoResetMin"

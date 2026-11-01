@@ -174,10 +174,10 @@ export function PlanoStrip({
       </span>
       <span
         className="w-28 shrink-0 truncate text-right text-xs text-muted-foreground"
-        title={`${shot.takesPrevistos}T × ${formatDuracaoTake(shot.duracaoTakeMin)}${shot.tempoSetupMin ? ` + ${shot.tempoSetupMin}min` : ""} = ${shot.tempoTotalMin}min`}
+        title={`${shot.takesPrevistos}T × ${formatDuracaoTake(shot.duracaoTakeMin)}${shot.resetEntreTakesMin ? ` + ${Math.max(shot.takesPrevistos - 1, 0)} × reset de ${shot.resetEntreTakesMin}min` : ""} = ${shot.tempoTotalMin}min`}
       >
         {shot.takesPrevistos}T×{formatDuracaoTake(shot.duracaoTakeMin)}
-        {shot.tempoSetupMin ? `+${shot.tempoSetupMin}` : ""} {shot.tempoTotalMin}min
+        {shot.resetEntreTakesMin ? `×r${shot.resetEntreTakesMin}` : ""} {shot.tempoTotalMin}min
       </span>
       <span
         className="shrink-0"

@@ -260,9 +260,10 @@ function SceneObservacoesRow({ scene }: { scene: ShootDayReportData["scenes"][nu
 
 /** Linhas da seção "ORDEM DE FILMAGEM" — uma por ShotSchedule, na ordem global do dia (planos de
  *  cenas diferentes podem se intercalar aqui, ao contrário da tabela CENAS DO DIA acima). HH acumula
- *  a partir de `startTime`: cada linha mostra o horário ANTES de somar seu tempoEstimadoMin +
- *  tempoResetMin, que empurra a linha seguinte pra frente. Mesmo tratamento visual de reset (divisória
- *  cinza, âmbar em HEAVY_RESETS) do restante do documento — só que aqui a linha não é sub-item de cena. */
+ *  a partir de `startTime`: o reset da linha (custo de CHEGAR nela) entra ANTES do horário dela, e o
+ *  tempo do plano empurra a linha seguinte — mesma conta do Hora a Hora (buildHoraAHoraPlanos). Mesmo
+ *  tratamento visual de reset (divisória cinza, âmbar em HEAVY_RESETS) do restante do documento — só
+ *  que aqui a linha não é sub-item de cena. */
 function ShotScheduleRows({
   schedule,
   startTime,
@@ -275,26 +276,26 @@ function ShotScheduleRows({
   return (
     <>
       {schedule.map((entry, i) => {
-        // O reset que empurra o horário DESTA linha é o do plano ANTERIOR (schedule[i-1]) — a
-        // arithmetic acumula tempoEstimadoMin+tempoResetMin de cada plano pra chegar no HH do
-        // próximo (ver loop abaixo), então a divisória mostrada acima da linha i precisa refletir
-        // o campo de schedule[i-1], não o de schedule[i] (senão o texto mostra um reset associado
-        // à linha errada, incoerente com os próprios horários calculados).
-        const previous = i > 0 ? schedule[i - 1] : null;
-        const isHeavyReset = previous ? HEAVY_RESETS.includes(previous.tipoReset) : false;
+        // O reset desta linha é o da PRÓPRIA linha: recalculateDaySchedule grava em cada ShotSchedule
+        // classifyReset(anterior, este), o custo de chegar nele. Antes o documento lia o de
+        // schedule[i-1] e somava o reset depois do plano — a divisória e o HH saíam uma linha
+        // deslocados em relação à tela da ordem do dia e ao Hora a Hora.
+        const chegada = i > 0 ? entry : null;
+        const isHeavyReset = chegada ? HEAVY_RESETS.includes(chegada.tipoReset) : false;
+        if (running !== null) running += entry.tempoResetMin ?? 0;
         const hh = running !== null ? formatHHh(minutesToTime(running)) : "—";
-        if (running !== null) running += entry.tempoTotalMin + (entry.tempoResetMin ?? 0);
+        if (running !== null) running += entry.tempoTotalMin;
         const filmado = entry.status === "FILMADO";
         const descartado = entry.status === "DESCARTADO";
 
         return (
           <View key={entry.id} style={{ width: "100%" }}>
-            {previous && previous.tipoReset !== "NENHUM" && previous.tipoReset !== "AJUSTE" && (
+            {chegada && chegada.tipoReset !== "NENHUM" && chegada.tipoReset !== "AJUSTE" && (
               <Tr bg={colors.rowAlt} wrap={false}>
                 <Td width="10%" />
                 <Td width="90%">
-                  <Text style={{ fontSize: 7, color: resetDividerColor(previous.tipoReset) }}>
-                    +{previous.tempoResetMin ?? 0}min {RESET_LABEL[previous.tipoReset].toLowerCase()}
+                  <Text style={{ fontSize: 7, color: resetDividerColor(chegada.tipoReset) }}>
+                    +{chegada.tempoResetMin ?? 0}min {RESET_LABEL[chegada.tipoReset].toLowerCase()}
                   </Text>
                 </Td>
               </Tr>
@@ -302,7 +303,7 @@ function ShotScheduleRows({
             <Tr
               alt={i % 2 === 1}
               bg={
-                previous?.tipoReset === "RESET_COMPLETO"
+                chegada?.tipoReset === "RESET_COMPLETO"
                   ? colors.dangerBg
                   : isHeavyReset
                     ? colors.amberBg

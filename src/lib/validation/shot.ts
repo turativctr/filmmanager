@@ -3,7 +3,7 @@ import { z } from "zod";
 import { normalizarTamanho } from "@/lib/shots-shared";
 
 // tipoReset/tempoResetMin/tempoTotalMin não entram aqui — são sempre recalculados no servidor
-// (tempoTotalMin = takesPrevistos × duracaoTakeMin + tempoSetupMin; tipoReset/tempoResetMin por
+// (tempoTotalMin = takesPrevistos × duracaoTakeMin + (takesPrevistos − 1) × resetEntreTakesMin; tipoReset/tempoResetMin por
 // recalculateScene()/recalculateDaySchedule() em src/lib/shots.ts), nunca aceitos como input direto.
 // tempoResetMinManual É aceito — é o ajuste calibrado por plano (nível 2 de "tempos de reset
 // configuráveis"); null volta a seguir o padrão do projeto ("usar padrão do projeto").
@@ -26,7 +26,8 @@ export const shotSchema = z.object({
     .min(0)
     .transform((v) => Math.round(v * 60) / 60)
     .optional(),
-  tempoSetupMin: z.coerce.number().int().min(0).optional(),
+  // Reset entre um take e o próximo, em minutos (entra takes − 1 vezes no total do plano).
+  resetEntreTakesMin: z.coerce.number().int().min(0).optional(),
   tempoResetMinManual: z.coerce.number().int().min(0).optional().nullable(),
   notasDirecao: z.string().optional().nullable(),
   notasContinuidade: z.string().optional().nullable(),

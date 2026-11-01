@@ -542,14 +542,21 @@ model Shot {
   lente             String?
   angulo            String?
   movimento         String?
-  // takesPrevistos/duracaoTakeMin/tempoSetupMin são editáveis; tempoTotalMin é sempre recalculado
-  // no servidor a partir dos três (takesPrevistos × duracaoTakeMin + tempoSetupMin) — nunca aceito
-  // como input direto da API, mesma convenção de tipoReset/tempoResetMin.
+  // takesPrevistos/duracaoTakeMin/resetEntreTakesMin são editáveis; tempoTotalMin é sempre
+  // recalculado no servidor (takesPrevistos × duracaoTakeMin + (takesPrevistos − 1) ×
+  // resetEntreTakesMin, ver computeTempoTotal) — nunca aceito como input direto da API, mesma
+  // convenção de tipoReset/tempoResetMin.
   takesPrevistos      Int           @default(3)
   // Fracionário: take de poucos segundos (7s ≈ 0.12min). tempoTotalMin continua inteiro —
   // computeTempoTotal arredonda pra cima.
   duracaoTakeMin      Float         @default(2)
+  // APOSENTADO (2026-11-01): o setup do plano virou bloco de tempo na diária. Fica no banco sempre 0,
+  // só pra o código antigo não quebrar durante o deploy; nada lê nem escreve.
   tempoSetupMin       Int           @default(0)
+  // Reset entre um take e o próximo (voltar à marca, refazer a cena), em minutos. Entra (takes − 1)
+  // vezes no total do plano — depois do último take não há reset. Diferente do reset ENTRE PLANOS
+  // (tipoReset/tempoResetMin), que é a troca de um plano pro seguinte.
+  resetEntreTakesMin  Int           @default(0)
   tempoTotalMin       Int           @default(6)
   tempoResetMin       Int?
   tempoResetMinManual Int?

@@ -116,7 +116,7 @@ export async function PATCH(
 
   const takesPrevistos = fields.takesPrevistos ?? shot.takesPrevistos;
   const duracaoTakeMin = fields.duracaoTakeMin ?? shot.duracaoTakeMin;
-  const tempoSetupMin = fields.tempoSetupMin ?? shot.tempoSetupMin;
+  const resetEntreTakesMin = fields.resetEntreTakesMin ?? shot.resetEntreTakesMin;
 
   await prisma.shot.update({
     where: { id: shot.id },
@@ -124,7 +124,7 @@ export async function PATCH(
       ...fields,
       ...hierarchyData,
       ...(scenePartId !== undefined ? { scenePartId } : {}),
-      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
+      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, resetEntreTakesMin),
     },
   });
 

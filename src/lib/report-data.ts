@@ -35,7 +35,7 @@ export type ShotRow = {
   movimento: string | null;
   takesPrevistos: number;
   duracaoTakeMin: number;
-  tempoSetupMin: number;
+  resetEntreTakesMin: number;
   tempoTotalMin: number;
   /** Já é o valor EFETIVO (ajuste manual do plano, se existir, senão o padrão do projeto — ambos
    *  multiplicados pelo fator do dia, ver resolveEffectiveResetMin em shots-shared.ts). Quem lê
@@ -72,7 +72,7 @@ export type ShotScheduleRow = {
   movimento: string | null;
   takesPrevistos: number;
   duracaoTakeMin: number;
-  tempoSetupMin: number;
+  resetEntreTakesMin: number;
   tempoTotalMin: number;
   status: ShotStatus;
   prioridade: ShotPrioridade;
@@ -560,7 +560,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
         movimento: shot.movimento,
         takesPrevistos: shot.takesPrevistos,
         duracaoTakeMin: shot.duracaoTakeMin,
-        tempoSetupMin: shot.tempoSetupMin,
+        resetEntreTakesMin: shot.resetEntreTakesMin,
         tempoTotalMin: shot.tempoTotalMin,
         tempoResetMin: resolveEffectiveResetMin(shot.tempoResetMin ?? 0, shot.tempoResetMinManual, fatorResetPercent),
         tipoReset: shot.tipoReset,
@@ -700,7 +700,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     movimento: entry.shot.movimento,
     takesPrevistos: entry.shot.takesPrevistos,
     duracaoTakeMin: entry.shot.duracaoTakeMin,
-    tempoSetupMin: entry.shot.tempoSetupMin,
+    resetEntreTakesMin: entry.shot.resetEntreTakesMin,
     tempoTotalMin: entry.shot.tempoTotalMin,
     status: entry.shot.status,
     prioridade: entry.shot.prioridade,

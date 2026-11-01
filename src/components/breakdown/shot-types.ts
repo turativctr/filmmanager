@@ -15,7 +15,7 @@ export type ShotData = {
   movimento: string | null;
   takesPrevistos: number;
   duracaoTakeMin: number;
-  tempoSetupMin: number;
+  resetEntreTakesMin: number;
   tempoTotalMin: number;
   tempoResetMin: number | null;
   tempoResetMinManual: number | null;

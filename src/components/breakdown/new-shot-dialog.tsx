@@ -55,7 +55,7 @@ export function NewShotDialog({
       movimento: data.get("movimento") || undefined,
       takesPrevistos: data.get("takesPrevistos") || undefined,
       duracaoTakeMin: duracaoTakeMin ?? undefined,
-      tempoSetupMin: data.get("tempoSetupMin") || undefined,
+      resetEntreTakesMin: data.get("resetEntreTakesMin") || undefined,
     };
 
     try {
@@ -132,8 +132,8 @@ export function NewShotDialog({
               <Input id="duracaoTakeMin" name="duracaoTakeMin" placeholder="m:ss" defaultValue="2:00" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tempoSetupMin">Setup</Label>
-              <HoraMinInput id="tempoSetupMin" name="tempoSetupMin" defaultValue={0} />
+              <Label htmlFor="resetEntreTakesMin">Reset entre takes</Label>
+              <HoraMinInput id="resetEntreTakesMin" name="resetEntreTakesMin" defaultValue={0} />
             </div>
           </div>
           <DialogFooter>

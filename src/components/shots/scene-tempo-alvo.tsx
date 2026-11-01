@@ -11,7 +11,7 @@ import { formatTempoEstimado } from "@/lib/paginas";
 import { resolveEffectiveRodMin } from "@/lib/schedule";
 import { minutosEmPlanosSemParte, origemRodDaParte, resolveRodDaParte } from "@/lib/scene-parts-shared";
 import { computeCortaveisMin, computeSceneShotTotals, resolveRodDaCena } from "@/lib/shots-shared";
-import { avaliarTempoAlvo, mensagemMedia, mensagemSaldo, mensagemSetupAcimaDaMedia } from "@/lib/tempo-alvo";
+import { avaliarTempoAlvo, mensagemMedia, mensagemSaldo } from "@/lib/tempo-alvo";
 import { cn } from "@/lib/utils";
 
 import type { ShotData } from "@/components/breakdown/shot-types";
@@ -101,7 +101,8 @@ export function SceneTempoAlvo({
       : avaliarTempoAlvo({
           alvoMin: alvo,
           somaMin,
-          partes: ativos.map((s) => ({ id: s.id, rotulo: `Plano ${s.numero}`, setupMin: s.tempoSetupMin })),
+          // Sem setupMin: o setup do plano foi aposentado (preparação vira bloco de tempo).
+          partes: ativos.map((s) => ({ id: s.id, rotulo: `Plano ${s.numero}` })),
         });
 
   // Sem alvo, sempre diz de onde o Rod vem — inclusive quando o número mudou "sozinho": apagar o
@@ -230,16 +231,6 @@ export function SceneTempoAlvo({
             <p className={cn("font-medium", avaliacao.estourou ? "text-erro-fg" : "text-muted-foreground")}>
               {mensagemSaldo(avaliacao, "A cena", "os planos")}
             </p>
-          )}
-          {avaliacao.mediaSeg !== null && avaliacao.setupsAcimaDaMedia.length > 0 && (
-            <ul className="space-y-0.5 text-alerta-fg">
-              {avaliacao.setupsAcimaDaMedia.map((p) => (
-                <li key={p.id} className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 shrink-0" />
-                  {p.rotulo}: {mensagemSetupAcimaDaMedia(p.setupMin, avaliacao.mediaSeg!)}
-                </li>
-              ))}
-            </ul>
           )}
         </>
       ) : (

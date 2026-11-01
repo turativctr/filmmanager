@@ -280,7 +280,7 @@ export function ShotListPanel({
         />
 
         <p className="text-sm text-muted-foreground">
-          {totals.planosMin}min de planos + {totals.resetsMin}min de resets = {totals.totalMin}min total ·{" "}
+          {totals.planosMin}min de planos + {totals.resetsMin}min de resets entre planos = {totals.totalMin}min total ·{" "}
           {totals.takesTotal} take{totals.takesTotal === 1 ? "" : "s"}
         </p>
 

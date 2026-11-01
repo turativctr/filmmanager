@@ -10,7 +10,7 @@ import { shotSchema } from "@/lib/validation/shot";
 
 // Espelha os @default do model Shot — usados pra resolver o valor efetivo de campos omitidos
 // antes de calcular tempoTotalMin (Postgres não permite default computado a partir de outra coluna).
-const SHOT_DEFAULTS = { takesPrevistos: 3, duracaoTakeMin: 2, tempoSetupMin: 0 };
+const SHOT_DEFAULTS = { takesPrevistos: 3, duracaoTakeMin: 2, resetEntreTakesMin: 0 };
 
 export async function GET(_request: Request, { params }: { params: { id: string; sceneId: string } }) {
   const session = await getServerSession(authOptions);
@@ -51,15 +51,15 @@ export async function POST(request: Request, { params }: { params: { id: string;
 
   const takesPrevistos = parsed.data.takesPrevistos ?? SHOT_DEFAULTS.takesPrevistos;
   const duracaoTakeMin = parsed.data.duracaoTakeMin ?? SHOT_DEFAULTS.duracaoTakeMin;
-  const tempoSetupMin = parsed.data.tempoSetupMin ?? SHOT_DEFAULTS.tempoSetupMin;
+  const resetEntreTakesMin = parsed.data.resetEntreTakesMin ?? SHOT_DEFAULTS.resetEntreTakesMin;
 
   await prisma.shot.create({
     data: {
       ...parsed.data,
       takesPrevistos,
       duracaoTakeMin,
-      tempoSetupMin,
-      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, tempoSetupMin),
+      resetEntreTakesMin,
+      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, resetEntreTakesMin),
       sceneId: scene.id,
       projectId: params.id,
       ordem: lastOrdem + 1,

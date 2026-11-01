@@ -46,7 +46,7 @@ function ShotLine({
     const raw = e.target.value;
     if (raw === "") {
       // Campos numéricos aqui não são nullable no schema (takesPrevistos/duracaoTakeMin/
-      // tempoSetupMin) — não há PATCH válido pra "vazio", só reverte o input pro valor salvo.
+      // resetEntreTakesMin) — não há PATCH válido pra "vazio", só reverte o input pro valor salvo.
       e.target.value = field === "duracaoTakeMin" ? formatDuracaoTake(shot[field]) : String(shot[field]);
       return;
     }
@@ -60,7 +60,7 @@ function ShotLine({
     await salvar(field, value);
   }
 
-  async function salvar(field: TakeField | "tempoSetupMin", value: number) {
+  async function salvar(field: TakeField | "resetEntreTakesMin", value: number) {
     try {
       const res = await fetch(`/api/projects/${projectId}/scenes/${sceneId}/shots/${shot.id}`, {
         method: "PATCH",
@@ -99,12 +99,13 @@ function ShotLine({
           defaultValue={formatDuracaoTake(shot.duracaoTakeMin)}
           onBlur={(e) => handleFieldBlur("duracaoTakeMin", e)}
         />
-        <span className="text-muted-foreground">+</span>
+        <span className="text-muted-foreground">× reset</span>
         <HoraMinInput
           className="h-7 w-12 px-1 text-center"
-          value={shot.tempoSetupMin}
+          title="Reset entre takes — entra uma vez a menos que o número de takes"
+          value={shot.resetEntreTakesMin}
           onCommit={(min) => {
-            if (min !== null && min >= 0) void salvar("tempoSetupMin", min);
+            if (min !== null && min >= 0) void salvar("resetEntreTakesMin", min);
           }}
         />
         <span className="shrink-0 text-muted-foreground">= {formatHoraMin(shot.tempoTotalMin)}</span>

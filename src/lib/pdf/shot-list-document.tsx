@@ -45,7 +45,7 @@ const COL = {
   reset: 44, // "completo" = 35pt ("Reset completo" quebra entre palavras)
   takes: 35, // cabeçalho "TAKES" = 26pt
   minTake: 46, // cabeçalho "DUR/TAKE" = 38pt, não quebra
-  setup: 35, // cabeçalho "SETUP" = 27pt
+  setup: 35, // cabeçalho "RST/TK" (reset entre takes) = ~30pt
   total: 34, // cabeçalho "TOTAL" = 25pt
 } as const;
 
@@ -67,29 +67,27 @@ function ShotScheduleRows({ schedule }: { schedule: ShootDayReportData["shotSche
   return (
     <>
       {schedule.map((entry, i) => {
-        // O reset exibido pra linha i (tanto na divisória quanto na coluna RESET) é o campo do
-        // plano ANTERIOR na ordem do dia (schedule[i-1]) — em ShotSchedule o reset fica associado
-        // a QUEM o antecede (empurra o HH do próximo plano, ver ShotScheduleRows em
-        // call-sheet-document.tsx), ao contrário de Shot (por cena), onde o próprio plano carrega
-        // o reset necessário pra alcançá-lo. Usar o campo errado aqui mostraria o reset associado
-        // à linha errada.
-        const previous = i > 0 ? schedule[i - 1] : null;
-        const isHeavyReset = previous ? HEAVY_RESETS.includes(previous.tipoReset) : false;
+        // O reset exibido pra linha i (divisória e coluna TROCA) é o da PRÓPRIA linha: em
+        // ShotSchedule, como em Shot, cada plano carrega o custo de CHEGAR nele (recalculateDaySchedule
+        // grava classifyReset(anterior, este)). Antes daqui lia-se schedule[i-1], e o reset aparecia
+        // uma linha acima de onde a troca acontece — diferente da tela da ordem do dia.
+        const chegada = i > 0 ? entry : null;
+        const isHeavyReset = chegada ? HEAVY_RESETS.includes(chegada.tipoReset) : false;
         const isDetalheRow = isDetalheOuInsert(entry.tamanho);
         const filmado = entry.status === "FILMADO";
         const descartado = entry.status === "DESCARTADO";
 
-        const previousHasReset = previous ? previous.tipoReset !== "NENHUM" && previous.tipoReset !== "AJUSTE" : false;
+        const temReset = chegada ? chegada.tipoReset !== "NENHUM" && chegada.tipoReset !== "AJUSTE" : false;
 
         return (
           // Divisória de reset + linha inteiras: só a <Tr> travada ainda deixava a linha começar no pé
           // da página e terminar na seguinte, embaixo do cabeçalho repetido.
           <View key={entry.id} style={{ width: "100%" }} wrap={false}>
-            {previous && previousHasReset && (
+            {chegada && temReset && (
               <SeparatorRow
-                bg={isHeavyReset ? (previous.tipoReset === "RESET_COMPLETO" ? colors.dangerBg : colors.amberBg) : colors.rowAlt}
-                textColor={resetDividerColor(previous.tipoReset)}
-                label={`+${previous.tempoResetMin ?? 0}min ${RESET_LABEL[previous.tipoReset].toLowerCase()}`}
+                bg={isHeavyReset ? (chegada.tipoReset === "RESET_COMPLETO" ? colors.dangerBg : colors.amberBg) : colors.rowAlt}
+                textColor={resetDividerColor(chegada.tipoReset)}
+                label={`+${chegada.tempoResetMin ?? 0}min ${RESET_LABEL[chegada.tipoReset].toLowerCase()}`}
               />
             )}
             <Tr alt={i % 2 === 1} bg={isDetalheRow ? colors.amberBg : undefined} wrap={false}>
@@ -108,7 +106,7 @@ function ShotScheduleRows({ schedule }: { schedule: ShootDayReportData["shotSche
               <Td width={COL.lente}>{entry.lente || "—"}</Td>
               <Td width={COL.angulo}>{entry.angulo || "—"}</Td>
               <Td width={COL.movimento}>{entry.movimento || "—"}</Td>
-              <Td width={COL.reset}>{previousHasReset ? RESET_LABEL[previous!.tipoReset] : "—"}</Td>
+              <Td width={COL.reset}>{temReset ? RESET_LABEL[chegada!.tipoReset] : "—"}</Td>
               <Td width={COL.takes} align="center">
                 {entry.takesPrevistos}
               </Td>
@@ -116,7 +114,7 @@ function ShotScheduleRows({ schedule }: { schedule: ShootDayReportData["shotSche
                 {formatDuracaoTake(entry.duracaoTakeMin)}
               </Td>
               <Td width={COL.setup} align="center">
-                {entry.tempoSetupMin}
+                {entry.resetEntreTakesMin}
               </Td>
               <Td width={COL.total} align="center">
                 {entry.tempoTotalMin}
@@ -167,7 +165,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                   <Td width={COL.lente}>LENTE</Td>
                   <Td width={COL.angulo}>ÂNGULO</Td>
                   <Td width={COL.movimento}>MOVIMENTO</Td>
-                  <Td width={COL.reset}>RESET</Td>
+                  <Td width={COL.reset}>TROCA</Td>
                   <Td width={COL.takes} align="center">
                     TAKES
                   </Td>
@@ -175,7 +173,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                     DUR/TAKE
                   </Td>
                   <Td width={COL.setup} align="center">
-                    SETUP
+                    RST/TK
                   </Td>
                   <Td width={COL.total} align="center">
                     TOTAL
@@ -212,7 +210,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                       <Text style={styles.sceneSinopse}>{scene.sinopse || "Sem sinopse."}</Text>
                       <Text style={styles.sceneTotais}>
                         {totals.count} plano{totals.count === 1 ? "" : "s"} · {totals.planosMin} min de planos +{" "}
-                        {totals.resetsMin} min de resets = {totals.totalMin} min totais
+                        {totals.resetsMin} min de resets entre planos = {totals.totalMin} min totais
                       </Text>
 
                       {scene.shots.length === 0 ? (
@@ -229,7 +227,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                             <Td width={COL.lente}>LENTE</Td>
                             <Td width={COL.angulo}>ÂNGULO</Td>
                             <Td width={COL.movimento}>MOVIMENTO</Td>
-                            <Td width={COL.reset}>RESET</Td>
+                            <Td width={COL.reset}>TROCA</Td>
                             <Td width={COL.takes} align="center">
                               TAKES
                             </Td>
@@ -237,7 +235,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                               DUR/TAKE
                             </Td>
                             <Td width={COL.setup} align="center">
-                              SETUP
+                              RST/TK
                             </Td>
                             <Td width={COL.total} align="center">
                               TOTAL
@@ -295,7 +293,7 @@ export function ShotListDocument({ data }: { data: ShootDayReportData }) {
                                     {formatDuracaoTake(shot.duracaoTakeMin)}
                                   </Td>
                                   <Td width={COL.setup} align="center">
-                                    {shot.tempoSetupMin}
+                                    {shot.resetEntreTakesMin}
                                   </Td>
                                   <Td width={COL.total} align="center">
                                     {shot.tempoTotalMin}

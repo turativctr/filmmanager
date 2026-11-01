@@ -53,12 +53,12 @@ console.log("\n=== Planos: o rótulo nomeia os resets e o ritmo do dia ===");
 check(
   "planos + resets",
   textoComOrigem(resolver({ planosMin: 75, planos: 6, resetsMin: 25, oitavos: 6 })),
-  "1h15 (6 planos + 25min de resets)"
+  "1h15 (6 planos + 25min de resets entre planos)"
 );
 check(
   "ritmo da diária diferente de 100% aparece",
   textoComOrigem(resolver({ planosMin: 75, planos: 6, resetsMin: 25, fatorResetPercent: 120, oitavos: 6 })),
-  "1h15 (6 planos + 25min de resets · com ritmo de 120%)"
+  "1h15 (6 planos + 25min de resets entre planos · com ritmo de 120%)"
 );
 check(
   "sem reset nenhum, não inventa a frase",

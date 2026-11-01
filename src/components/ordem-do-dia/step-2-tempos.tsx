@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { intercalar, scheduleDaTimeline, type BlocoDeTempo, type ItemTimeline } from "@/lib/day-timeline";
+import { formatHoraMin } from "@/lib/hora-min";
 import {
   formatHHh,
   resolveEffectivePrepMin,
@@ -71,7 +72,7 @@ function BlocoTable({
                     {item.bloco.rotulo}
                   </span>
                 </TableCell>
-                <TableCell className="text-sm">{item.bloco.duracaoMin}</TableCell>
+                <TableCell className="text-sm">{formatHoraMin(item.bloco.duracaoMin)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {schedule[index]
                     ? `${formatHHh(schedule[index]!.rodStart)} às ${formatHHh(schedule[index]!.rodEnd)}`

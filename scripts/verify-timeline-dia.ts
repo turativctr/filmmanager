@@ -34,7 +34,8 @@ check("sem horário de início: nada calculado", separarTimeline(itens, schedule
 check("minutos em blocos somam só os blocos", minutosEmBlocos([transporte, bloco("Espera de luz", 5, 20)]), 90);
 
 console.log("\n=== Presets ===");
-check("cinco presets pedidos", BLOCO_PRESETS.map((p) => p.rotulo), ["Transporte", "Mudança de locação", "Espera de luz", "Maquiagem", "Refeição"]);
+// "Nova setagem" pedida em 2026-11-01: troca de ambiente dentro da mesma locação.
+check("presets pedidos", BLOCO_PRESETS.map((p) => p.rotulo), ["Transporte", "Mudança de locação", "Nova setagem", "Espera de luz", "Maquiagem", "Refeição"]);
 check("rótulos dos presets cabem em 30", BLOCO_PRESETS.every((p) => p.rotulo.length <= 30), true);
 
 console.log(`\n${falhas === 0 ? "TUDO OK" : `FALHOU (${falhas})`}`);

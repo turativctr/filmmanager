@@ -14,6 +14,8 @@ export const ROTULO_BLOCO_MAX = 30;
 export const BLOCO_PRESETS: { rotulo: string; duracaoMin: number }[] = [
   { rotulo: "Transporte", duracaoMin: 30 },
   { rotulo: "Mudança de locação", duracaoMin: 45 },
+  // Troca de ambiente dentro da mesma locação (quarto → sala): reluz e redecora.
+  { rotulo: "Nova setagem", duracaoMin: 30 },
   { rotulo: "Espera de luz", duracaoMin: 20 },
   { rotulo: "Maquiagem", duracaoMin: 30 },
   { rotulo: "Refeição", duracaoMin: 30 },

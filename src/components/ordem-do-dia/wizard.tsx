@@ -34,7 +34,14 @@ import type {
   ShotSummary,
 } from "./types";
 
-const STEPS = ["Locação e logística", "Tempos e ritmo", "Alertas e habilidades", "Meteorologia e revisão"];
+// Elenco e equipe têm passo próprio: no fim do "Tempos e ritmo", debaixo da tabela de cenas, ninguém achava.
+const STEPS = [
+  "Locação e logística",
+  "Tempos e ritmo",
+  "Elenco e equipe",
+  "Alertas e habilidades",
+  "Meteorologia e revisão",
+];
 
 function buildInitialLogistics(shootDay: ShootDayInfo, locacaoInfo: LocacaoInfo): LogisticsState {
   const locacao = locacaoInfo.locacao;
@@ -399,39 +406,39 @@ export function OrdemDoDiaWizard({
             />
           )}
           {step === 2 && (
-            <div className="space-y-6">
-              <Step2Tempos
-                rows={sceneTimeRows}
-                blocos={blocosDeTempo}
-                blocoManhaInicio={shootDay.blocoManhaInicio}
-                almocoInicio={shootDay.almocoInicio}
-                almocoFim={shootDay.almocoFim}
-                blocoTardeInicio={shootDay.blocoTardeInicio}
-                projectId={projectId}
-                onRowChange={updateSceneTime}
-                onDistribuir={distribuirTemposAutomaticamente}
-                onShotsUpdated={updateSceneShots}
-              />
-              <Step2Elenco
-                castRows={castRows}
-                elencoDisponivel={elencoDisponivel.filter((p) => !castRows.some((r) => r.id === p.id))}
-                onIncluirNoElenco={incluirNoElenco}
-                onCastChange={updateCast}
-                onRecalcularTodos={recalcularTodos}
-                chamadaGeral={shootDay.chamadaGeral}
-                desprodInicio={shootDay.desprodInicio}
-                onChegadaElenco={aplicarChegadaElenco}
-                onSaidaElenco={aplicarSaidaElenco}
-                extraRows={extraRows}
-                onExtraChange={updateExtra}
-                chamadaEquipe={chamadaEquipe}
-                chamadaEquipeSugerida={chamadaEquipeSugerida}
-                onChamadaEquipeChange={(dept, valor) => setChamadaEquipe((prev) => ({ ...prev, [dept]: valor }))}
-              />
-            </div>
+            <Step2Tempos
+              rows={sceneTimeRows}
+              blocos={blocosDeTempo}
+              blocoManhaInicio={shootDay.blocoManhaInicio}
+              almocoInicio={shootDay.almocoInicio}
+              almocoFim={shootDay.almocoFim}
+              blocoTardeInicio={shootDay.blocoTardeInicio}
+              projectId={projectId}
+              onRowChange={updateSceneTime}
+              onDistribuir={distribuirTemposAutomaticamente}
+              onShotsUpdated={updateSceneShots}
+            />
           )}
-          {step === 3 && <Step3Alertas data={passo3} projectId={projectId} shootDayId={shootDay.id} />}
-          {step === 4 && (
+          {step === 3 && (
+            <Step2Elenco
+              castRows={castRows}
+              elencoDisponivel={elencoDisponivel.filter((p) => !castRows.some((r) => r.id === p.id))}
+              onIncluirNoElenco={incluirNoElenco}
+              onCastChange={updateCast}
+              onRecalcularTodos={recalcularTodos}
+              chamadaGeral={shootDay.chamadaGeral}
+              desprodInicio={shootDay.desprodInicio}
+              onChegadaElenco={aplicarChegadaElenco}
+              onSaidaElenco={aplicarSaidaElenco}
+              extraRows={extraRows}
+              onExtraChange={updateExtra}
+              chamadaEquipe={chamadaEquipe}
+              chamadaEquipeSugerida={chamadaEquipeSugerida}
+              onChamadaEquipeChange={(dept, valor) => setChamadaEquipe((prev) => ({ ...prev, [dept]: valor }))}
+            />
+          )}
+          {step === 4 && <Step3Alertas data={passo3} projectId={projectId} shootDayId={shootDay.id} />}
+          {step === 5 && (
             <Step4Revisao
               meteo={meteo}
               onChange={(p) => setMeteo((s) => ({ ...s, ...p }))}
@@ -455,8 +462,8 @@ export function OrdemDoDiaWizard({
         >
           Voltar
         </Button>
-        {step < 4 ? (
-          <Button type="button" onClick={() => setStep((s) => Math.min(4, s + 1))}>
+        {step < STEPS.length ? (
+          <Button type="button" onClick={() => setStep((s) => Math.min(STEPS.length, s + 1))}>
             Avançar
           </Button>
         ) : (

@@ -45,11 +45,10 @@ function BlocoTable({
           <TableRow>
             <TableHead>Cena</TableHead>
             <TableHead>Set</TableHead>
-            <TableHead>Sinopse</TableHead>
             <TableHead>Sinopse AD</TableHead>
             <TableHead>Prep</TableHead>
             <TableHead>Rod</TableHead>
-            <TableHead>Horário calculado</TableHead>
+            <TableHead>Horário</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -66,7 +65,7 @@ function BlocoTable({
             ) : (
               // Bloco de tempo: só rótulo, duração e horário — posição e duração se editam no stripboard.
               <TableRow key={item.bloco.id} className="bg-muted/40">
-                <TableCell colSpan={5} className="text-sm">
+                <TableCell colSpan={4} className="text-sm">
                   <span className="flex items-center gap-1.5 font-medium">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {item.bloco.rotulo}
@@ -83,7 +82,7 @@ function BlocoTable({
           )}
           {itens.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="py-4 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="py-4 text-center text-sm text-muted-foreground">
                 Nenhuma cena neste bloco.
               </TableCell>
             </TableRow>

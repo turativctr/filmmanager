@@ -137,7 +137,7 @@ export default async function OrdemDoDiaPage({
     locacaoInfo = { locacao: null, mixedCount: distinctLocacaoIds.length };
   }
 
-  const initialStep = Math.min(4, Math.max(1, Number(searchParams.step) || 1));
+  const initialStep = Math.min(5, Math.max(1, Number(searchParams.step) || 1));
 
   // Departamento salvo com "" está desmarcado (não vai ao set) e continua assim; só quem nunca foi
   // salvo recebe a sugestão automática. A sugestão também é o que a caixinha preenche ao marcar.

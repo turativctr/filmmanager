@@ -22,13 +22,6 @@ function MinutesCell({ value, onChange }: { value: number | null; onChange: (v: 
   return <HoraMinInput className="h-8 w-16" vazioPermitido value={value} onCommit={onChange} />;
 }
 
-function scheduleLabel(schedule: ComputedSchedule | null): string {
-  if (!schedule) return "—";
-  return `Prep: ${formatHHh(schedule.prepStart)} às ${formatHHh(schedule.prepEnd)} · Rod: ${formatHHh(
-    schedule.rodStart
-  )} às ${formatHHh(schedule.rodEnd)}`;
-}
-
 type TakeField = "takesPrevistos" | "duracaoTakeMin";
 
 function ShotLine({
@@ -177,12 +170,9 @@ export function SceneTimeRowItem({
           </div>
         </TableCell>
         <TableCell className="text-muted-foreground">{row.setLocacaoDisplay}</TableCell>
-        <TableCell className="max-w-64 truncate text-muted-foreground" title={row.sinopse ?? undefined}>
-          {row.sinopse ?? "—"}
-        </TableCell>
         <TableCell>
           <Textarea
-            className="h-8 min-h-8 w-48 resize-y py-1 text-xs"
+            className="h-8 min-h-8 w-full min-w-48 resize-y py-1 text-xs"
             defaultValue={row.sinopseAD ?? ""}
             placeholder={resolveSinopseAD(row)}
             onBlur={handleSinopseADBlur}
@@ -194,11 +184,6 @@ export function SceneTimeRowItem({
         <TableCell>
           <div className="flex items-center gap-1.5">
             <MinutesCell value={row.rodMin} onChange={(v) => onRowChange(row.sceneId, { rodMin: v })} />
-            {/* O número do Rod nunca fica sem origem: "você definiu", "soma dos planos", "média deste
-                projeto", "convenção" ou "sem base pra estimar". */}
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {row.rodDigitado ? "você definiu" : rotuloOrigem(row.origemTempo)}
-            </span>
             {row.shotsTotal && (
               <Tooltip>
                 <TooltipTrigger
@@ -214,12 +199,29 @@ export function SceneTimeRowItem({
               </Tooltip>
             )}
           </div>
+          {/* O número do Rod nunca fica sem origem: "você definiu", "soma dos planos", "média deste
+              projeto", "convenção" ou "sem base pra estimar". Embaixo do campo, quebrando linha — na
+              mesma linha, "2 planos + 3min de resets entre planos" invadia a coluna do horário. */}
+          <p className="mt-0.5 max-w-36 text-[11px] leading-tight text-muted-foreground">
+            {row.rodDigitado ? "você definiu" : rotuloOrigem(row.origemTempo)}
+          </p>
         </TableCell>
-        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{scheduleLabel(schedule)}</TableCell>
+        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+          {schedule ? (
+            <>
+              <div>Prep {formatHHh(schedule.prepStart)} – {formatHHh(schedule.prepEnd)}</div>
+              <div className="text-foreground">
+                Rod {formatHHh(schedule.rodStart)} – {formatHHh(schedule.rodEnd)}
+              </div>
+            </>
+          ) : (
+            "—"
+          )}
+        </TableCell>
       </TableRow>
       {expanded && hasShots && (
         <TableRow>
-          <TableCell colSpan={7} className="bg-muted/30 py-1.5">
+          <TableCell colSpan={6} className="bg-muted/30 py-1.5">
             <div className="space-y-0.5 pl-6">
               {row.shots!.map((shot) => (
                 <ShotLine

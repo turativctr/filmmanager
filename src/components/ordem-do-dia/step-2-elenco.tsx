@@ -195,7 +195,7 @@ export function Step2Elenco({
                 <TableHead>Cenas</TableHead>
                 <TableHead>Chegada</TableHead>
                 <TableHead>Camarim</TableHead>
-                <TableHead>Set</TableHead>
+                <TableHead>Rodar</TableHead>
                 <TableHead>Saída</TableHead>
               </TableRow>
             </TableHeader>

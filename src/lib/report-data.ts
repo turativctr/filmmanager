@@ -156,6 +156,10 @@ export type ReportSceneRow = {
   } | null;
 };
 
+/** Candidatos do passo 2 da OD: quem está nas cenas do dia mais quem a AD incluiu, com a caixinha
+ *  de "vai ao set". castPresente é este mesmo conjunto só com os presentes. */
+export type ReportElencoDoDia = ReportCastPresente & { presente: boolean; naCena: boolean };
+
 export type ReportCastPresente = {
   id: string;
   idCurto: string;
@@ -166,7 +170,8 @@ export type ReportCastPresente = {
   camarim: string | null;
   set: string | null;
   saida: string | null;
-  /** true quando chamada/camarim/set vieram do fallback automático (sem CharacterCallTime cadastrado). */
+  /** Sempre false: os horários do elenco são só os que a AD preencheu (o cálculo por cena virou botão
+   *  no passo 2 da OD). Fica pelos documentos que ainda leem o campo. */
   estimado: boolean;
 };
 
@@ -411,7 +416,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
             },
           },
         },
-        callTimes: true,
+        callTimes: { include: { character: true } },
         blocos: true,
       },
     }),
@@ -614,54 +619,41 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       });
     }
   }
+  const idsNasCenas = new Set(castMap.keys());
   const callTimeByCharacter = new Map(shootDay.callTimes.map((ct) => [ct.characterId, ct]));
-
-  // Fallback quando não há CharacterCallTime cadastrado: usa o horário de Rod da primeira
-  // cena do personagem no dia (a mais cedo) como "Set", e deriva Camarim/Chegada a partir
-  // dela. É uma estimativa (marcada como tal no relatório), não substitui um apontamento real.
-  const earliestRodStartByCharacter = new Map<string, string>();
-  for (const row of scenes) {
-    if (!row.schedule) continue;
-    for (const c of row.cast) {
-      const current = earliestRodStartByCharacter.get(c.id);
-      if (!current || timeToMinutes(row.schedule.rodStart) < timeToMinutes(current)) {
-        earliestRodStartByCharacter.set(c.id, row.schedule.rodStart);
-      }
-    }
+  // Quem a AD incluiu fora das cenas (ensaio, prova) entra na lista como qualquer um do elenco.
+  for (const ct of shootDay.callTimes) {
+    if (ct.presente !== true || castMap.has(ct.characterId)) continue;
+    castMap.set(ct.characterId, {
+      id: ct.character.id,
+      idCurto: ct.character.idCurto,
+      numeroElenco: ct.character.numeroElenco,
+      personagem: ct.character.personagem,
+      ator: ct.character.ator,
+    });
   }
 
-  const castPresente: ReportCastPresente[] = sortByArrival(
+  // Horários são o que a AD preencheu — sem cálculo por cena. Sem nada salvo, chega com a equipe
+  // (chamada geral) e o resto fica em branco até ela preencher.
+  const elencoDoDia: ReportElencoDoDia[] = sortByArrival(
     [...castMap.values()].map((character) => {
       const callTime = callTimeByCharacter.get(character.id);
-      if (callTime) {
-        return {
-          ...character,
-          chamada: callTime.chamada,
-          camarim: callTime.camarim,
-          set: callTime.set,
-          saida: callTime.saida,
-          estimado: false,
-        };
-      }
-
-      const earliestRodStart = earliestRodStartByCharacter.get(character.id);
-      if (!earliestRodStart) {
-        return { ...character, chamada: null, camarim: null, set: null, saida: null, estimado: false };
-      }
-      const setMin = timeToMinutes(earliestRodStart);
-      const camarimMin = setMin - 30;
-      const chamadaMin = camarimMin - 15;
       return {
         ...character,
-        chamada: minutesToTime(chamadaMin),
-        camarim: minutesToTime(camarimMin),
-        set: minutesToTime(setMin),
-        saida: null,
-        estimado: true,
+        chamada: callTime ? callTime.chamada : shootDay.chamadaGeral,
+        camarim: callTime?.camarim ?? null,
+        set: callTime?.set ?? null,
+        saida: callTime?.saida ?? null,
+        estimado: false,
+        presente: callTime?.presente ?? true,
+        naCena: idsNasCenas.has(character.id),
       };
     }),
     shootDay.chamadaGeral
   );
+  const castPresente: ReportCastPresente[] = elencoDoDia
+    .filter((c) => c.presente)
+    .map(({ presente: _presente, naCena: _naCena, ...c }) => c);
 
   const extraMap = new Map<string, ReportExtraPresente>();
   for (const entry of shootDay.scenes) {
@@ -771,6 +763,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     rodStartManha: manhaSchedule[0]?.rodStart ?? null,
     rodStartTarde: tardeSchedule[0]?.rodStart ?? null,
     castPresente,
+    elencoDoDia,
     castMeals,
     extrasPresente,
     extrasMeals,

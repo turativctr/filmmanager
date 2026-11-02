@@ -135,7 +135,7 @@ export function Step4Revisao({
               Transporte: {logistics.transporteHorario || "—"} · {logistics.transporteEndereco || "—"}
             </p>
             <p>
-              {castRows.length} ator(es) escalado(s), {extraRows.length} grupo(s) de figuração
+              {castRows.filter((r) => r.presente).length} ator(es) escalado(s), {extraRows.length} grupo(s) de figuração
             </p>
           </CardContent>
         </Card>

@@ -49,8 +49,10 @@ export default async function OrdemDoDiaPage({
     return character ? (totals.get(character.id) ?? 0) : 0;
   };
 
+  // O cálculo por cena (auto*) só entra se a AD pedir, pelo botão — os horários iniciais são os
+  // salvos (ou a chamada geral, quando nada foi salvo).
   const autoSchedule = computeCastAutoSchedule(data.scenes);
-  const castRows = data.castPresente.map((c) => {
+  const castRows = data.elencoDoDia.map((c) => {
     const auto = autoSchedule.get(c.id);
     return {
       id: c.id,
@@ -58,16 +60,26 @@ export default async function OrdemDoDiaPage({
       personagem: c.personagem,
       ator: c.ator,
       cenas: data.scenes.filter((s) => s.cast.some((sc) => sc.id === c.id)).map((s) => s.numero),
-      chamada: c.chamada ?? auto?.chamada ?? null,
-      camarim: c.camarim ?? auto?.camarim ?? null,
-      set: c.set ?? auto?.set ?? null,
-      saida: c.saida ?? auto?.saida ?? null,
+      presente: c.presente,
+      naCena: c.naCena,
+      chamada: c.chamada,
+      camarim: c.camarim,
+      set: c.set,
+      saida: c.saida,
       autoChamada: auto?.chamada ?? null,
       autoCamarim: auto?.camarim ?? null,
       autoSet: auto?.set ?? null,
       autoSaida: auto?.saida ?? null,
     };
   });
+
+  // Quem do elenco do projeto ainda não está na lista — pra incluir alguém fora das cenas do dia.
+  const noDia = new Set(data.elencoDoDia.map((c) => c.id));
+  const elencoDisponivel = (
+    await prisma.character.findMany({ where: { projectId: params.id }, orderBy: { personagem: "asc" } })
+  )
+    .filter((c) => !noDia.has(c.id))
+    .map((c) => ({ id: c.id, idCurto: getCharacterId(c, data.project), personagem: c.personagem, ator: c.ator }));
 
   const extraRows = data.extrasPresente.map((e) => ({
     ...e,
@@ -159,6 +171,7 @@ export default async function OrdemDoDiaPage({
       projeto={{ titulo: data.project.titulo, sigla: data.project.sigla }}
       locacaoInfo={locacaoInfo}
       castRows={castRows}
+      elencoDisponivel={elencoDisponivel}
       extraRows={extraRows}
       chamadaEquipeInicial={chamadaEquipeInicial}
       chamadaEquipeSugerida={chamadaEquipeSugerida}

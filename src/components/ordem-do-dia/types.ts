@@ -83,6 +83,10 @@ export type CastRow = {
   personagem: string;
   ator: string | null;
   cenas: string[];
+  /** Vai ao set nessa diária (caixinha do passo 2). */
+  presente: boolean;
+  /** Está nas cenas do dia; false = incluído pela AD (ensaio, prova). */
+  naCena: boolean;
   chamada: string | null;
   camarim: string | null;
   set: string | null;
@@ -92,6 +96,9 @@ export type CastRow = {
   autoSet: string | null;
   autoSaida: string | null;
 };
+
+/** Alguém do elenco do projeto fora da lista do dia, que a AD pode incluir. */
+export type ElencoDisponivel = { id: string; idCurto: string; personagem: string; ator: string | null };
 
 export type ExtraRow = {
   id: string;

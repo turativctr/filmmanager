@@ -864,6 +864,9 @@ model CharacterCallTime {
   camarim     String?
   set         String?
   saida       String?
+  // Quem vai ao set nessa diária, decidido pela AD no passo 2 da OD. null = padrão (vai quem está
+  // nas cenas do dia); true = vai mesmo fora das cenas (ensaio, prova); false = não vai.
+  presente    Boolean?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

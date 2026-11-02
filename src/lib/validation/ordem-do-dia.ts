@@ -6,6 +6,7 @@ export const callTimeEntrySchema = z.object({
   camarim: z.string().nullable().optional(),
   set: z.string().nullable().optional(),
   saida: z.string().nullable().optional(),
+  presente: z.boolean().nullable().optional(),
 });
 
 export const callTimesSchema = z.object({

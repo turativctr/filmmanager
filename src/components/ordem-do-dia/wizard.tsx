@@ -23,6 +23,7 @@ import { Step3Alertas } from "./step-3-alertas";
 import { Step4Revisao } from "./step-4-revisao";
 import type {
   CastRow,
+  ElencoDisponivel,
   ExtraRow,
   LocacaoInfo,
   LogisticsState,
@@ -97,6 +98,7 @@ export function OrdemDoDiaWizard({
   projeto,
   locacaoInfo,
   castRows: initialCastRows,
+  elencoDisponivel,
   extraRows: initialExtraRows,
   chamadaEquipeInicial,
   chamadaEquipeSugerida,
@@ -110,6 +112,7 @@ export function OrdemDoDiaWizard({
   projeto: { titulo: string; sigla: string | null };
   locacaoInfo: LocacaoInfo;
   castRows: CastRow[];
+  elencoDisponivel: ElencoDisponivel[];
   extraRows: ExtraRow[];
   chamadaEquipeInicial: Record<string, string>;
   chamadaEquipeSugerida: Record<string, string>;
@@ -133,19 +136,40 @@ export function OrdemDoDiaWizard({
   const [chamadaEquipe, setChamadaEquipe] = useState(chamadaEquipeInicial);
   const [sceneTimeRows, setSceneTimeRows] = useState(initialSceneTimeRows);
 
-  function updateCast(id: string, patch: Partial<Pick<CastRow, "chamada" | "camarim" | "set" | "saida">>) {
+  function updateCast(id: string, patch: Partial<Pick<CastRow, "chamada" | "camarim" | "set" | "saida" | "presente">>) {
     setCastRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  }
+
+  // Alguém fora das cenas do dia (ensaio, prova): entra marcado, chegando com a equipe. Sem cena,
+  // não tem cálculo automático pra oferecer.
+  function incluirNoElenco(personagem: ElencoDisponivel) {
+    setCastRows((prev) => [
+      ...prev,
+      {
+        ...personagem,
+        cenas: [],
+        presente: true,
+        naCena: false,
+        chamada: shootDay.chamadaGeral,
+        camarim: null,
+        set: null,
+        saida: null,
+        autoChamada: null,
+        autoCamarim: null,
+        autoSet: null,
+        autoSaida: null,
+      },
+    ]);
   }
 
   function recalcularTodos() {
     setCastRows((prev) =>
-      prev.map((row) => ({
-        ...row,
-        chamada: row.autoChamada,
-        camarim: row.autoCamarim,
-        set: row.autoSet,
-        saida: row.autoSaida,
-      }))
+      // Quem está fora das cenas não tem cálculo — fica com o que a AD preencheu.
+      prev.map((row) =>
+        row.naCena
+          ? { ...row, chamada: row.autoChamada, camarim: row.autoCamarim, set: row.autoSet, saida: row.autoSaida }
+          : row
+      )
     );
   }
 
@@ -153,13 +177,19 @@ export function OrdemDoDiaWizard({
   // automático (horário de set / fim das cenas de cada um). Cada linha segue editável depois.
   function aplicarChegadaElenco(modo: "equipe" | "auto") {
     setCastRows((prev) =>
-      prev.map((row) => ({ ...row, chamada: modo === "equipe" ? shootDay.chamadaGeral : row.autoChamada }))
+      prev.map((row) => ({
+        ...row,
+        chamada: modo === "equipe" ? shootDay.chamadaGeral : row.naCena ? row.autoChamada : row.chamada,
+      }))
     );
   }
 
   function aplicarSaidaElenco(modo: "equipe" | "auto") {
     setCastRows((prev) =>
-      prev.map((row) => ({ ...row, saida: modo === "equipe" ? shootDay.desprodInicio : row.autoSaida }))
+      prev.map((row) => ({
+        ...row,
+        saida: modo === "equipe" ? shootDay.desprodInicio : row.naCena ? row.autoSaida : row.saida,
+      }))
     );
   }
 
@@ -259,6 +289,7 @@ export function OrdemDoDiaWizard({
           camarim: row.camarim,
           set: row.set,
           saida: row.saida,
+          presente: row.presente,
         })),
       }),
     });
@@ -383,6 +414,8 @@ export function OrdemDoDiaWizard({
               />
               <Step2Elenco
                 castRows={castRows}
+                elencoDisponivel={elencoDisponivel.filter((p) => !castRows.some((r) => r.id === p.id))}
+                onIncluirNoElenco={incluirNoElenco}
                 onCastChange={updateCast}
                 onRecalcularTodos={recalcularTodos}
                 chamadaGeral={shootDay.chamadaGeral}

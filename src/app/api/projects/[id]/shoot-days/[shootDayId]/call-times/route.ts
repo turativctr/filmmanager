@@ -27,6 +27,13 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  // Dá pra incluir quem não está nas cenas do dia, então o personagem tem que ser deste projeto.
+  const ids = [...new Set(parsed.data.callTimes.map((ct) => ct.characterId))];
+  const doProjeto = await prisma.character.count({ where: { id: { in: ids }, projectId: params.id } });
+  if (doProjeto !== ids.length) {
+    return NextResponse.json({ error: "Personagem não pertence a este projeto." }, { status: 400 });
+  }
+
   await prisma.$transaction(
     parsed.data.callTimes.map((ct) =>
       prisma.characterCallTime.upsert({
@@ -40,12 +47,15 @@ export async function PATCH(
           camarim: ct.camarim ?? null,
           set: ct.set ?? null,
           saida: ct.saida ?? null,
+          presente: ct.presente ?? null,
         },
         update: {
           chamada: ct.chamada ?? null,
           camarim: ct.camarim ?? null,
           set: ct.set ?? null,
           saida: ct.saida ?? null,
+          // Sem o campo no payload, a escolha de quem vai fica como estava.
+          ...(ct.presente !== undefined ? { presente: ct.presente } : {}),
         },
       })
     )

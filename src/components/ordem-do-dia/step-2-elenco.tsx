@@ -1,9 +1,15 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,7 +23,7 @@ import {
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import { formatHHh } from "@/lib/schedule";
 
-import type { CastRow, ExtraRow } from "./types";
+import type { CastRow, ElencoDisponivel, ExtraRow } from "./types";
 
 function TimeCell({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
   return (
@@ -84,6 +90,8 @@ function modoAtivo(valores: (string | null)[], equipe: string | null, autos: (st
 
 export function Step2Elenco({
   castRows,
+  elencoDisponivel,
+  onIncluirNoElenco,
   onCastChange,
   onRecalcularTodos,
   chamadaGeral,
@@ -97,7 +105,9 @@ export function Step2Elenco({
   onChamadaEquipeChange,
 }: {
   castRows: CastRow[];
-  onCastChange: (id: string, patch: Partial<Pick<CastRow, "chamada" | "camarim" | "set" | "saida">>) => void;
+  elencoDisponivel: ElencoDisponivel[];
+  onIncluirNoElenco: (personagem: ElencoDisponivel) => void;
+  onCastChange: (id: string, patch: Partial<Pick<CastRow, "chamada" | "camarim" | "set" | "saida" | "presente">>) => void;
   onRecalcularTodos: () => void;
   chamadaGeral: string | null;
   desprodInicio: string | null;
@@ -114,10 +124,37 @@ export function Step2Elenco({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <h4 className="text-sm font-semibold">Elenco presente</h4>
-          <Button type="button" variant="outline" size="sm" onClick={onRecalcularTodos}>
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Recalcular todos
-          </Button>
+          <div className="flex gap-2">
+            {elencoDisponivel.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    <UserPlus className="mr-1.5 h-3.5 w-3.5" />
+                    Incluir do elenco
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+                  {elencoDisponivel.map((p) => (
+                    <DropdownMenuItem key={p.id} onSelect={() => onIncluirNoElenco(p)}>
+                      <span className="font-mono text-xs">{p.idCurto}</span>
+                      <span className="ml-2">{p.personagem}</span>
+                      {p.ator && <span className="ml-2 text-muted-foreground">{p.ator}</span>}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRecalcularTodos}
+              title="Preenche os horários pelo cálculo das cenas de cada um"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              Calcular pelas cenas
+            </Button>
+          </div>
         </div>
         {castRows.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-x-6 gap-y-1">
@@ -127,9 +164,9 @@ export function Step2Elenco({
               rotuloEquipe="Com a equipe"
               horarioEquipe={chamadaGeral}
               ativo={modoAtivo(
-                castRows.map((r) => r.chamada),
+                castRows.filter((r) => r.presente).map((r) => r.chamada),
                 chamadaGeral,
-                castRows.map((r) => r.autoChamada)
+                castRows.filter((r) => r.presente).map((r) => (r.naCena ? r.autoChamada : r.chamada))
               )}
               onAplicar={onChegadaElenco}
             />
@@ -139,9 +176,9 @@ export function Step2Elenco({
               rotuloEquipe="Com a desprodução"
               horarioEquipe={desprodInicio}
               ativo={modoAtivo(
-                castRows.map((r) => r.saida),
+                castRows.filter((r) => r.presente).map((r) => r.saida),
                 desprodInicio,
-                castRows.map((r) => r.autoSaida)
+                castRows.filter((r) => r.presente).map((r) => (r.naCena ? r.autoSaida : r.saida))
               )}
               onAplicar={onSaidaElenco}
             />
@@ -151,6 +188,7 @@ export function Step2Elenco({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8" aria-label="Vai ao set" />
                 <TableHead>ID</TableHead>
                 <TableHead>Personagem</TableHead>
                 <TableHead>Ator</TableHead>
@@ -163,28 +201,45 @@ export function Step2Elenco({
             </TableHeader>
             <TableBody>
               {castRows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={row.presente ? undefined : "text-muted-foreground"}>
+                  <TableCell>
+                    <Checkbox
+                      checked={row.presente}
+                      aria-label={`${row.personagem} vai ao set`}
+                      onCheckedChange={(c) => onCastChange(row.id, { presente: c === true })}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{row.idCurto}</TableCell>
                   <TableCell>{row.personagem}</TableCell>
                   <TableCell className="text-muted-foreground">{row.ator ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{row.cenas.join(", ")}</TableCell>
-                  <TableCell>
-                    <TimeCell value={row.chamada} onChange={(v) => onCastChange(row.id, { chamada: v })} />
+                  <TableCell className="text-xs text-muted-foreground">
+                    {row.naCena ? row.cenas.join(", ") : "Fora das cenas"}
                   </TableCell>
-                  <TableCell>
-                    <TimeCell value={row.camarim} onChange={(v) => onCastChange(row.id, { camarim: v })} />
-                  </TableCell>
-                  <TableCell>
-                    <TimeCell value={row.set} onChange={(v) => onCastChange(row.id, { set: v })} />
-                  </TableCell>
-                  <TableCell>
-                    <TimeCell value={row.saida} onChange={(v) => onCastChange(row.id, { saida: v })} />
-                  </TableCell>
+                  {row.presente ? (
+                    <>
+                      <TableCell>
+                        <TimeCell value={row.chamada} onChange={(v) => onCastChange(row.id, { chamada: v })} />
+                      </TableCell>
+                      <TableCell>
+                        <TimeCell value={row.camarim} onChange={(v) => onCastChange(row.id, { camarim: v })} />
+                      </TableCell>
+                      <TableCell>
+                        <TimeCell value={row.set} onChange={(v) => onCastChange(row.id, { set: v })} />
+                      </TableCell>
+                      <TableCell>
+                        <TimeCell value={row.saida} onChange={(v) => onCastChange(row.id, { saida: v })} />
+                      </TableCell>
+                    </>
+                  ) : (
+                    <TableCell colSpan={4} className="text-sm">
+                      Não vai — fica fora da OD
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {castRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-4 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="py-4 text-center text-sm text-muted-foreground">
                     Nenhum personagem escalado nas cenas do dia.
                   </TableCell>
                 </TableRow>

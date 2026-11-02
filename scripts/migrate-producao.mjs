@@ -28,8 +28,19 @@ if (!url) {
 }
 
 console.log(`[migrate] aplicando migrations em produção${process.env.DIRECT_URL ? " (via DIRECT_URL)" : ""}...`);
+// Pelo pooler (PgBouncer em modo transação), o pg_advisory_lock e o unlock do Prisma caem em
+// conexões diferentes do servidor: o lock fica preso numa conexão que nunca o solta, e o deploy
+// seguinte espera 10s e falha (aconteceu em 2026-11-02, P1002 "Timed out trying to acquire a
+// postgres advisory lock"). O lock só protege contra duas migrations ao mesmo tempo — aqui só o
+// deploy de produção migra —, então pelo pooler ele é desligado.
+const viaPooler = !process.env.DIRECT_URL && url.includes("-pooler");
+if (viaPooler) console.log("[migrate] conexão pelo pooler: advisory lock do Prisma desligado.");
 const r = spawnSync("npx", ["prisma", "migrate", "deploy"], {
   stdio: "inherit",
-  env: { ...process.env, DATABASE_URL: url },
+  env: {
+    ...process.env,
+    DATABASE_URL: url,
+    ...(viaPooler ? { PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1" } : {}),
+  },
 });
 process.exit(r.status ?? 1);

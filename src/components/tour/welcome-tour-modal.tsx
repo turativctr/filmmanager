@@ -52,7 +52,7 @@ export function WelcomeTourModal({ projectId }: { projectId: string }) {
     <Dialog open={open} onOpenChange={(next) => !next && finish(null)}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Bem-vindo à Próxima Cena</DialogTitle>
+          <DialogTitle>Bem-vindo ao Próximo Plano</DialogTitle>
           <DialogDescription>Veja como funciona o fluxo básico:</DialogDescription>
         </DialogHeader>
 

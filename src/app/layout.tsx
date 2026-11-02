@@ -15,7 +15,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Próxima Cena",
+  title: "Próximo Plano",
   description: "Gestão de produção audiovisual — Scheduling e Budgeting",
   manifest: "/manifest.json",
   icons: {

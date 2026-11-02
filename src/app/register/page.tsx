@@ -58,7 +58,7 @@ export default function RegisterPage() {
     <>
       <PageBackground />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-6 px-4">
-        <span className="text-lg font-semibold tracking-tight">Próxima Cena</span>
+        <span className="text-lg font-semibold tracking-tight">Próximo Plano</span>
         <Card className={cn("w-full max-w-[400px]", GLASS_PANEL_ROUNDED)}>
           <CardHeader>
             <CardTitle>Criar conta</CardTitle>

@@ -1,6 +1,6 @@
 {
-  "name": "Próxima Cena",
-  "short_name": "Próxima Cena",
+  "name": "Próximo Plano",
+  "short_name": "Próximo Plano",
   "description": "Gestão de produção audiovisual — roteiro, elenco, cronograma, orçamento e set.",
   "start_url": "/projects",
   "display": "standalone",

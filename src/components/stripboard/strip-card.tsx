@@ -230,8 +230,12 @@ export function StripCard({
           {parte ? formatOitavos(parte.oitavos) : formatPaginas(item.scene.paginas)}
         </span>
 
-        <span className="w-12 shrink-0 text-right text-xs text-muted-foreground">
-          {schedule ? formatHHh(schedule.rodStart) : "—"}
+        {/* Início e fim do Rod — só o início parecia o horário em que a cena termina. */}
+        <span
+          className="w-[5.5rem] shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground"
+          title={schedule ? `Rod: ${formatHHh(schedule.rodStart)} às ${formatHHh(schedule.rodEnd)}` : undefined}
+        >
+          {schedule ? `${formatHHh(schedule.rodStart)}–${formatHHh(schedule.rodEnd)}` : "—"}
         </span>
 
         {showTempoManualBadge && (

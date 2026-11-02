@@ -3,7 +3,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  // O nome do cookie (com ou sem prefixo __Secure-) sai do protocolo da requisição, que é o mesmo
+  // critério do login. O padrão do getToken olha o NEXTAUTH_URL: se ele não começar com https://,
+  // o middleware procura o cookie errado e devolve todo login para /login.
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: request.nextUrl.protocol === "https:",
+  });
   if (token) return NextResponse.next();
 
   // Atalho de auto-login (sem senha, sempre como demo@filmmanager.local) só existe em

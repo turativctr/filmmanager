@@ -127,7 +127,7 @@ export function Sidebar({ isAdmin }: { isAdmin?: boolean }) {
         )}
       >
         <Link href="/projects" className="text-sm font-semibold tracking-tight">
-          Film Manager
+          Próxima Cena
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 pt-2">

@@ -1,6 +1,6 @@
 {
-  "name": "Film Manager",
-  "short_name": "Film Manager",
+  "name": "Próxima Cena",
+  "short_name": "Próxima Cena",
   "description": "Gestão de produção audiovisual — roteiro, elenco, cronograma, orçamento e set.",
   "start_url": "/projects",
   "display": "standalone",

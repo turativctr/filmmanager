@@ -11,6 +11,22 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: request.nextUrl.protocol === "https:",
   });
+  if (request.nextUrl.searchParams.has("__diag")) {
+    const decode = (secureCookie: boolean) =>
+      getToken({ req: request, secret: process.env.NEXTAUTH_SECRET, secureCookie }).then(
+        (t) => !!t,
+        (e) => `erro: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    return NextResponse.json({
+      protocol: request.nextUrl.protocol,
+      cookieNames: request.cookies.getAll().map((c) => c.name),
+      hasSecret: !!process.env.NEXTAUTH_SECRET,
+      nextauthUrlHttps: process.env.NEXTAUTH_URL?.startsWith("https://") ?? null,
+      vercel: !!process.env.VERCEL,
+      tokenSecure: await decode(true),
+      tokenPlain: await decode(false),
+    });
+  }
   if (token) return NextResponse.next();
 
   // Atalho de auto-login (sem senha, sempre como demo@filmmanager.local) só existe em

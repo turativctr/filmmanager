@@ -4,6 +4,7 @@ import { Image, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { ShotTipoReset } from "@prisma/client";
 
 import { formatHHh } from "@/lib/schedule";
+import { PRIORIDADE_INICIAL, PRIORIDADE_LABEL, PRIORIDADES } from "@/lib/shots-shared";
 
 // Paleta original — usada também pelos documentos de Budget/Breakdown/HH Schedule,
 // que não fazem parte deste redesenho visual. Nunca alterar os valores abaixo;
@@ -233,6 +234,7 @@ export const kit = StyleSheet.create({
     borderColor: colors.borderV2,
   },
   castLegendRow: { fontSize: 7, marginBottom: 1.5 },
+  prioridadeLegend: { fontSize: 7, color: colors.medGray, marginBottom: 6 },
 });
 
 export function Table({ children }: { children: React.ReactNode }) {
@@ -574,6 +576,15 @@ export function SummaryCard({
         <Text style={kit.summaryCardLabel}>{label}</Text>
       </View>
     </View>
+  );
+}
+
+/** Explica as letras da coluna de prioridade dos planos (E / D / T), que sozinhas não dizem nada. */
+export function PrioridadeLegend() {
+  return (
+    <Text style={kit.prioridadeLegend}>
+      Prioridade do plano: {PRIORIDADES.map((p) => `${PRIORIDADE_INICIAL[p]} = ${PRIORIDADE_LABEL[p]}`).join("  ·  ")}
+    </Text>
   );
 }
 

@@ -34,7 +34,8 @@ export function EditShootDayDialog({ projectId, day }: { projectId: string; day:
       numeroDia: form.get("numeroDia"),
       data: form.get("data"),
       chamadaGeral: form.get("chamadaGeral") || undefined,
-      lancheHorario: form.get("lancheHorario") || undefined,
+      // null (não undefined): apagar o campo tem que tirar o lanche da diária, não "deixar como está".
+      lancheHorario: form.get("lancheHorario") || null,
       desprodInicio: form.get("desprodInicio") || undefined,
     };
 

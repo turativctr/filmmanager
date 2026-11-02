@@ -1,3 +1,5 @@
+import { minutesToTime, timeToMinutes } from "@/lib/schedule";
+
 export const CREW_CALL_DEPARTMENTS = [
   "Catering",
   "Produção",
@@ -15,6 +17,20 @@ export const CREW_CALL_DEPARTMENTS = [
   "Equipe Extra",
   "Pós-Produção",
 ] as const;
+
+const MINUS_60_DEPARTMENTS = new Set(["Catering", "Produção"]);
+const NO_DEFAULT_DEPARTMENTS = new Set(["Equipe Extra", "Pós-Produção"]);
+
+export function defaultChamadaEquipe(chamadaGeral: string | null): Record<string, string> {
+  if (!chamadaGeral) return {};
+  const minus60 = minutesToTime(timeToMinutes(chamadaGeral) - 60);
+  const result: Record<string, string> = {};
+  for (const dept of CREW_CALL_DEPARTMENTS) {
+    if (NO_DEFAULT_DEPARTMENTS.has(dept)) continue;
+    result[dept] = MINUS_60_DEPARTMENTS.has(dept) ? minus60 : chamadaGeral;
+  }
+  return result;
+}
 
 export const FIXED_SAFETY_RULES = [
   "Qualquer tipo de discriminação, assédio ou retaliação não será tolerado.",

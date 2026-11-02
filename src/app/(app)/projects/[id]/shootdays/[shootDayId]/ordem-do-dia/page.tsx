@@ -24,7 +24,7 @@ import {
   totalScenesByCharacter,
 } from "@/lib/ordem-do-dia";
 import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
-import { getShootDayReportData } from "@/lib/report-data";
+import { asStringRecord, getShootDayReportData } from "@/lib/report-data";
 import { prisma } from "@/lib/prisma";
 
 export default async function OrdemDoDiaPage({
@@ -127,15 +127,15 @@ export default async function OrdemDoDiaPage({
 
   const initialStep = Math.min(4, Math.max(1, Number(searchParams.step) || 1));
 
-  const existingChamadaEquipe: Record<string, string> = {};
-  // A rota já devolve chamadaEquipeList com os valores salvos (ou null); usamos os defaults automáticos
-  // apenas para departamentos ainda sem valor salvo.
+  // Departamento salvo com "" está desmarcado (não vai ao set) e continua assim; só quem nunca foi
+  // salvo recebe a sugestão automática. A sugestão também é o que a caixinha preenche ao marcar.
+  const salvoChamadaEquipe = asStringRecord(data.shootDay.chamadaEquipe);
   const autoChamadaEquipe = defaultChamadaEquipe(data.shootDay.chamadaGeral);
-  for (const { departamento, horario } of data.chamadaEquipeList) {
-    if (horario) existingChamadaEquipe[departamento] = horario;
-  }
   const chamadaEquipeInicial = Object.fromEntries(
-    CREW_CALL_DEPARTMENTS.map((dept) => [dept, existingChamadaEquipe[dept] ?? autoChamadaEquipe[dept] ?? ""])
+    CREW_CALL_DEPARTMENTS.map((dept) => [dept, salvoChamadaEquipe[dept] ?? autoChamadaEquipe[dept] ?? ""])
+  );
+  const chamadaEquipeSugerida = Object.fromEntries(
+    CREW_CALL_DEPARTMENTS.map((dept) => [dept, autoChamadaEquipe[dept] ?? data.shootDay.chamadaGeral ?? ""])
   );
 
   const figurinoAgg = aggregateFigurino(data.scenes, characters);
@@ -161,6 +161,7 @@ export default async function OrdemDoDiaPage({
       castRows={castRows}
       extraRows={extraRows}
       chamadaEquipeInicial={chamadaEquipeInicial}
+      chamadaEquipeSugerida={chamadaEquipeSugerida}
       sceneTimeRows={sceneTimeRows}
       initialStep={initialStep}
       blocosDeTempo={data.blocosDeTempo}

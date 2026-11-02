@@ -99,6 +99,7 @@ export function OrdemDoDiaWizard({
   castRows: initialCastRows,
   extraRows: initialExtraRows,
   chamadaEquipeInicial,
+  chamadaEquipeSugerida,
   passo3,
   sceneTimeRows: initialSceneTimeRows,
   initialStep,
@@ -111,6 +112,7 @@ export function OrdemDoDiaWizard({
   castRows: CastRow[];
   extraRows: ExtraRow[];
   chamadaEquipeInicial: Record<string, string>;
+  chamadaEquipeSugerida: Record<string, string>;
   passo3: Passo3Data;
   sceneTimeRows: SceneTimeRow[];
   initialStep?: number;
@@ -144,6 +146,20 @@ export function OrdemDoDiaWizard({
         set: row.autoSet,
         saida: row.autoSaida,
       }))
+    );
+  }
+
+  // Chegada/saída do elenco todo de uma vez — com a equipe (chamada geral / desprodução) ou pelo
+  // automático (horário de set / fim das cenas de cada um). Cada linha segue editável depois.
+  function aplicarChegadaElenco(modo: "equipe" | "auto") {
+    setCastRows((prev) =>
+      prev.map((row) => ({ ...row, chamada: modo === "equipe" ? shootDay.chamadaGeral : row.autoChamada }))
+    );
+  }
+
+  function aplicarSaidaElenco(modo: "equipe" | "auto") {
+    setCastRows((prev) =>
+      prev.map((row) => ({ ...row, saida: modo === "equipe" ? shootDay.desprodInicio : row.autoSaida }))
     );
   }
 
@@ -369,9 +385,14 @@ export function OrdemDoDiaWizard({
                 castRows={castRows}
                 onCastChange={updateCast}
                 onRecalcularTodos={recalcularTodos}
+                chamadaGeral={shootDay.chamadaGeral}
+                desprodInicio={shootDay.desprodInicio}
+                onChegadaElenco={aplicarChegadaElenco}
+                onSaidaElenco={aplicarSaidaElenco}
                 extraRows={extraRows}
                 onExtraChange={updateExtra}
                 chamadaEquipe={chamadaEquipe}
+                chamadaEquipeSugerida={chamadaEquipeSugerida}
                 onChamadaEquipeChange={(dept, valor) => setChamadaEquipe((prev) => ({ ...prev, [dept]: valor }))}
               />
             </div>

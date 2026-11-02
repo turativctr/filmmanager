@@ -4,7 +4,7 @@ import { intercalar, scheduleDaTimeline, separarTimeline, type BlocoNaTimeline }
 import { tempoDeReferenciaMin, type OrigemTempo } from "@/lib/estimativa";
 import { getMediaDoProjeto, getPartidaDoProjeto, origemDoTempoDaLinha } from "@/lib/estimativa-server";
 import { prisma } from "@/lib/prisma";
-import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
+import { CREW_CALL_DEPARTMENTS, defaultChamadaEquipe } from "@/lib/report-constants";
 import {
   minutesToTime,
   resolveEffectivePrepMin,
@@ -717,11 +717,14 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
     (i): i is { kind: "cena" } & HoraAHoraSceneBlock => i.kind === "cena"
   );
 
+  // Departamento salvo com "" é quem não vai ao set nessa diária (caixinha desmarcada) e fica fora da
+  // OD; departamento nunca salvo segue a sugestão automática — a mesma que o wizard mostra.
   const chamadaEquipeMap = asStringRecord(shootDay.chamadaEquipe);
+  const chamadaEquipeAuto = defaultChamadaEquipe(shootDay.chamadaGeral);
   const chamadaEquipeList = CREW_CALL_DEPARTMENTS.map((departamento) => ({
     departamento,
-    horario: chamadaEquipeMap[departamento] ?? null,
-  }));
+    horario: (chamadaEquipeMap[departamento] ?? chamadaEquipeAuto[departamento]) || null,
+  })).filter((item) => item.horario !== null);
 
   return {
     project,
@@ -732,6 +735,7 @@ export async function getShootDayReportData(projectId: string, shootDayId: strin
       data: shootDay.data.toISOString(),
       chamadaGeral: shootDay.chamadaGeral,
       lancheHorario: shootDay.lancheHorario,
+      chamadaEquipe: chamadaEquipeMap,
       // Nível 3 de "tempos de reset configuráveis" — os tempoResetMin acima já vêm com este fator
       // aplicado (ver resolveEffectiveResetMin), mas o valor crú também é exposto pra UI mostrar o
       // aviso "Resets a N%" e a conta no tooltip ("15min × 70% = 11min").

@@ -14,7 +14,6 @@
  */
 import type { ReportSceneRow, ShotScheduleRow } from "@/lib/report-data";
 import { minutesToTime, timeToMinutes } from "@/lib/schedule";
-import { CREW_CALL_DEPARTMENTS } from "@/lib/report-constants";
 import {
   detectPendingGaps,
   detectResumptions,
@@ -75,19 +74,7 @@ export function computeCastAutoSchedule(scenes: ReportSceneRow[]): Map<string, C
 // Passo 2 — chamada de equipe por departamento
 // ---------------------------------------------------------------------------
 
-const MINUS_60_DEPARTMENTS = new Set(["Catering", "Produção"]);
-const NO_DEFAULT_DEPARTMENTS = new Set(["Equipe Extra", "Pós-Produção"]);
-
-export function defaultChamadaEquipe(chamadaGeral: string | null): Record<string, string> {
-  if (!chamadaGeral) return {};
-  const minus60 = minutesToTime(timeToMinutes(chamadaGeral) - 60);
-  const result: Record<string, string> = {};
-  for (const dept of CREW_CALL_DEPARTMENTS) {
-    if (NO_DEFAULT_DEPARTMENTS.has(dept)) continue;
-    result[dept] = MINUS_60_DEPARTMENTS.has(dept) ? minus60 : chamadaGeral;
-  }
-  return result;
-}
+export { defaultChamadaEquipe } from "@/lib/report-constants";
 
 // ---------------------------------------------------------------------------
 // Parsing "Personagem_descrição" e agregação por personagem

@@ -8,6 +8,7 @@ import {
   BlocoDeTempoRow,
   CallSheetHeader,
   CastLegend,
+  PrioridadeLegend,
   colors,
   kit,
   periodoAbrev,
@@ -78,7 +79,6 @@ const styles = StyleSheet.create({
   safetyLine: { fontSize: 7, color: colors.danger, marginBottom: 1.5 },
   callBarRow: { flexDirection: "row", marginBottom: 8 },
   callBarCell: {
-    width: "16.66%",
     borderWidth: 0.5,
     borderColor: colors.borderV2,
     backgroundColor: colors.lightGray,
@@ -457,7 +457,8 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
 
   const callBar = [
     { label: "Chamada Geral", value: shootDay.chamadaGeral },
-    { label: "Lanche", value: shootDay.lancheHorario },
+    // Lanche só existe em diária que tem lanche — vazio, a célula some em vez de mostrar "—".
+    ...(shootDay.lancheHorario ? [{ label: "Lanche", value: shootDay.lancheHorario }] : []),
     { label: "Rodando", value: rodStartManha },
     { label: "Almoço", value: shootDay.almocoInicio },
     { label: "Rodando Pós Almoço", value: rodStartTarde },
@@ -554,24 +555,27 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
 
         <View style={styles.callBarRow}>
           {callBar.map((item) => (
-            <View key={item.label} style={styles.callBarCell}>
+            // Largura dividida pelo número de células: sem Lanche são 5, e a barra continua inteira.
+            <View key={item.label} style={{ ...styles.callBarCell, width: `${100 / callBar.length}%` }}>
               <Text style={styles.callBarLabel}>{item.label}</Text>
               <Text style={styles.callBarValue}>{formatHHhOrDash(item.value)}</Text>
             </View>
           ))}
         </View>
 
-        <View style={styles.section} wrap={false}>
-          <SectionTitle>CHAMADA DA EQUIPE</SectionTitle>
-          <View style={styles.crewGrid}>
-            {chamadaEquipeList.map((item) => (
-              <View key={item.departamento} style={styles.crewCell}>
-                <Text style={styles.crewDept}>{item.departamento}</Text>
-                <Text style={styles.crewTime}>{formatHHhOrDash(item.horario)}</Text>
-              </View>
-            ))}
+        {chamadaEquipeList.length > 0 && (
+          <View style={styles.section} wrap={false}>
+            <SectionTitle>CHAMADA DA EQUIPE</SectionTitle>
+            <View style={styles.crewGrid}>
+              {chamadaEquipeList.map((item) => (
+                <View key={item.departamento} style={styles.crewCell}>
+                  <Text style={styles.crewDept}>{item.departamento}</Text>
+                  <Text style={styles.crewTime}>{formatHHhOrDash(item.horario)}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.section}>
           <SectionTitle>ELENCO</SectionTitle>
@@ -718,6 +722,7 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
         {shotSchedule.length > 0 && (
           <View style={styles.section}>
             <SectionTitle>ORDEM DE FILMAGEM</SectionTitle>
+            <PrioridadeLegend />
             <Table>
               <Tr header dark>
                 <Td width="10%" align="center">
@@ -825,6 +830,7 @@ export function CallSheetDocument({ data }: { data: ShootDayReportData }) {
           documentTitle={horaAHoraTitle}
         />
 
+        {horaAHoraItens.some((i) => i.kind === "cena") && <PrioridadeLegend />}
         {horaAHoraItens.length === 0 ? (
           <Text style={styles.hhEmptyText}>Nenhum plano cadastrado para esta diária.</Text>
         ) : (

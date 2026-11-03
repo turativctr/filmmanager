@@ -335,6 +335,8 @@ export function ShotListPanel({
                         tempoResetMinManual={shot.tempoResetMinManual}
                         detail={lensChangeDetail(shots[index - 1], shot)}
                         onUpdateManual={(min) => handleUpdate(shot.id, { tempoResetMinManual: min })}
+                        posicaoCameraManual={shot.posicaoCameraManual}
+                        onTogglePosicaoCamera={(value) => handleUpdate(shot.id, { posicaoCameraManual: value })}
                       />
                     )}
                     <SortableShotRow

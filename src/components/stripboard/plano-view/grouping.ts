@@ -103,6 +103,7 @@ export function computeOrderTotalMin(list: PlanoScheduleEntry[]): number {
     angulo: e.shot.angulo,
     movimento: e.shot.movimento,
     tamanho: e.shot.tamanho,
+    posicaoCameraManual: e.shot.posicaoCameraManual,
   }));
   const resets = recomputeResetsForOrderedShots(resetInputs);
   const resetsMin = Array.from(resets.values()).reduce((sum, r) => sum + r.tempoResetMin, 0);

@@ -56,7 +56,7 @@ export const RESET_LABEL: Record<ShotTipoReset, string> = {
   NENHUM: "Nenhum",
   AJUSTE: "Ajuste",
   TROCA_LENTE: "Troca de lente",
-  TROCA_CAMERA: "Troca de câmera",
+  TROCA_CAMERA: "Posição de câmera",
   RESET_POSICAO: "Reset de posição",
   RESET_COMPLETO: "Reset completo",
 };
@@ -69,6 +69,8 @@ export type ShotResetInput = {
   angulo?: string | null;
   movimento?: string | null;
   tamanho?: string | null;
+  /** Inserido à mão entre dois planos (tripé muda de lugar mesmo com o mesmo recorte). */
+  posicaoCameraManual?: boolean;
 };
 
 export type ShotResetResult = {
@@ -146,7 +148,7 @@ export function classifyReset(previous: ShotResetInput | null, current: ShotRese
   const candidates: ShotTipoReset[] = [];
   if (tamanhoDrastic && lensDiffers && anguloDiffers) candidates.push("RESET_COMPLETO");
   if (tamanhoDrastic) candidates.push("RESET_POSICAO");
-  if (movementCrosses) candidates.push("TROCA_CAMERA");
+  if (movementCrosses || current.posicaoCameraManual) candidates.push("TROCA_CAMERA");
   if (lensDiffers) candidates.push("TROCA_LENTE");
   if (anguloDiffers) candidates.push("AJUSTE");
 

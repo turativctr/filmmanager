@@ -10,6 +10,7 @@ export type PlanoShot = {
   lente: string | null;
   angulo: string | null;
   movimento: string | null;
+  posicaoCameraManual: boolean;
   takesPrevistos: number;
   duracaoTakeMin: number;
   resetEntreTakesMin: number;

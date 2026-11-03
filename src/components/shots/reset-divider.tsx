@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { formatHoraMin, parseHoraMin, PLACEHOLDER_HORA_MIN, TITULO_HORA_MIN } from "@/lib/hora-min";
 
 /** Linha divisória entre dois planos consecutivos — Correção 1: substitui o bloco âmbar largo
- *  por uma linha fina com texto pequeno centralizado. NENHUM e AJUSTE não exibem nada; TROCA_LENTE
+ *  por uma linha fina com texto pequeno centralizado. NENHUM e AJUSTE não exibem nada (só o botão
+ *  discreto "+ posição de câmera", quando onTogglePosicaoCamera é passado); TROCA_LENTE
  *  e TROCA_CAMERA usam cor neutra; RESET_POSICAO usa âmbar suave; RESET_COMPLETO usa vermelho suave.
  *
  *  "Tempos de reset configuráveis": `tempoResetMin` é o valor computado (padrão do projeto pro
@@ -27,6 +28,8 @@ export function ResetDivider({
   fatorResetPercent = 100,
   detail,
   onUpdateManual,
+  posicaoCameraManual = false,
+  onTogglePosicaoCamera,
 }: {
   tipoReset: ShotTipoReset;
   tempoResetMin: number | null;
@@ -37,11 +40,29 @@ export function ResetDivider({
   detail?: string;
   /** Ausente = divisor só-leitura (ex.: preview de drag, sem plano real em escopo). */
   onUpdateManual?: (min: number | null) => void;
+  /** Posição de câmera inserida à mão antes deste plano (Shot.posicaoCameraManual). */
+  posicaoCameraManual?: boolean;
+  /** Presente = dá pra inserir/remover a posição de câmera entre estes dois planos, como o almoço
+   *  na OD: o tripé pode mudar de lugar mesmo sem mudar o recorte. */
+  onTogglePosicaoCamera?: (value: boolean) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
 
-  if (tipoReset === "NENHUM" || tipoReset === "AJUSTE") return null;
+  if (tipoReset === "NENHUM" || tipoReset === "AJUSTE") {
+    if (!onTogglePosicaoCamera) return null;
+    return (
+      <div className="group flex justify-center py-0.5">
+        <button
+          type="button"
+          className="rounded px-2 text-[11px] text-muted-foreground/60 hover:bg-muted hover:text-foreground focus-visible:text-foreground"
+          onClick={() => onTogglePosicaoCamera(true)}
+        >
+          + posição de câmera
+        </button>
+      </div>
+    );
+  }
 
   const isHeavy = HEAVY_RESETS.includes(tipoReset);
   const computed = tempoResetMin ?? 0;
@@ -114,6 +135,15 @@ export function ResetDivider({
               {RESET_LABEL[tipoReset]} · {base}min × {fatorResetPercent}% = {effective}min
             </TooltipContent>
           </Tooltip>
+        )}
+        {posicaoCameraManual && onTogglePosicaoCamera && (
+          <button
+            type="button"
+            className="text-[10px] text-muted-foreground underline hover:text-foreground"
+            onClick={() => onTogglePosicaoCamera(false)}
+          >
+            remover
+          </button>
         )}
         {isManual && (
           <>

@@ -561,6 +561,9 @@ model Shot {
   tempoResetMin       Int?
   tempoResetMinManual Int?
   tipoReset           ShotTipoReset @default(NENHUM)
+  // Marcado à mão: a câmera muda de posição (tripé) antes deste plano, mesmo sem mudar o recorte.
+  // Força ao menos TROCA_CAMERA ("Posição de câmera") no reset de chegada — ver classifyReset.
+  posicaoCameraManual Boolean       @default(false)
   notasDirecao      String?       @db.Text
   notasContinuidade String?       @db.Text
   status            ShotStatus    @default(PENDENTE)

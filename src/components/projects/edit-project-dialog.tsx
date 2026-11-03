@@ -376,7 +376,7 @@ export function EditProjectDialog({ project }: { project: ProjectDefaults }) {
                     <HoraMinInput id="resetTrocaLenteMin" name="resetTrocaLenteMin" defaultValue={project.resetTrocaLenteMin} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="resetTrocaCameraMin">Troca de câmera</Label>
+                    <Label htmlFor="resetTrocaCameraMin">Posição de câmera</Label>
                     <HoraMinInput id="resetTrocaCameraMin" name="resetTrocaCameraMin" defaultValue={project.resetTrocaCameraMin} />
                   </div>
                   <div className="space-y-1.5">

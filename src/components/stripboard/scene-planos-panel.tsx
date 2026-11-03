@@ -236,6 +236,8 @@ export function ScenePlanosPanel({
                       fatorResetPercent={fatorResetPercent}
                       detail={lensChangeDetail(visiveis[index - 1], shot)}
                       onUpdateManual={(min) => handleUpdate(shot.id, { tempoResetMinManual: min })}
+                      posicaoCameraManual={shot.posicaoCameraManual}
+                      onTogglePosicaoCamera={(value) => handleUpdate(shot.id, { posicaoCameraManual: value })}
                     />
                   )}
                   <div

@@ -20,6 +20,8 @@ export type ShotData = {
   tempoResetMin: number | null;
   tempoResetMinManual: number | null;
   tipoReset: ShotTipoReset;
+  /** Posição de câmera inserida à mão antes deste plano (tripé muda mesmo com o mesmo recorte). */
+  posicaoCameraManual: boolean;
   notasDirecao: string | null;
   notasContinuidade: string | null;
   status: ShotStatus;

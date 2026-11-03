@@ -138,8 +138,14 @@ export function StripboardBoard({
         body: JSON.stringify({ changes, blocos }),
       });
       if (!res.ok) {
-        console.error("Falha ao salvar mudanças do Stripboard:", res.status, await res.text().catch(() => ""));
-        toast.error("Erro ao salvar — tente novamente");
+        const corpo = await res.text().catch(() => "");
+        console.error("Falha ao salvar mudanças do Stripboard:", res.status, corpo);
+        // Regras da diária (parte repetida, cena dividida...) voltam como 400 com o motivo — mostrar o motivo.
+        let motivo: unknown = null;
+        try {
+          motivo = JSON.parse(corpo).error;
+        } catch {}
+        toast.error(typeof motivo === "string" ? motivo : `Erro ao salvar (${res.status}) — tente novamente`);
         setBoard(previousBoard);
       }
     } catch (err) {
@@ -207,6 +213,11 @@ export function StripboardBoard({
       const movingItem = getItems(board, sourceContainer).find((i) => i.itemId === activeId);
       if (!movingItem) return;
 
+      // Soltar sobre a metade de baixo de uma tira põe depois dela — senão a última posição da lista
+      // nunca seria alcançável (só dá pra soltar "antes" do último).
+      const translated = active.rect.current.translated;
+      const depois = Boolean(translated) && translated!.top + translated!.height / 2 > over.rect.top + over.rect.height / 2;
+
       const destDayId = destContainer.startsWith("day:") ? destContainer.split(":")[1] : null;
       const destDay = destDayId ? board.days.find((d) => d.id === destDayId) : undefined;
 
@@ -234,13 +245,13 @@ export function StripboardBoard({
       if (!destDay) {
         const idx = board.boneyard.findIndex((i) => i.itemId === overId);
         const lista = nextBoard.boneyard;
-        const insertAt = idx === -1 ? lista.length : idx;
+        const insertAt = idx === -1 ? lista.length : idx + (depois ? 1 : 0);
         nextBoard = setBoneyard(nextBoard, [...lista.slice(0, insertAt), movingItem, ...lista.slice(insertAt)]);
       } else {
         const entries = buildDayEntries(destDay);
         const entryIds = entries.map((e) => dayEntryId(destDay.id, e));
         const idx = isContainerId(overId) ? -1 : entryIds.indexOf(overId);
-        const insertAt = idx === -1 ? entries.length : idx;
+        const insertAt = idx === -1 ? entries.length : idx + (depois ? 1 : 0);
 
         // Ao entrar num dia vindo do Boneyard, preenche só o PREP (por comparação de set/locação com a
         // cena anterior: 0min se for o mesmo set, já montado). O Rod fica vazio de propósito: gravar

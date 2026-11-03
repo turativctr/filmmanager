@@ -9,6 +9,10 @@ import { dadosDaReordenacao } from "@/lib/scene-shoot-day-fields";
 import { recalculateDayBlocks } from "@/lib/shootday-blocks";
 import { stripboardReorderSchema } from "@/lib/validation/stripboard";
 
+// Cada arraste reescreve a diária inteira (duas fases de `ordem`) e o Boneyard, uma consulta por
+// linha. Contra o Neon em São Paulo isso passa dos 5s padrão de transação interativa do Prisma.
+const PRISMA_TX_TIMEOUT_MS = 30_000;
+
 /** Alertas automáticos detectados no breakdown/planos da cena, usados pra pré-preencher
  *  SceneShootDay.observacoes na primeira vez que a cena é agendada num dia — ver PATCH desta
  *  rota: o pré-preenchimento só roda pra pares (sceneId, shootDayId) genuinamente novos, nunca
@@ -225,7 +229,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         },
       });
     }
-  });
+  }, { timeout: PRISMA_TX_TIMEOUT_MS });
 
   // Recalcula blocoManhaInicio/almocoInicio/almocoFim/blocoTardeInicio de toda diária tocada por este
   // reorder — inclui as diárias de ORIGEM das cenas movidas (existingByPair, via shootDayIds antigos),

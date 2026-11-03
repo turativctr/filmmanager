@@ -7,10 +7,11 @@ import { normalizarTamanho } from "@/lib/shots-shared";
 // recalculateScene()/recalculateDaySchedule() em src/lib/shots.ts), nunca aceitos como input direto.
 // tempoResetMinManual É aceito — é o ajuste calibrado por plano (nível 2 de "tempos de reset
 // configuráveis"); null volta a seguir o padrão do projeto ("usar padrão do projeto").
-// `numero` também não entra: é a identidade do plano na decupagem/claquete e é sempre atribuído pelo
+// `numero` também não entra na criação: é a identidade do plano na decupagem/claquete, atribuída pelo
 // servidor (próximo número livre ao criar; letra do pai ao virar coverage; próximo livre ao
-// desvincular) — nunca derivado da posição, nunca aceito do cliente. Ver nextFreeShotNumero e
-// coverageShotNumero em src/lib/shots-shared.ts.
+// desvincular) — nunca derivado da posição. Ver nextFreeShotNumero e coverageShotNumero em
+// src/lib/shots-shared.ts. Na edição a AD pode trocá-lo à mão (shotPatchSchema) — é o único jeito
+// de um número mudar fora da hierarquia; nada renumera sozinho.
 export const shotSchema = z.object({
   descricao: z.string().min(1),
   // Maiúscula por palavra ao gravar — ver normalizarTamanho.
@@ -40,10 +41,20 @@ export const shotSchema = z.object({
 // ausente = não mexe.
 // scenePartId: string = atribui a uma parte da cena dividida; null = sem parte (aparece em todas);
 // ausente = não mexe.
+// numero: troca manual do número da claquete (maiúsculo, único na cena — a API confere).
 export const shotPatchSchema = shotSchema.partial().extend({
+  numero: z
+    .string()
+    .trim()
+    .min(1)
+    .max(10)
+    .transform((v) => v.toUpperCase())
+    .optional(),
   ehMaster: z.boolean().optional(),
   planoPaiId: z.string().min(1).nullable().optional(),
   scenePartId: z.string().min(1).nullable().optional(),
+  // Posição de câmera inserida à mão antes deste plano — ver Shot.posicaoCameraManual.
+  posicaoCameraManual: z.boolean().optional(),
 });
 
 export type ShotInput = z.infer<typeof shotPatchSchema>;

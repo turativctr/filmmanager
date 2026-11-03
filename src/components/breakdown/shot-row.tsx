@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Check, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete-dialog";
 import { PrioridadeTag } from "@/components/shots/prioridade-tag";
@@ -94,6 +95,7 @@ export function SortableShotRow({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const [numeroDraft, setNumeroDraft] = useState(shot.numero);
   const [takesDraft, setTakesDraft] = useState(shot.takesPrevistos.toString());
   const [duracaoDraft, setDuracaoDraft] = useState(formatDuracaoTake(shot.duracaoTakeMin));
   const [descricaoDraft, setDescricaoDraft] = useState(shot.descricao);
@@ -109,6 +111,7 @@ export function SortableShotRow({
   // de `shot` resetava TODOS os campos a cada salvamento: a AD corrigia a descrição, clicava na
   // lente, começava a digitar, e a resposta do servidor apagava o que ela tinha digitado. Com
   // dependência por valor, só o campo que de fato mudou por fora é sobrescrito.
+  useEffect(() => setNumeroDraft(shot.numero), [shot.numero]);
   useEffect(() => setTakesDraft(shot.takesPrevistos.toString()), [shot.takesPrevistos]);
   useEffect(() => setDuracaoDraft(formatDuracaoTake(shot.duracaoTakeMin)), [shot.duracaoTakeMin]);
   useEffect(() => setDescricaoDraft(shot.descricao), [shot.descricao]);
@@ -118,6 +121,20 @@ export function SortableShotRow({
   useEffect(() => setMovimentoDraft(shot.movimento ?? ""), [shot.movimento]);
   useEffect(() => setNotasDirecaoDraft(shot.notasDirecao ?? ""), [shot.notasDirecao]);
   useEffect(() => setNotasContinuidadeDraft(shot.notasContinuidade ?? ""), [shot.notasContinuidade]);
+
+  function commitNumero() {
+    // Número vazio ou repetido na cena desfaz a edição (a API recusaria do mesmo jeito).
+    const value = numeroDraft.trim().toUpperCase();
+    const repetido = sceneShots.some((s) => s.id !== shot.id && s.numero.trim().toUpperCase() === value);
+    if (value === "" || value.length > 10 || repetido) {
+      if (repetido) toast.error(`Já existe um plano ${value} nesta cena.`);
+      setNumeroDraft(shot.numero);
+      return;
+    }
+    setNumeroDraft(value);
+    if (value === shot.numero) return;
+    void onUpdate(shot.id, { numero: value });
+  }
 
   function commitTakes() {
     const value = Number(takesDraft);
@@ -220,7 +237,7 @@ export function SortableShotRow({
             </span>
             <span
               className="w-16 shrink-0 truncate font-medium"
-              title={`Plano ${shot.numero} — número da claquete; não muda ao reordenar nem ao excluir outros planos`}
+              title={`Plano ${shot.numero} — número da claquete; não muda ao reordenar nem ao excluir outros planos (dá pra trocar à mão ao abrir o plano)`}
             >
               {shot.numero}
             </span>
@@ -317,6 +334,22 @@ export function SortableShotRow({
       {isExpanded && (
         <div className="space-y-3 border-t px-3 py-3" onClick={(e) => e.stopPropagation()}>
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <div className="space-y-1">
+              <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                Número
+                <TermTooltip content="O número da claquete. Nada o muda sozinho — nem reordenar nem excluir outros planos. Troque à mão se precisar; os coverages acompanham (6A vira 5A)." />
+              </label>
+              <Input
+                className="h-8 w-20"
+                maxLength={10}
+                value={numeroDraft}
+                onChange={(e) => setNumeroDraft(e.target.value)}
+                onBlur={commitNumero}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                }}
+              />
+            </div>
             <div className="space-y-1">
               <label className="flex items-center gap-1 text-xs text-muted-foreground">
                 Prioridade

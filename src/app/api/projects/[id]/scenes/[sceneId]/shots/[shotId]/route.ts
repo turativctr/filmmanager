@@ -43,7 +43,7 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { ehMaster, planoPaiId, scenePartId, ...fields } = parsed.data;
+  const { ehMaster, planoPaiId, scenePartId, numero, ...fields } = parsed.data;
 
   if (scenePartId) {
     const parte = await prisma.scenePart.findFirst({ where: { id: scenePartId, sceneId: shot.sceneId } });
@@ -114,19 +114,52 @@ export async function PATCH(
     nextOrder = [...resto.slice(0, topo), ...grupo, ...resto.slice(topo)].map((s) => s.id);
   }
 
+  // Troca manual do número. Os coverages acompanham o pai (6A → 5A) — o resto da cena nunca muda.
+  const coverageRenames: { id: string; numero: string }[] = [];
+  if (numero !== undefined && numero !== shot.numero) {
+    if (hierarchyData.numero !== undefined) {
+      return badRequest("Troque o número e o vínculo de coverage em passos separados.");
+    }
+    const coverages = sceneShots.filter((s) => s.planoPaiId === shot.id);
+    const coverageIds = new Set(coverages.map((c) => c.id));
+    const ocupados = new Set(
+      sceneShots.filter((s) => s.id !== shot.id && !coverageIds.has(s.id)).map((s) => s.numero.trim().toUpperCase())
+    );
+    if (ocupados.has(numero) || coverages.some((c) => c.numero.trim().toUpperCase() === numero)) {
+      return badRequest(`Já existe um plano ${numero} nesta cena.`);
+    }
+    ocupados.add(numero);
+    for (const coverage of coverages) {
+      const sufixo = coverage.numero.startsWith(shot.numero) ? coverage.numero.slice(shot.numero.length) : "";
+      // Coverage com número fora do padrão "pai + letra" fica como está.
+      if (!/^[A-Z]+$/i.test(sufixo)) {
+        ocupados.add(coverage.numero.trim().toUpperCase());
+        continue;
+      }
+      const novo = `${numero}${sufixo.toUpperCase()}`;
+      if (ocupados.has(novo)) return badRequest(`O coverage ${coverage.numero} viraria ${novo}, que já existe nesta cena.`);
+      ocupados.add(novo);
+      coverageRenames.push({ id: coverage.id, numero: novo });
+    }
+    hierarchyData.numero = numero;
+  }
+
   const takesPrevistos = fields.takesPrevistos ?? shot.takesPrevistos;
   const duracaoTakeMin = fields.duracaoTakeMin ?? shot.duracaoTakeMin;
   const resetEntreTakesMin = fields.resetEntreTakesMin ?? shot.resetEntreTakesMin;
 
-  await prisma.shot.update({
-    where: { id: shot.id },
-    data: {
-      ...fields,
-      ...hierarchyData,
-      ...(scenePartId !== undefined ? { scenePartId } : {}),
-      tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, resetEntreTakesMin),
-    },
-  });
+  await prisma.$transaction([
+    prisma.shot.update({
+      where: { id: shot.id },
+      data: {
+        ...fields,
+        ...hierarchyData,
+        ...(scenePartId !== undefined ? { scenePartId } : {}),
+        tempoTotalMin: computeTempoTotal(takesPrevistos, duracaoTakeMin, resetEntreTakesMin),
+      },
+    }),
+    ...coverageRenames.map((c) => prisma.shot.update({ where: { id: c.id }, data: { numero: c.numero } })),
+  ]);
 
   if (nextOrder) await writeShotOrder(nextOrder);
 
